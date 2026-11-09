@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-09",
+  "request": "艾莎为主角，安娜为辅助配角；英文学习由安娜发声，移除突兀旁白",
+  "status": "implemented_and_validated",
+  "role_policy": {
+    "solo_lead": "frost / Elsa",
+    "assistant": "nuan / Anna",
+    "old_save": "原 Anna 玩家选择迁移为 Elsa；进度、贴纸、已听次数和换装保留",
+    "swap": "单人模式不提供换人按钮或教程；Tab/手柄不切换主角；双人模式保留"
+  },
+  "voices": {
+    "active_speaker_lines": {
+      "Elsa_chinese_only": 25,
+      "Anna_dialogue_and_all_english": 310
+    },
+    "external_narrator_lines": 0,
+    "words_cards_quiz_hints_menus": "Anna",
+    "story_memories": "Anna speaks to her sister, first person",
+    "independent_words_and_mixed_english": "same en-US-AriaNeural voice, rate -24%, pitch +4Hz",
+    "audio_audit": {
+      "active_clips": 393,
+      "decoded": 393,
+      "segments": 514,
+      "asr_sample_segments": 10,
+      "errors": [],
+      "english_voice": [
+        "en-US-AriaNeural",
+        "-24%",
+        "+4Hz"
+      ],
+      "speakers": [
+        "frost",
+        "nuan"
+      ]
+    }
+  },
+  "verification": {
+    "unit_tests_source": 129,
+    "unit_tests_built": 129,
+    "physics_solution_routes": 30,
+    "browser_checks": 44,
+    "core_words": 30,
+    "minimum_completed_hearings_per_word": 8,
+    "role_browser": {
+      "beforeAvatar": "game/portrait_frost.webp?v=7370de5c75ee",
+      "afterAvatar": "game/portrait_frost.webp?v=7370de5c75ee",
+      "noSwapButton": true
+    },
+    "audio_files_decoded": 393,
+    "asr": {
+      "segments": 10,
+      "en": 2,
+      "zh": 8,
+      "raw_flags": 1,
+      "english_ice_and_flower": "matched",
+      "flag": "Elsa Chinese 冰路→冰露，轻轻地→轻轻的：同音词形差异；未据此认定配音错误",
+      "human_listening_performed": false
+    },
+    "logs": ".tools/elsa-lead/"
+  },
+  "release_package": {
+    "path": "/Users/Thin/.codex/visualizations/2026/11/09/01a1bf57-3d0c-7473-a164-ef37a15cef79/elsa-lead-anna-voice.zip",
+    "zip_bytes": 15443118,
+    "runtime_bytes": 16527948,
+    "audio_files": 393,
+    "asset_version": "7370de5c75ee",
+    "sha256": "3fd79e3beec8317f583794328aff5398b4a0bcdeb67eabcf839d626ae0bf959c"
+  },
+  "publication": "Not deployed; this update is on the existing feature branch."
+}

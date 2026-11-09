@@ -1,5 +1,11 @@
 # Word exposure plan (PLAN A5: every core word heard at least 8 times per room)
 
+## Current runtime guarantee (Elsa-lead revision)
+
+Elsa now speaks Chinese only. Anna owns every English word, learning line, hint and recap; `who: companion` and `narrator` below are historical S3 terminology. The old authored-count tables are design history, not evidence for the revised dialogue. Actual audible completions are counted per run; the clear-page picture review fills each room's three core words up to eight before offering the quiz/next control. Skipped chapter cards and interrupted dialogue therefore do not lose the learning target. Missing audio or muted play remains navigable and is never falsely credited as heard. The browser acceptance fixture verifies all 30 core words, including deliberately skipped chapters.
+
+## Historical S3 authored-count tables
+
 Final room order (CONTRACT section 8): hall, lake, slope, tower, spring, bunny, floe, music, ballroom, garden.
 Numbers are computed from `lines.json`, `words.json` and the room maps in `levels.js` by `.tools/tmp/guide-lines/check3.mjs`
 (`node .tools/tmp/guide-lines/check3.mjs`; it is the old `.tools/tmp/c-content-s3/check2.mjs` plus the guide checks: every guide entry of

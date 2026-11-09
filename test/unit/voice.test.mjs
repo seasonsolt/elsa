@@ -27,7 +27,17 @@ function setup({ missing = false, sound = true } = {}) {
     clearTimeout: id => timers.delete(id), performance: { now: () => 0 }, console,
   };
   const voice = vm.runInNewContext(voiceSource + '\nvoice;', context);
-  return { voice, heard, sources, timers };
+  return { voice, heard, sources, timers, context };
+}
+
+export async function annaStaysTheLearningVoiceWithElsaAsLead({ assert }) {
+  const s = setup(); s.context.game.player = 'frost';
+  const subtitles = []; s.voice.onSubtitle(p => { if (p) subtitles.push(p); });
+  const done = s.voice.line('mixed'); await flush();
+  assert.equal(subtitles[0].who, 'nuan', 'legacy companion lines belong to Anna');
+  s.sources[0].onended(); await done;
+  const word = s.voice.word('heart'); await flush();
+  s.sources[1].onended(); assert.equal(await word, true);
 }
 
 export async function onlyCompletedAudibleClipsCountAsHeard({ assert }) {

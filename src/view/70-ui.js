@@ -6,7 +6,7 @@
      degrades to silence instead of throwing. Nothing in this file calls into another file while the script is loading. */
 
   const uxState = { inited: false, tok: null, modal: null, hudBuilt: false, lit: {}, sig: '', player: '', tick: 0, seen: {} };
-  const uxLocal = { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'nuan', sound: true };
+  const uxLocal = { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true };
   const uxWait = ms => new Promise(r => setTimeout(r, ms));
   const uxInk = '#4a3a8c';
   const UX_HUE = ['#ff9cc0', '#ffd27a', '#9fd6ff', '#b9e3a5', '#d4b4ff', '#ffb98a'];
@@ -518,7 +518,7 @@
       <image href="${SRC(p.img)}" x="8" y="5" width="28" height="28" preserveAspectRatio="xMidYMid meet"/><text class="latin" x="44" y="27" font-size="20" fill="${p.col}"></text></g>`).join('');
     $('hud').innerHTML = `<g id="uxHud" visibility="hidden">
       <g id="uxAvatars" transform="translate(38 38)">
-        <g transform="translate(0 0)"><g class="ux-btn" id="uxAv" data-act="swap" data-ui="swap" tabindex="-1" role="button" aria-label="swap">
+        <g transform="translate(0 0)"><g id="uxAv" role="img" aria-label="艾莎，安娜陪伴">
           <circle r="34" fill="#000" fill-opacity="0" pointer-events="all"/>
           <circle r="29" fill="${'#ffd27a'}" stroke="#fff" stroke-width="3" filter="url(#softShadow)"/>
           <clipPath id="uxClipA"><circle r="25"/></clipPath>
@@ -532,7 +532,6 @@
       <g id="uxKeysPos"><g id="uxKeys">${keys}</g></g></g>`;
     const root = $('hud');
     uxBind(root, {
-      swap: () => { try { if (game.mode !== 'solo') return; if (typeof swapPlayer === 'function') swapPlayer(); else game.swap(); } catch (e) {} },
       hint: el => {
         let tgt = null;
         try { tgt = game.guide && game.guide(); } catch (e) {}
@@ -561,12 +560,12 @@
     if (!show) return;
     const solo = g.mode !== 'duo';
     /* avatar: the player's portrait big, the companion small */
-    const me = solo ? (g.player || 'nuan') : 'nuan', other = me === 'nuan' ? 'frost' : 'nuan';
+    const me = 'frost', other = 'nuan';
     if (uxState.player !== me + g.mode) {
       uxState.player = me + g.mode;
       $('uxAvImg').setAttribute('href', SRC('portrait_' + me));
       $('uxAvImg2').setAttribute('href', SRC('portrait_' + other));
-      $('uxAv').setAttribute('pointer-events', solo ? 'auto' : 'none');
+      $('uxAv').setAttribute('pointer-events', 'none');
     }
     /* counters with icons; only the kinds this room has, laid out left to right */
     const items = g.items || [];

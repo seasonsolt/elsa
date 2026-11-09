@@ -176,8 +176,8 @@
     const hasEn = def => def.say.some(isEn);
     const wordsOnly = () => { try { return typeof setting === 'function' && setting('english') === 'words'; } catch (e) { return false; } };
     const wordText = id => (SUBS && SUBS.words && SUBS.words[id] && SUBS.words[id].en) || String(id);
-    /* "companion" = whichever sister is not the one the child plays */
-    const speakerOf = def => def.who !== 'companion' ? def.who : (typeof game === 'object' && game.player === 'frost' ? 'nuan' : 'frost');
+    /* Anna is the stable learning companion, including legacy companion line definitions. */
+    const speakerOf = def => def.who !== 'companion' ? def.who : 'nuan';
     function segmentsOf(key, def, wMode) {
       const e = SUBS && SUBS.lines && SUBS.lines[key];
       if (e) return (wMode && e.w !== undefined ? e.w || [] : e.s).map(([text, en]) => ({ text, en: !!en }));
@@ -284,7 +284,7 @@
     }
     function word(id, opts) {
       opts = Object.assign({ interrupt: true, tag: 'word', maxWait: 1500, subtitle: false }, opts);
-      return new Promise(resolve => submit(make({ kind: 'word', key: 'word_' + id, who: 'narrator', file: `word_${id}.mp3`, words: [id], resolve }, opts)));
+      return new Promise(resolve => submit(make({ kind: 'word', key: 'word_' + id, who: 'nuan', file: `word_${id}.mp3`, words: [id], resolve }, opts)));
     }
     /* Hover names: debounced 400 ms, at most one waiting; hovering back to the name that already played cancels the pending one. */
     function ui(name) {

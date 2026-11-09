@@ -21,6 +21,8 @@ PLAN.md is still the spec. This file only pins down names and shapes.
 
 ## 1. Logic API (agent a; node-testable, no DOM)
 
+Current story/view policy: Elsa (`frost`) is always the solo lead, Anna (`nuan`) assists. Save sanitization migrates the old Anna selection to Elsa without losing progress. The generic engine below still supports either controlled character for physics regression tests and legacy callers; the story UI no longer exposes swapping.
+
 ```
 KID_PHYS = { ...PHYS, speed: 180, coyote: 0.14, buffer: 0.18 }   // used when g.mode === 'solo'
 createGame() → g, plus:
@@ -61,30 +63,30 @@ All keys live in `lines.json` → `lines`. `<lv>` is the level id (`hall`, `lake
 
 | Key | Who | When |
 |---|---|---|
-| `p1` `p2` `p3` | narrator | prologue, 3 pages (each also names `art`) |
-| `ch_<lv>` | narrator | chapter card: room picture + one sentence |
-| `learn_<w>` | narrator | chapter card word intro: 「这一关我们要找 heart——heart 就是爱心。跟我说：heart！」 (view then waits 1.5 s with ear/mouth anim) |
-| `recall_<w>` | companion sister | next room start: 「还记得 door 吗？」 for previous room's 3 words |
+| `p1` `p2` `p3` | Anna | prologue conversation with Elsa, 3 pages (each also names `art`) |
+| `ch_<lv>` | Anna | chapter card: room picture + one sentence |
+| `learn_<w>` | Anna | chapter card word intro and speaking together (view then waits 1.5 s with ear/mouth anim) |
+| `recall_<w>` | Anna | next room start: 「还记得 door 吗？」 for previous room's 3 words |
 | `start_<lv>_<n>` | either | lines at room start, played in order |
-| `guide_<lv>_<n>` | companion | stuck hint for guide entry n (matches levels.js guide `say`), embeds the target's word |
-| `pick_<w>_<n>` | companion | variations after picking an item of word w (「又一个 heart！」), n = 1..3 |
+| `guide_<lv>_<n>` | Anna | stuck hint for guide entry n (matches levels.js guide `say`), embeds the target's word |
+| `pick_<w>_<n>` | Anna | variations after picking an item of word w (「又一个 heart！」), n = 1..3 |
 | `star_<n>` | either | small star count, n = 1..5: `[{"en":"Star!"}, {"en":"One!"}]` style |
 | `open_<lv>` | either | door / gate opens |
-| `clear_<lv>` | narrator | clear page sentence |
-| `quiz_<w>` | companion | 「哪个是 heart？点一点！」 |
-| `quiz_right_<n>` `quiz_wrong_<n>` | companion | n = 1..3 variations |
-| `tutor_move` `tutor_jump` `tutor_magic` `tutor_swap` `tutor_fullscreen` | companion / narrator | first-time keyboard teaching; fullscreen tip for parents |
-| `splash_<n>` | companion | encouragement after falling in water, n = 1..4 |
-| `idle_<n>` | companion | player idle > 3 s, n = 1..4 |
+| `clear_<lv>` | Anna | clear page sentence |
+| `quiz_<w>` | Anna | 「哪个是 heart？点一点！」 |
+| `quiz_right_<n>` `quiz_wrong_<n>` | Anna | n = 1..3 variations |
+| `tutor_move` `tutor_jump` `tutor_magic` `tutor_fullscreen` | Anna | first-time keyboard teaching; fullscreen tip for parents |
+| `splash_<n>` | Anna | encouragement after falling in water, n = 1..4 |
+| `idle_<n>` | Anna | player idle > 3 s, n = 1..4 |
 | `miss_frost` `miss_nuan` | the other sister | sisters far apart (「姐姐，你在哪儿？」) |
 | `together_<n>` | either | reunion, n = 1..2 (「Yay! 我们在一起啦！」) |
-| `mem_<memoryId>` | narrator | memory fragment narration (≤ 15 s); memoryIds are those in levels.js |
+| `mem_<memoryId>` | Anna | memory fragment narration (≤ 15 s); memoryIds are those in levels.js |
 | `me_frost` `me_nuan` | that sister | 「认识她们」 self-introduction |
-| `win` `end` | narrator | ending pages |
-| `ui_<name>` | narrator | hover name. names: `start` `continue` `next` `replay` `back` `words` `stickers` `wardrobe` `settings` `hint` `fullscreen` `swap` `solo` `duo` `sound` `quiz_skip` `meet` `rooms` `room_<lv>` |
+| `win` `end` | Anna | ending pages |
+| `ui_<name>` | Anna | hover name. names: `start` `continue` `next` `replay` `back` `words` `stickers` `wardrobe` `settings` `hint` `fullscreen` `swap` `solo` `duo` `sound` `quiz_skip` `meet` `rooms` `room_<lv>` |
 | `cheer_<n>` | either | short fixed phrases: Yay / Good job / Let's go / Wow, n = 1..4 |
 
-Line shape (PLAN A4): `{ "who": "narrator" | "frost" | "nuan" | "companion", "say": [ segments ], "art"?: "<image>" }`. `"companion"` means "whichever sister is NOT the player" — narration.py renders it twice: `vo_<key>__frost.mp3` and `vo_<key>__nuan.mp3`; the view picks the right file. Segment: string (zh voice of that speaker) | `{"w": wordId}` (en voice, the word's `en`) | `{"en": "Yay!"}` (fixed phrase; skipped/replaced by its zh gloss `{"en":"Yay!","zh":"耶！"}` when setting english === 'words').
+Current lines use `who: "frost" | "nuan"`; every English-bearing lesson/phrase belongs to Anna, Elsa speaks Chinese only. `narrator` is only a deprecated Anna voice alias and is not used by active lines. The parser retains legacy `companion` support and its two generated file variants, but runtime always selects Anna for such a line. Segment: string (zh voice of that speaker) | `{"w": wordId}` (en voice, the word's `en`) | `{"en": "Yay!"}` (fixed phrase; skipped/replaced by its zh gloss when setting english === 'words').
 
 `words.json`: `[{ "id", "en", "zh", "icon": "word_<id>", "room": "<lv>" | null }]`. Write all ~38 words from PLAN A5 now (rooms 5–10 included, ids from the table; `room` uses these future ids: `slope` `spring` `bunny` `floe` `music` `garden` for rooms 3,5,6,7,8,10 — and `hall` `lake` `tower` `ballroom` for 1,2,4,9).
 
@@ -93,8 +95,8 @@ Line shape (PLAN A4): `{ "who": "narrator" | "frost" | "nuan" | "companion", "sa
 ```
 voice.line(key, opts?) → Promise   play vo_<key>.mp3 (or __frost/__nuan for companion lines, by g.player);
                                    ducks music; opts {interrupt:true|false, priority}; resolves when finished or skipped;
-                                   counts every {"w"} segment via noteWordHeard; fires subtitle callback
-voice.word(wordId) → Promise       play word_<id>.mp3 (slow standard pronunciation); counts as heard
+                                   counts words only after audible completion; resolves true then, otherwise false; fires subtitle callback
+voice.word(wordId) → Promise       Anna's word_<id>.mp3 (slow standard pronunciation); same voice as mixed lessons
 voice.ui(name)                     hover name (ui_<name>), debounced 400 ms, never queues more than one
 voice.stop()
 voice.busy → boolean

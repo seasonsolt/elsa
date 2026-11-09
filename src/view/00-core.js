@@ -13,7 +13,7 @@
     subtitles: v => typeof v === 'boolean',
     english: v => v === 'words' || v === 'words+phrases',
     mode: v => v === 'solo' || v === 'duo',
-    player: v => v === 'nuan' || v === 'frost',
+    player: v => v === 'frost',
     sound: v => typeof v === 'boolean',
   };
   function lsRead(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
@@ -23,7 +23,7 @@
   function defaultSave() {
     return {
       v: 2,
-      settings: { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'nuan', sound: true },
+      settings: { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true },
       rooms: {},
       words: {},
       stickers: [],

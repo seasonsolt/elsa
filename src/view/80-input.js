@@ -1,4 +1,4 @@
-  /* Input (CONTRACT §5). Solo: ← → ↑ Space, Tab swaps the sisters. Duo keeps the two-person layout.
+  /* Input (CONTRACT §5). Solo: ← → ↑ Space controls Elsa; Anna assists. Duo keeps the two-person layout.
      Everything the keys do goes through g.input / g.press / g.swap; held keys are re-applied every frame by syncInput(). */
   const SOLO_KEYS = { ArrowLeft: 'l', ArrowRight: 'r', ArrowDown: 'd', ArrowUp: 'jump', Space: 'act', Enter: 'act', NumpadEnter: 'act' };
   const DUO_KEYS = {
@@ -22,7 +22,7 @@
   /* True while the room is live and nothing is covering it. */
   function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen() && !uxState.modal; }
   /* The sister the arrow keys steer right now. */
-  const steered = () => (game.mode === 'solo' ? game.player || 'nuan' : 'nuan');
+  const steered = () => (game.mode === 'solo' ? 'frost' : 'nuan');
 
   function clearInput() {
     heldKeys.clear();
@@ -33,7 +33,7 @@
   }
   addEventListener('blur', clearInput);
 
-  /* Gamepad (optional, cheap): d-pad or left stick walks, A / up jumps, X / B magic, Y swaps. */
+  /* Gamepad: d-pad or left stick walks, A / up jumps, X / B magic; Elsa remains the solo lead. */
   const padState = { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false };
   function pollGamepad() {
     let p = null;
@@ -46,7 +46,7 @@
     padState.d = ay > .75 || b(13) ? 1 : 0;
     padState.jump = b(0) || b(12) || ay < -.75;
     padState.act = b(2) || b(1) || b(7);
-    padState.swap = b(3) || b(4);
+    padState.swap = false;
     padState.any = padState.jump || padState.act || padState.swap || b(9);
     if (padState.any && !was.any) wakeOnce();
     if (storyIsOpen()) { if (padState.any && !was.any) advanceStoryPage(); return; }
@@ -72,7 +72,7 @@
     }
     const k = c => heldKeys.has(c);
     if (game.mode === 'solo') {
-      const inp = game.input[game.player || 'nuan'];
+      const inp = game.input.frost;
       inp.l = k('ArrowLeft') || padState.l || touchHeld.l ? 1 : 0;
       inp.r = k('ArrowRight') || padState.r || touchHeld.r ? 1 : 0;
       inp.d = k('ArrowDown') || padState.d ? 1 : 0;
@@ -86,20 +86,17 @@
       ni.d = k('ArrowDown') || padState.d ? 1 : 0;
     }
     /* the tutorial only counts keys the player pressed, not what the companion is doing */
-    const mine = game.mode === 'solo' ? [game.input[game.player || 'nuan']] : [game.input.frost, game.input.nuan];
+    const mine = game.mode === 'solo' ? [game.input[game.player || 'frost']] : [game.input.frost, game.input.nuan];
     if (mine.some(i => i.l || i.r)) inputSeen.move = true;
   }
 
-  /* ---- swap (solo) ---- */
+  /* Legacy hook: the solo story keeps Elsa as lead rather than swapping roles. */
   function swapPlayer() {
-    if (!canPlay() || game.mode !== 'solo') return false;
-    if (typeof game.swap === 'function') game.swap();   // emits {type:'swap', player}
-    else { game.player = game.player === 'nuan' ? 'frost' : 'nuan'; game.events.push({ type: 'swap', player: game.player }); }
-    return true;
+    return false;
   }
   /* Called for the 'swap' event, wherever the swap came from (Tab, the avatar in the hud, the gamepad). */
   function onPlayerSwapped(e) {
-    if (e && (e.player === 'nuan' || e.player === 'frost')) game.player = e.player;
+    if (game.mode === 'solo') game.player = 'frost';
     setSetting('player', game.player);
     for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
     inputSeen.swap = true;
@@ -129,7 +126,6 @@
     }
     if (e.code === 'KeyM' && !e.repeat) { setSetting('sound', !setting('sound')); return; }
     if (e.code === 'KeyR' && !e.repeat && game.state === 'play') { restartRoom(); return; }
-    if (e.code === 'Tab') { e.preventDefault(); if (!e.repeat) { game.kbd.tab = 1; swapPlayer(); } return; }
     const solo = game.mode === 'solo';
     const map = solo ? SOLO_KEYS : DUO_KEYS;
     const m = map[e.code];

@@ -31,7 +31,7 @@ const qa = String.raw`
   qaPanel.querySelector('#qa-rooms').onclick = () => {
     const i = +qaSelect.value;
     voice.stop(); uxState.modal = null; $('modal').textContent = ''; story = null; uxClearOverlay();
-    game.mode = 'solo'; game.player = 'nuan'; game.start(i); companion.reset(); handleEvents(); playFlow.phase = 'play';
+    game.mode = 'solo'; game.player = 'frost'; game.start(i); companion.reset(); handleEvents(); playFlow.phase = 'play';
     save.flags.tutorial = true; playFlow.tutoring = false;
     qaOutput.textContent = 'Room ' + LEVELS[i].id + ' (normal keyboard input)';
   };
@@ -40,6 +40,9 @@ const qa = String.raw`
     const check = (ok, message) => { rows.push({ ok: !!ok, message }); qaOutput.textContent = JSON.stringify(rows, null, 2); if (!ok) throw new Error(message); };
     try {
       setSetting('sound', true); wakeAudio();
+      check(defaultSave().settings.player === 'frost', 'Elsa is the default solo lead');
+      check(save.settings.player === 'frost', 'Saved solo selection uses Elsa');
+      check(Object.values(LINES.lines).every(l => ['frost', 'nuan'].includes(l.who) && (!l.say.some(s => typeof s === 'object' && (s.w || s.en)) || l.who === 'nuan')), 'Anna owns all English learning; no active third narrator');
       // Silence the accelerated test rendering without changing the production sound setting.
       if (bus) bus.master.gain.value = 0;
       save.flags.prologue = save.flags.tutorial = save.flags.fullscreenTip = true;

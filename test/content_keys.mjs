@@ -28,7 +28,7 @@ const PICK_WORDS = { h: 'heart', '*': 'snowflake', o: 'ball' };   // 50-talk KIN
 const FAMILIES = [
   { name: 'prologue', src: /'p1'[\s\S]*'p2'[\s\S]*'p3'/, keys: () => ['p1', 'p2', 'p3'] },
   { name: 'ending', src: /\['win', 'end'\]/, keys: () => ['win', 'end'] },
-  { name: 'tutorial', src: /tutor_move[\s\S]*tutor_jump[\s\S]*tutor_magic[\s\S]*tutor_swap/, keys: () => ['tutor_move', 'tutor_jump', 'tutor_magic', 'tutor_swap'] },
+  { name: 'tutorial', src: /tutor_move[\s\S]*tutor_jump[\s\S]*tutor_magic/, keys: () => ['tutor_move', 'tutor_jump', 'tutor_magic'] },
   { name: 'fullscreen tip', src: /tutor_fullscreen/, keys: () => ['tutor_fullscreen'] },
   { name: 'chapter card', src: /'ch_' \+ lv\.id/, keys: c => c.levels.map(l => `ch_${l.id}`) },
   { name: 'clear page', src: /'clear_' \+ lv\.id/, keys: c => c.levels.map(l => `clear_${l.id}`) },

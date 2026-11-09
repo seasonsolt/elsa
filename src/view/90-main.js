@@ -166,7 +166,6 @@
       if (!await ask('tutor_move', 'r', () => inputSeen.move, 10000)) return;
       if (!await ask('tutor_jump', 'up', () => inputSeen.jump, 10000)) return;
       if (!await ask('tutor_magic', 'space', () => inputSeen.magic, 10000)) return;
-      if (game.mode === 'solo' && !await ask('tutor_swap', 'tab', () => inputSeen.swap, 4000)) return;
       save.flags.tutorial = true; saveWrite();
     } finally {
       clearInterval(blinker);

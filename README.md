@@ -2,6 +2,8 @@
 
 A storybook platformer for young children about Elsa and Anna, 艾莎 (frost) and 安娜 (nuan), in an ice castle. Chinese voice guidance, English core-word learning, desktop first.
 
+Elsa is the solo lead (← → ↑ Space); Anna follows and helps. Existing saves keep progress and outfits while switching the lead to Elsa. Anna voices all English learning, word cards, quizzes, hints and menus; stories and memories are her conversations with Elsa. Elsa retains Chinese dialogue. There is no active third-person narrator or solo character-swap control.
+
 - Play: open `ice-castle.html` from a local web server (`python3 -m http.server`), assets load from `game/`.
 - Build: `cd art && python3 slice.py && cp game/* ../game/ && python3 build_page.py`.
 - Development plan: [PLAN.md](PLAN.md).

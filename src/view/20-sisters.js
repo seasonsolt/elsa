@@ -3,7 +3,7 @@
   const RUN = ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'];
   const FRAMES = ['idle', 'blink', ...RUN, 'jump', 'fall', 'cast', 'cheer'];
   const view = {};
-  for (const id of ['frost', 'nuan']) {
+  for (const id of ['nuan', 'frost']) {
     const shadow = el('ellipse', { rx: 22, ry: 5, fill: '#10184a', opacity: .34 }, $('shadows'));
     const root = el('g', {}, $('sisters'));
     const frames = {};
@@ -23,7 +23,7 @@
   const reunited = () => typeof heart !== 'undefined' && heart && heart.togetherT > .5;
   const celebrating = () => game.state === 'clear' || game.state === 'win';
   /* The sister the player steers in solo mode, null in duo. */
-  const playerId = () => (game.mode === 'solo' ? game.player || 'nuan' : null);
+  const playerId = () => (game.mode === 'solo' ? 'frost' : null);
 
   function pickFrame(id, s, v, now) {
     if (celebrating()) return 'cheer';

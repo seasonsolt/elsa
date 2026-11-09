@@ -11,7 +11,7 @@ Output  <out>/vo_<key>.mp3                 narrator / frost / nuan / fixed-voice
         <out>/vo_<key>__nuan.mp3
         <out>/vo_<key>[__who]__w.mp3       only for lines with {"en": ...} segments: the "english = words only" variant,
                                            where each {"en","zh"} phrase becomes its zh gloss (skipped without a gloss)
-        <out>/word_<id>.mp3                one word, narrator en voice, slow
+        <out>/word_<id>.mp3                one word, Anna's en voice, slow
         <out>/subs.json                    subtitle text (English marked) plus the word table, see below
 <out> defaults to ./game (relative to the current directory, like the old script).
 
@@ -58,7 +58,8 @@ LOUDNESS = 'I=-18:TP=-2:LRA=11'
 SPEAKERS = ('narrator', 'frost', 'nuan')
 # Used when lines.json carries no "voices" block; mirrors PLAN A4.
 DEFAULT_VOICES = {
-    'narrator': {'zh': ['zh-CN-XiaoxiaoNeural', '-8%', '+0Hz'], 'en': ['en-US-JennyNeural', '-20%', '+0Hz']},
+    # Compatibility alias for old content; current lessons are spoken by Anna.
+    'narrator': {'zh': ['zh-CN-XiaoyiNeural', '+4%', '+8Hz'], 'en': ['en-US-AriaNeural', '-10%', '+4Hz']},
     'frost': {'zh': ['zh-CN-XiaoxiaoNeural', '-6%', '-4Hz'], 'en': ['en-US-JennyNeural', '-15%', '-4Hz']},
     'nuan': {'zh': ['zh-CN-XiaoyiNeural', '+4%', '+8Hz'], 'en': ['en-US-AriaNeural', '-10%', '+4Hz']},
 }
@@ -211,7 +212,7 @@ def plan(content, only, redo, out_dir, sample):
                 continue
             fname = f'word_{wid}.mp3'
             if redo or only is not None or not os.path.exists(os.path.join(out_dir, fname)):
-                jobs.append(Job(fname, [{'text': w['en'], 'lang': 'en', 'en': True, 'voice': content.voice('narrator', 'en')}], f'word_{wid}'))
+                jobs.append(Job(fname, [{'text': w['en'], 'lang': 'en', 'en': True, 'voice': content.voice('nuan', 'en')}], f'word_{wid}'))
     return jobs
 
 
@@ -236,7 +237,7 @@ def sample_items(content, n):
         fname, sp, wo = content.outputs(key)[0]
         items.append((fname, content.segments(key, sp, wo), key))
     for wid in list(content.words)[:min(2, n)]:
-        items.append((f'word_{wid}.mp3', [{'text': content.words[wid]['en'], 'lang': 'en', 'en': True, 'voice': content.voice('narrator', 'en')}], f'word_{wid}'))
+        items.append((f'word_{wid}.mp3', [{'text': content.words[wid]['en'], 'lang': 'en', 'en': True, 'voice': content.voice('nuan', 'en')}], f'word_{wid}'))
     return items
 
 

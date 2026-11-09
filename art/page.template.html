@@ -113,6 +113,8 @@ body:not(.subs) #info { display: none; }
 body[data-mode="solo"] .keys.frost, body:not([data-mode]) .keys.frost { display: none; }
 body[data-mode="duo"] .keys.solo { display: none; }
 body[data-mode="solo"] .keys.nuan, body:not([data-mode]) .keys.nuan { display: none; }
+body[data-mode="solo"] #tSwitch { display: none; }
+body[data-mode="solo"] #touch { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--paper); }
 
 /* ---- Touch pad: symbols only ---- */
@@ -175,7 +177,7 @@ body.touch .keys { display: none; }
 
 <div id="info">
   <div id="hint"></div>
-  <div class="keys solo"><b>单人模式</b><kbd>←</kbd> <kbd>→</kbd> 走 <kbd>↑</kbd> 跳 <kbd>空格</kbd> 魔法 <kbd>Tab</kbd> 换人</div>
+  <div class="keys solo"><b>艾莎探险，安娜陪伴</b><kbd>←</kbd> <kbd>→</kbd> 走 <kbd>↑</kbd> 跳 <kbd>空格</kbd> 魔法</div>
   <div class="keys frost"><b>艾莎：造冰块、冻住水面</b><kbd>A</kbd> <kbd>D</kbd> 走 <kbd>W</kbd> 跳 <kbd>S</kbd> 下 <kbd>F</kbd> 魔法</div>
   <div class="keys nuan"><b>安娜：二段跳、融化粉冰墙</b><kbd>←</kbd> <kbd>→</kbd> 走 <kbd>↑</kbd> 跳 <kbd>↓</kbd> 下 <kbd>Enter</kbd> 魔法</div>
 </div>

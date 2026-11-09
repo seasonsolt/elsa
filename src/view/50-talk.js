@@ -159,7 +159,7 @@
     }
     /* The child stands still: after 3 s a gentle nudge from the companion, at most 3 in a row, 10 s apart. Solo only. */
     function stepIdle(g, dt, t) {
-      const s = g.sisters[g.player || 'nuan'], inp = (g.input && g.input[g.player || 'nuan']) || {};
+      const s = g.sisters[g.player || 'frost'], inp = (g.input && g.input[g.player || 'frost']) || {};
       if (!s) return;
       const sig = [Math.round(s.x), Math.round(s.y), g.progress, inp.l ? 1 : 0, inp.r ? 1 : 0].join();
       if (sig !== room.sig) { room.sig = sig; room.idleT = 0; room.idleN = 0; return; }
@@ -190,7 +190,7 @@
       // far apart for a few seconds: the companion calls out once (key = the sister being called, i.e. the player)
       if (g.mode === 'solo' && heart.mood > .55) {
         room.farT += dt;
-        if (room.farT > 3.5 && !room.farSpoken) { room.farSpoken = true; say('miss_' + (g.player || 'nuan'), { tag: 'miss', maxWait: 1500 }); }
+        if (room.farT > 3.5 && !room.farSpoken) { room.farSpoken = true; say('miss_' + (g.player || 'frost'), { tag: 'miss', maxWait: 1500 }); }
         if (room.farT > 25) { room.farT = 0; room.farSpoken = false; }
       } else if (heart.mood < .2) { room.farT = 0; room.farSpoken = false; }
       const still = s => s.ground && Math.abs(s.vx) < 1 && !s.splash;

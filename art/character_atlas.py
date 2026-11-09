@@ -85,11 +85,11 @@ def import_atlas(sizes, game_dir=None):
         sizes[f'portrait_{who}'] = [312, 416]
     # The title previously contained the original sisters, so replace its figures too.
     cover = Image.open(game_dir / 'bg0.webp').convert('RGBA').resize((960, 520), Image.Resampling.LANCZOS)
-    for who, cx in [('frost', 270), ('nuan', 700)]:
+    for who, cx, target_h in [('frost', 330, 390), ('nuan', 700, 320)]:
         figure = frames[who]['idle'].copy()
-        scale = 365 / figure.height
-        figure = figure.resize((round(figure.width * scale), 365), Image.Resampling.LANCZOS)
-        cover.alpha_composite(figure, (round(cx - figure.width / 2), 155))
+        scale = target_h / figure.height
+        figure = figure.resize((round(figure.width * scale), target_h), Image.Resampling.LANCZOS)
+        cover.alpha_composite(figure, (round(cx - figure.width / 2), 520 - target_h))
     cover.convert('RGB').save(game_dir / 'key.webp', quality=90)
     meet = Image.new('RGBA', (256, 256))
     for who, x in [('frost', 0), ('nuan', 128)]:

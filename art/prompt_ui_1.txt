@@ -1,0 +1,22 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, square 1:1 at the highest available resolution, then copy the generated PNG to ./raw/ui_1.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the first attached reference image precisely. The second attached image is the costume sheet of the two original sisters: where an icon shows a sister, match her face, hair, skin tone and costume from it (the girl with the silver-lilac bob and blue fur-trimmed coat is Frost; the girl with two curly black puff buns and the rust-red dress with yellow shawl is Nuan).
+
+Subject: a sheet of 16 game interface icons on a perfectly flat solid #FF00FF magenta background (pure magenta everywhere between and around the icons, no background shadows, no gradients, no vignette, no paper texture on the background). The icons are arranged in a strict 4 by 4 grid (4 columns, 4 rows, 16 equal cells) with wide gaps, no icon touching another icon or the edge of the image, and nothing crossing from one cell to the next. Every icon is one big, chunky, rounded, friendly object for a 6-year-old child, hand-painted in the same gouache storybook style with soft ink outlines, centred in its cell and filling about 75 percent of the cell, no ground shadow. Do NOT use pink, magenta or purple-pink colours inside any icon. Absolutely no text, no letters, no digits, no labels anywhere. The words in parentheses are bookkeeping ids only and must never appear in the image. Cells are listed row by row, left to right:
+Row 1, column 1 (ui_book): a closed storybook with a deep blue cover, golden corners and a golden snowflake emblem on the front, seen slightly from the front-left.
+Row 1, column 2 (ui_bulb): a glowing golden light bulb with a warm yellow glow, a brass screw base and three tiny sparkles.
+Row 1, column 3 (ui_gear): a brass cogwheel with eight teeth and a small ice-blue snowflake in its round centre.
+Row 1, column 4 (ui_fullscreen): four ice-blue corner brackets pointing outwards to the four corners, like an expand-to-full-screen symbol, with a little frost sparkle in the middle, no frame around them.
+Row 2, column 1 (ui_play): a big round glowing golden-amber button with a bold white triangle pointing right in the middle (a play button), with a soft glow.
+Row 2, column 2 (ui_next): a round ice-blue button with a bold golden arrow pointing right in the middle.
+Row 2, column 3 (ui_replay): a round ice-blue button with a bold golden circular arrow going around once (a replay symbol) in the middle.
+Row 2, column 4 (ui_back): a round ice-blue button with a bold golden arrow pointing left in the middle.
+Row 3, column 1 (ui_ear): a big friendly cartoon ear in warm brown skin tone with a gentle spiral inside and three curved sound waves coming towards it in ice blue.
+Row 3, column 2 (ui_mouth): a big smiling open mouth with red lips, showing a little tongue, saying a word, with three small curved sound waves coming out of it in ice blue.
+Row 3, column 3 (ui_sticker): a round golden star sticker with a white border and one corner peeling up to show the paper underneath, with tiny sparkles.
+Row 3, column 4 (ui_wardrobe): a little blue princess dress with white snowflake embroidery and a soft light-blue sash, hanging on a wooden hanger, with two tiny sparkles.
+Row 4, column 1 (ui_solo): a round ice-blue medallion containing the head and shoulders of Nuan alone, smiling, matched to the costume sheet.
+Row 4, column 2 (ui_duo): a round ice-blue medallion containing the heads and shoulders of both sisters side by side, Frost on the left and Nuan on the right, both smiling, matched to the costume sheet.
+Row 4, column 3 (ui_meet): an ornate oval golden picture frame with a small bow on top, containing a portrait of Frost and Nuan cheek to cheek, smiling, matched to the costume sheet.
+Row 4, column 4 (hat_snowman): a black silk top hat with a wide red band, seen from the front, slightly tilted.
+Keep every icon fully inside its own cell. No text or labels.

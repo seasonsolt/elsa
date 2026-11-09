@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/sticker_board.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the palette, brushwork and paper texture of the attached reference precisely.
+
+Subject: the background page of a children's sticker book: a big, soft, calm castle scene seen straight-on, painted lightly and low in contrast so that many small colourful stickers can be placed on top of it. A tall pale moonlit castle hall wall of blue stone and ice with a row of large arched windows showing a starry indigo night sky and a few snowy rooftops, polished frosty floor at the bottom, soft gold lantern glows at the edges, delicate snowflake carvings. Most of the picture is open, light and uncluttered, mid-tone periwinkle and ice blue (lighter than the reference), with decorative detail only near the edges and in the arches. No people, no creatures, no text.

@@ -1,0 +1,12 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, square 1:1 at the highest available resolution, then copy the generated PNG to ./raw/bunny.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the attached reference image(s) precisely. The bunny is an original, very cute little SNOW BUNNY for a 6-year-old: round, plump, soft white fur with pale-blue shading, long upright ears with soft blue-lilac insides, a tiny rosy-grey nose, big shiny dark eyes, a round fluffy tail, a small cosy red knitted scarf, no clothes otherwise. Always the same bunny, same proportions, same size, always seen from the SIDE facing RIGHT.
+
+Subject: six poses of the same snow bunny on a perfectly flat solid #FF00FF magenta background (pure magenta everywhere between and around the pieces, no background shadows, no ground shadows, no gradients, no vignette, no paper texture on the background). Do NOT use pink, magenta or purple-pink colours anywhere inside the pieces. Absolutely no text, no letters, no digits, no numerals anywhere. Hand-painted gouache storybook style with soft ink outlines. The poses are in a strict 3 columns by 2 rows grid (6 equal cells) with wide gaps, no pose touching another or the image edge, nothing crossing between cells. Cells row by row, left to right (words in parentheses are bookkeeping ids and must never appear in the image):
+Row 1, column 1 (bunny_idle): sitting upright on its haunches, front paws together, ears up, looking right with a gentle smile and a tiny wiggle of the nose.
+Row 1, column 2 (bunny_hop1): crouching low, hind legs folded under it, ears laid back a little, about to jump.
+Row 1, column 3 (bunny_hop2): launching: body stretched long and slanted upward, hind legs just leaving the ground, front paws forward, ears flowing back.
+Row 2, column 1 (bunny_hop3): at the top of the hop: body in the air, legs tucked in, ears floating up, happy open eyes.
+Row 2, column 2 (bunny_hop4): landing: front paws touching down, hind legs swinging down and forward, ears bouncing forward.
+Row 2, column 3 (bunny_home): curled up asleep, a small round ball of fur with tucked paws and ears folded down, tail visible, eyes closed with a peaceful smile, a tiny sleeping sparkle above it.
+Each pose is drawn at the same scale (the sitting bunny is about as tall as the hop poses are long). No text or labels.

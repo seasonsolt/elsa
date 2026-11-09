@@ -1,0 +1,4 @@
+{
+ "ui_1": {"grid": [4, 4], "cells": ["ui_book", "ui_bulb", "ui_gear", "ui_fullscreen", "ui_play", "ui_next", "ui_replay", "ui_back", "ui_ear", "ui_mouth", "ui_sticker", "ui_wardrobe", "ui_solo", "ui_duo", "ui_meet", "hat_snowman"]},
+ "ui_2": {"bands": ["ui_keys (4 unlit keys: up, left, right, space)", "lit keys left to right: ui_key_left ui_key_right ui_key_up ui_key_space", "fish_1 fish_2"]}
+}

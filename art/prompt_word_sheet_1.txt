@@ -1,0 +1,22 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, square 1:1 at the highest available resolution, then copy the generated PNG to ./raw/word_sheet_1.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the attached reference image(s) precisely. Each icon is a single, big, rounded, friendly, instantly readable object for a 6-year-old child, painted in the same hand-painted gouache storybook style, with soft ink outlines, centred in its cell and filling about 75 percent of the cell.
+
+Subject: a sheet of 16 game word icons on a perfectly flat solid #FF00FF magenta background (pure magenta everywhere between and around the icons, no background shadows, no gradients, no vignette, no paper texture on the background). The icons are arranged in a strict 4 by 4 grid (4 columns, 4 rows, 16 equal cells) with wide gaps, no icon touching another icon or the edge of the image, and nothing crossing from one cell to the next. Each icon is one object (or one small group where stated), drawn alone with no ground shadow and no scene. Do NOT use pink, magenta or purple-pink colours inside any icon. Absolutely no text, no letters, no digits, no numerals, no labels, no captions anywhere. The words in parentheses are bookkeeping ids only and must never appear in the image. Cells are listed row by row, left to right:
+Row 1, column 1 (heart): a big faceted glowing ruby-red heart gem.
+Row 1, column 2 (star): a big golden five-pointed star with a soft warm glow and a few tiny sparkles.
+Row 1, column 3 (door): a closed pointed-arch castle door of blue painted wood with a pale ice frame, brass bands and a round brass ring handle.
+Row 1, column 4 (water): one big round blue water drop with two gentle ripple rings underneath it.
+Row 2, column 1 (ice): a sparkling clear ice-blue ice cube with a bright white highlight and tiny glints.
+Row 2, column 2 (fish): a small friendly golden-orange fish swimming, seen from the side, with flowing pale-blue fins and a happy eye.
+Row 2, column 3 (slide): a small curved ice slide with a little ladder and a snow-white top rail, standing on a small mound of snow.
+Row 2, column 4 (fast): one sparkling ice-blue snowflake rushing sideways to the right, with three long white speed streaks trailing behind it.
+Row 3, column 1 (down): one big chunky ice-blue arrow pointing straight down, with two small snowflakes falling above it.
+Row 3, column 2 (push): two red knitted mittens pressed flat against the side of a big round snowball, as if pushing it, with three small motion dashes beside the snowball.
+Row 3, column 3 (open): a small wooden treasure chest with its lid thrown wide open and warm golden light and sparkles rising out of it.
+Row 3, column 4 (gate): a brass-and-iron portcullis gate: a rectangular set of strong vertical bars with a brass frame, set in a small stone arch.
+Row 4, column 1 (jump): a bouncy snow mushroom: a round white cap with pale-blue spots on a stem shaped like a metal coil spring, with two curved motion arcs rising above it.
+Row 4, column 2 (alt_fast): an alternative picture for speed: a small wooden toboggan sled racing downhill to the right with long white speed streaks behind it and flying snow.
+Row 4, column 3 (alt_push): an alternative picture for pushing: one big round snowball with a flat wide arrow painted in ice blue next to it, pointing at the snowball, and two small motion dashes.
+Row 4, column 4 (alt_open): an alternative picture for open: a pointed-arch blue castle door swung wide open, with warm golden light pouring out.
+Keep every icon fully inside its own cell, large, clear and uncluttered. No text or labels.

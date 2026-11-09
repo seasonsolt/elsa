@@ -3,7 +3,7 @@
 <title>霜霜和暖暖的冰堡</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Fredoka:wght@500;600&display=swap">
 <style>
 /* Layout: a painted picture-book page fills the screen; a quiet caption band sits under it. */
 :root {
@@ -16,6 +16,7 @@
   --ember: #ffbd7e;
   --muted: #a9b6e2;
   --display: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --latin: "Fredoka", ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
   --body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   color-scheme: dark;
 }
@@ -23,33 +24,29 @@ html, body { height: 100%; }
 [hidden] { display: none !important; }
 body {
   margin: 0;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--night);
   color: var(--paper);
   font-family: var(--body);
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 12px;
   box-sizing: border-box;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   overscroll-behavior: none;
 }
+/* The stage is as big as the window allows (960:520), never scrolls. Parent subtitles reserve a band under it. */
 #stage {
   display: block;
-  width: min(100%, calc((100dvh - 132px) * 1.846));
+  width: min(100vw, calc(100dvh * 960 / 520));
   height: auto;
-  border-radius: 12px;
   background: #2a3a86;
   touch-action: none;
   user-select: none; -webkit-user-select: none;
 }
+body.subs #stage { width: min(100vw, calc((100dvh - 84px) * 960 / 520)); }
+body.touch #stage { width: min(100vw, calc((100dvh - 84px) * 960 / 520)); }
 #stage text { font-family: var(--display); }
+#stage .latin { font-family: var(--latin); font-weight: 600; }
 .btn { cursor: pointer; outline: none; }
-.btn rect { transition: fill .12s; }
-.btn:hover rect, .btn:focus-visible rect { fill: #5a6fca; }
-.btn:focus-visible rect { stroke: var(--gold); stroke-width: 3; }
-.primary rect { fill: #ffd27a; }
-.primary text { fill: #4a2c05 !important; }
-.primary:hover rect, .primary:focus-visible rect { fill: #ffe5ad; }
 .page { animation: pageIn .45s ease-out both; }
 @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
 .gateArt { transition: transform .35s ease; }
@@ -59,24 +56,70 @@ body {
 @keyframes shimmer { from { opacity: .82; } to { opacity: 1; } }
 .flake { animation: fall linear infinite; }
 @keyframes fall { from { transform: translate(0, -30px); } to { transform: translate(38px, 560px); } }
+
+/* ---- Picture buttons (60-story.js / 70-ui.js build them; position lives on an outer <g>, scale on .ux-btn) ---- */
+.ux-btn, .ux-card, .ux-tile { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: transform .14s ease-out; -webkit-tap-highlight-color: transparent; }
+.ux-btn:hover, .ux-btn:focus-visible, .ux-tile:hover, .ux-tile:focus-visible { transform: scale(1.1); }
+.ux-card:hover, .ux-card:focus-visible { animation: uxWig .6s ease-in-out; }
+.ux-btn:active, .ux-tile:active { transform: scale(.95); }
+.ux-btn:focus-visible .ux-plate, .ux-tile:focus-visible .ux-frame { stroke: var(--gold); stroke-width: 4; }
+.ux-btn.dim { opacity: .5; }
+.ux-pulse { animation: uxPulse 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes uxPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+.ux-pop { opacity: 0; transform: scale(.4); transform-box: fill-box; transform-origin: center; }
+.ux-pop.show { animation: uxPop .55s cubic-bezier(.3, 1.5, .5, 1) forwards; }
+@keyframes uxPop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+.ux-wig { animation: uxWig .5s ease-in-out; transform-box: fill-box; transform-origin: center; }
+@keyframes uxWig { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-5deg) scale(1.05); } 75% { transform: rotate(5deg) scale(1.05); } }
+.ux-shake { animation: uxShake .4s ease-in-out; transform-box: fill-box; transform-origin: center; }
+@keyframes uxShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-9px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
+.ux-glow { animation: uxGlow 1s ease-in-out infinite alternate; }
+@keyframes uxGlow { from { opacity: .25; } to { opacity: 1; } }
+.ux-bob { animation: uxBob .5s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center bottom; }
+@keyframes uxBob { from { transform: translateY(0) scale(1); } to { transform: translateY(-8px) scale(1.03); } }
+.ux-bounce { animation: uxBounce .9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes uxBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.ux-star { transition: transform .7s cubic-bezier(.3, 1.2, .4, 1); }
+.ux-ring { transform: rotate(-90deg); transform-origin: center; transform-box: fill-box; stroke-dashoffset: var(--len); transition: stroke-dashoffset .25s ease-out; }
+.ux-hold .ux-ring { stroke-dashoffset: 0; transition: stroke-dashoffset var(--hold, 2s) linear; }
+.ux-key { transition: transform .08s, opacity .2s; transform-box: fill-box; transform-origin: center; opacity: .8; }   /* slightly quiet until pressed or taught; it sits in the top bar after the counters */
+.ux-key.lit, .ux-key.teach { opacity: 1; }
+.ux-key.lit { transform: scale(1.14); }
+.ux-key.teach { animation: uxPulse .7s ease-in-out infinite; }
+.ux-conf { animation: uxConf 1.5s cubic-bezier(.15, .7, .35, 1) forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes uxConf { 0% { transform: translate(0, 0) rotate(0) scale(.4); opacity: 1; } 15% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); opacity: 0; } }
+.rw-item { cursor: grab; touch-action: none; }
+.rw-item:active { cursor: grabbing; }
+.rw-choice[data-state="lock"], .rw-choice[data-state="miss"] { cursor: not-allowed; }
+.ux-opt rect { transition: fill .12s; }
+.ux-opt:hover rect.ux-bg { fill: #5a6fca; }
+.ux-soft { transition: opacity .3s; }
 @media (prefers-reduced-motion: reduce) {
-  .flake, .flicker, .shimmer, .page { animation: none; }
+  .flake, .flicker, .shimmer, .page, .ux-pulse, .ux-bob, .ux-bounce, .ux-glow, .ux-key.teach { animation: none; }
   .flake { display: none; }
 }
+
+/* ---- Parent strip under the stage: hint line and key legends, only while parent subtitles are on ---- */
 #info {
-  width: min(100%, calc((100dvh - 132px) * 1.846));
-  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px 28px; align-items: start;
-  font-size: 13px; line-height: 1.55;
+  width: min(100vw, calc((100dvh - 84px) * 960 / 520));
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 28px; align-items: start;
+  font-size: 13px; line-height: 1.5; padding: 0 12px; box-sizing: border-box; max-height: 68px; overflow: hidden;
 }
+body:not(.subs) #info { display: none; }
 #hint { min-width: 0; color: var(--ice); text-wrap: pretty; }
 .keys { color: var(--muted); white-space: nowrap; }
 .keys b { font-weight: 600; display: block; }
 .keys.frost b { color: var(--ice); } .keys.nuan b { color: var(--ember); }
+body[data-mode="solo"] .keys.frost, body:not([data-mode]) .keys.frost { display: none; }
+body[data-mode="duo"] .keys.solo { display: none; }
+body[data-mode="solo"] .keys.nuan, body:not([data-mode]) .keys.nuan { display: none; }
 kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--paper); }
-#touch { display: none; width: min(100%, 720px); gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+/* ---- Touch pad: symbols only ---- */
+#touch { display: none; width: min(100%, 720px); gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0 12px; box-sizing: border-box; }
 #touch button {
-  appearance: none; border: 1px solid var(--line); border-radius: 12px; background: var(--ink); color: var(--paper);
-  font-family: var(--display); font-size: 17px; padding-block: 14px; touch-action: none;
+  appearance: none; border: 1px solid var(--line); border-radius: 14px; background: var(--ink); color: var(--paper);
+  font-family: var(--display); font-size: 26px; min-height: 64px; touch-action: none;
   user-select: none; -webkit-user-select: none;
 }
 #touch button.on { background: #5a6fca; }
@@ -84,11 +127,6 @@ kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radi
 body.touch #touch { display: grid; }
 body.touch #info { grid-template-columns: minmax(0, 1fr); }
 body.touch .keys { display: none; }
-@media (max-width: 640px) {
-  #info { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  #hint { grid-column: 1 / -1; }
-  .keys { white-space: normal; }
-}
 </style>
 
 <svg id="stage" viewBox="0 0 960 520" role="img" aria-label="霜霜和暖暖在冰堡里的游戏画面">
@@ -103,6 +141,12 @@ body.touch .keys { display: none; }
     <radialGradient id="chillEdge" cx=".5" cy=".5" r=".72"><stop offset=".48" stop-color="#e4f4ff" stop-opacity="0"/><stop offset=".82" stop-color="#d6ecff" stop-opacity=".38"/><stop offset="1" stop-color="#f2faff" stop-opacity=".9"/></radialGradient>
     <linearGradient id="storyTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1438" stop-opacity=".82"/><stop offset=".6" stop-color="#0d1438" stop-opacity=".55"/><stop offset="1" stop-color="#0d1438" stop-opacity="0"/></linearGradient>
     <linearGradient id="topFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#101a4c" stop-opacity=".78"/><stop offset=".5" stop-color="#101a4c" stop-opacity=".12"/><stop offset=".78" stop-color="#101a4c" stop-opacity="0"/><stop offset="1" stop-color="#101a4c" stop-opacity=".68"/></linearGradient>
+    <filter id="silhouette" x="-5%" y="-5%" width="110%" height="110%"><feColorMatrix type="matrix" values="0 0 0 0 .42  0 0 0 0 .46  0 0 0 0 .62  0 0 0 .92 0"/></filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0d1438" flood-opacity=".45"/></filter>
+    <linearGradient id="plateGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset="1" stop-color="#cfe0ff" stop-opacity=".9"/></linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9ae"/><stop offset="1" stop-color="#ffbf5c"/></linearGradient>
+    <linearGradient id="bottomFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1438" stop-opacity="0"/><stop offset="1" stop-color="#0d1438" stop-opacity=".78"/></linearGradient>
+    <clipPath id="avatarClip"><circle r="1" cx="0" cy="0"/></clipPath>
   </defs>
   <image id="bg" width="960" height="520" preserveAspectRatio="none"/>
   <g id="glows"></g>
@@ -121,14 +165,17 @@ body.touch .keys { display: none; }
   <g id="talk" aria-live="polite"></g>
   <g id="hud"></g>
   <g id="overlay"></g>
+  <g id="modal"></g>
+  <g id="subs" pointer-events="none"></g>
 </svg>
 
 <div id="touch">
-  <button id="tLeft">向左</button><button id="tRight">向右</button><button id="tJump">跳</button><button id="tAct">魔法</button><button id="tSwitch">换人</button>
+  <button id="tLeft" aria-label="left">&#9664;</button><button id="tRight" aria-label="right">&#9654;</button><button id="tJump" aria-label="jump">&#9650;</button><button id="tAct" aria-label="magic">&#10022;</button><button id="tSwitch" aria-label="swap">&#8646;</button>
 </div>
 
 <div id="info">
-  <div id="hint">两个人一起玩，或者一个人轮流操作两姐妹都可以。</div>
+  <div id="hint"></div>
+  <div class="keys solo"><b>单人模式</b><kbd>←</kbd> <kbd>→</kbd> 走 <kbd>↑</kbd> 跳 <kbd>空格</kbd> 魔法 <kbd>Tab</kbd> 换人</div>
   <div class="keys frost"><b>霜霜：造冰块、冻住水面</b><kbd>A</kbd> <kbd>D</kbd> 走 <kbd>W</kbd> 跳 <kbd>S</kbd> 下 <kbd>F</kbd> 魔法</div>
   <div class="keys nuan"><b>暖暖：二段跳、融化粉冰墙</b><kbd>←</kbd> <kbd>→</kbd> 走 <kbd>↑</kbd> 跳 <kbd>↓</kbd> 下 <kbd>Enter</kbd> 魔法</div>
 </div>
@@ -138,922 +185,5 @@ body.touch .keys { display: none; }
 </script>
 
 <script id="view">
-(() => {
-  const NS = 'http://www.w3.org/2000/svg';
-  const $ = id => document.getElementById(id);
-  const game = createGame();
-  const SIZES = /*SIZES*/;
-  const SRC = n => `game/${n}.webp`;
-
-  function el(tag, attrs, parent) {
-    const n = document.createElementNS(NS, tag);
-    for (const k in attrs) n.setAttribute(k, attrs[k]);
-    if (parent) parent.appendChild(n);
-    return n;
-  }
-  const img = (name, x, y, w, h, parent, extra) => el('image', Object.assign({ href: SRC(name), x, y, width: w, height: h, preserveAspectRatio: 'none' }, extra), parent);
-
-  /* Painted lights in each room's backdrop; they breathe so the picture feels lit. */
-  const ROOMS = [
-    { bg: 'bg0', glows: [[482, 418, 120, 'warm'], [482, 60, 130, 'warm'], [299, 192, 46, 'warm'], [664, 192, 46, 'warm'], [53, 250, 44, 'warm'], [907, 250, 44, 'warm']] },
-    { bg: 'bg1', glows: [[109, 120, 62, 'warm'], [478, 110, 62, 'warm'], [852, 120, 62, 'warm'], [560, 175, 90, 'cool']] },
-    { bg: 'bg2', glows: [[85, 300, 60, 'warm'], [650, 120, 52, 'warm'], [810, 250, 56, 'warm'], [260, 150, 80, 'cool']] },
-    { bg: 'bg3', glows: [[60, 240, 50, 'warm'], [900, 240, 50, 'warm'], [480, 40, 150, 'cool'], [250, 170, 70, 'warm'], [710, 170, 70, 'warm']] },
-  ];
-
-  /* The tale: three prologue pages, a chapter card before each room, and the thaw at the end. */
-  const PROLOGUE = [
-    { art: 'story_prologue', vo: 'p1', lines: ['小时候，霜霜的手心会飘出雪花。', '姐妹俩常在大厅里堆雪人，暖暖最喜欢那个戴红围巾的雪人。'] },
-    { art: 'story_winter', vo: 'p2', lines: ['长大后，霜霜怕伤到妹妹，总是关着房门。', '丰收节那天，她的寒气失控了：港口一夜冰封，夏天变成了永冬。', '霜霜一个人逃进了北山的冰堡。'] },
-    { art: 'key', vo: 'p3', lines: ['暖暖提着灯笼追上山：「姐姐，我们一起回家吧。」', '只有姐妹俩一起，才能穿过冰堡的四个房间，', '把小时候的雪人重新堆起来。'] },
-  ];
-  const CHAPTERS = [
-    ['暖暖在冰堡大厅找到了姐姐。', '「别靠近我，我控制不住。」「那我们就一起想办法。」'],
-    ['冰堡后面的湖只冻住了一半。', '霜霜第一次试着轻轻地用魔法，为妹妹冻出一条路。'],
-    ['塔楼的铁门很重，一个人打不开。', '一个踩住机关，另一个往前走——这次换霜霜相信妹妹。'],
-    ['舞厅里散落着三个大雪球，是小时候的回忆。', '把那个戴红围巾的雪人重新堆起来吧。'],
-  ];
-
-  const LINES = /*LINES*/;
-  const MEMS = [[8, 5], [1, 3], [18, 2], [19, 2]];   // the hidden memory in each room, as [column, row]
-  const PAR = [70, 80, 100, 90];                      // seconds for the 默契 star
-  const DIARY = [
-    ['霜霜的日记', '她没有躲开我。我造的冰块，她踩着就上去了。'],
-    ['暖暖的日记', '姐姐冻出的冰路一点都不滑，她一定很小心很小心。'],
-    ['霜霜的日记', '原来相信一个人，比控制冰雪还难，也比控制冰雪更暖。'],
-    ['暖暖的日记', '雪人回来了。姐姐的手，好像也没那么冷了。'],
-  ];
-  const PROFILE = [
-    { id: 'frost', name: '霜霜', tag: '12 岁 · 姐姐', color: '#cfe6ff', quote: '「如果我离她远一点，她就不会再受伤了吧。」', rows: [['性格', '安静、细心，对自己很严格'], ['魔法', '造冰块、冻住水面'], ['害怕', '伤到自己在乎的人'], ['心愿', '能放心地牵起妹妹的手'], ['秘密', '妹妹塞进门缝的每一张画，她都收在枕头底下']] },
-    { id: 'nuan', name: '暖暖', tag: '9 岁 · 妹妹', color: '#ffd9a8', quote: '「门总有一天会开的。我会一直敲下去。」', rows: [['性格', '热情、执着，有点冒失'], ['魔法', '灯笼能融化粉冰，还能连跳两下'], ['害怕', '再一次被关在门外'], ['心愿', '姐姐重新和她一起玩'], ['秘密', '她其实也怕冷，只是从来不说']] },
-  ];
-  /* Best stars per room survive reloads when the browser allows it. */
-  let best = [0, 0, 0, 0].map(() => [false, false, false]);
-  try { const b = JSON.parse(localStorage.getItem('icecastle.stars')); if (Array.isArray(b) && b.length === 4) best = b; } catch (e) {}
-  const saveBest = () => { try { localStorage.setItem('icecastle.stars', JSON.stringify(best)); } catch (e) {} };
-  const wrap = (text, n) => {
-    const out = [];
-    let line = '';
-    for (const ch of text) {
-      if (line.length >= n && !'，。、！？：；」…—'.includes(ch)) { out.push(line); line = ''; }
-      line += ch;
-    }
-    if (line) out.push(line);
-    return out;
-  };
-
-  function fillSnow(box, n, big) {
-    for (let i = 0; i < n; i++) {
-      el('circle', {
-        class: 'flake', cx: Math.random() * 1000 - 40, cy: 0,
-        r: big ? 2.4 + Math.random() * 2.6 : .9 + Math.random() * 1.5,
-        fill: '#fff', opacity: big ? .3 + Math.random() * .3 : .4 + Math.random() * .4,
-        style: `animation-duration:${(big ? 6 : 10) + Math.random() * 8}s;animation-delay:-${Math.random() * 16}s`,
-      }, box);
-    }
-  }
-  fillSnow($('snowBack'), 34, false);
-  fillSnow($('snowFront'), 12, true);
-
-  /* Sisters: every frame is an already-loaded image, shown one at a time. */
-  const SPRITE = 84 / 170;   // game units per stored pixel; the elder sister stands 84 tall
-  const RUN = ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'];
-  const FRAMES = ['idle', 'blink', ...RUN, 'jump', 'fall', 'cast', 'cheer'];
-  const view = {};
-  for (const id of ['frost', 'nuan']) {
-    const shadow = el('ellipse', { rx: 22, ry: 5, fill: '#10184a', opacity: .34 }, $('shadows'));
-    const root = el('g', {}, $('sisters'));
-    const frames = {};
-    for (const f of FRAMES) {
-      const [w, h, ax] = SIZES[`${id}_${f}`];   // ax: the head's x in the image, so every frame lines up on the head
-      frames[f] = img(`${id}_${f}`, -ax * SPRITE, 3 - h * SPRITE, w * SPRITE, h * SPRITE, root, { visibility: 'hidden' });
-    }
-    const mark = el('path', { d: 'M-8-104H8L0-93Z', fill: '#ffd27a', visibility: 'hidden' }, root);
-    view[id] = { root, shadow, frames, mark, shown: null, castT: 0, stride: 0, airT: 0, idleT: 0 };
-  }
-  const lanternGlow = el('circle', { r: 62, fill: 'url(#warm)' }, $('shadows'));
-  const frostGlow = el('circle', { r: 58, fill: 'url(#cool)', opacity: .7 }, $('shadows'));
-
-  /* Tiles */
-  const isSolid = ch => '#XIB'.includes(ch);
-  const cellAt = (c, r) => (r < 0 || r >= ROWS || c < 0 || c >= COLS) ? '#' : game.grid[r][c];
-
-  function runs(test) {
-    const out = [];
-    for (let r = 0; r < ROWS; r++) {
-      let start = -1;
-      for (let c = 0; c <= COLS; c++) {
-        const on = c < COLS && test(c, r);
-        if (on && start < 0) start = c;
-        if (!on && start >= 0) { out.push({ r, c: start, len: c - start }); start = -1; }
-      }
-    }
-    return out;
-  }
-
-  function drawTiles() {
-    const box = $('tiles');
-    box.textContent = '';
-    let wall = '', rim = '';
-    const under = [];
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      if (game.grid[r][c] !== '#') continue;
-      const x = c * T, y = r * T;
-      wall += `M${x} ${y}h${T}v${T}h-${T}z`;
-      if (r < ROWS - 1 && cellAt(c, r + 1) !== '#') { rim += `M${x} ${y + T}h${T}`; under.push([x, y + T]); }
-      if (cellAt(c + 1, r) !== '#') rim += `M${x + T} ${y}v${T}`;
-      if (cellAt(c - 1, r) !== '#') rim += `M${x} ${y}v${T}`;
-    }
-    el('path', { d: wall, fill: 'url(#brick)' }, box);
-    el('path', { d: wall, fill: '#26337f', opacity: .44 }, box);
-    el('path', { d: rim, stroke: '#1a2565', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: .62, fill: 'none' }, box);
-    for (const [x, y] of under) el('rect', { x, y, width: T, height: 16, fill: 'url(#under)' }, box);
-
-    for (const run of runs((c, r) => cellAt(c, r) === '~')) {
-      el('rect', { x: run.c * T, y: run.r * T + 7, width: run.len * T, height: T - 7, fill: '#23509f' }, box);
-      el('rect', { class: 'shimmer', x: run.c * T, y: run.r * T + 4, width: run.len * T, height: 30, fill: 'url(#water)' }, box);
-    }
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      const ch = game.grid[r][c], x = c * T, y = r * T;
-      if (ch === 'X') img('pinkice', x - 1, y - 1, T + 2, T + 2, box, { class: 'shimmer' });
-      else if (ch === 'I') img('frozen', x, y, T, T, box);
-      else if (ch === 'B') {
-        const b = game.blocks;
-        const next = b.length >= MAX_BLOCKS && b[0].c === c && b[0].r === r;
-        img('iceblock', x, y, T, T, box, { opacity: next ? .55 : 1 });
-      }
-    }
-    for (const run of runs((c, r) => cellAt(c, r) === '=')) {
-      const w = run.len * T, n = Math.max(1, Math.round(run.len / 3)), piece = w / n;
-      for (let i = 0; i < n; i++) img('shelf' + ((run.c + i) % 3), run.c * T + i * piece - 5, run.r * T - 6, piece + 10, Math.min(46, piece * .36 + 6), box);
-    }
-    for (const run of runs((c, r) => {
-      if (r === 0) return false;
-      const ch = cellAt(c, r), up = cellAt(c, r - 1);
-      return ch === '#' && !isSolid(up) && up !== '=' && up !== '~';
-    })) {
-      const w = run.len * T, n = Math.max(1, Math.round(run.len / 2.5)), piece = w / n;
-      for (let i = 0; i < n; i++) img('drift' + ((run.c + run.r + i) % 2), run.c * T + i * piece - 6, run.r * T - 9, piece + 12, 19, box);
-    }
-  }
-
-  function drawGoal() {
-    const box = $('goal');
-    box.textContent = '';
-    const d = game.door;
-    const g = el('g', { transform: `translate(${d.x} ${d.bottom + 3})` }, box);
-    if (game.goal === 'snowman') {
-      const got = game.items.filter(i => i.kind === 'o' && i.got).length;
-      el('ellipse', { rx: 40, ry: 7, fill: '#10184a', opacity: got ? .3 : .12 }, g);
-      if (got === 1) img('ball', -24, -48, 48, 48, g);
-      if (got === 2) img('two', -30, -86, 60, 86, g);
-      if (got >= 3) { el('circle', { cy: -60, r: 92, fill: 'url(#cool)' }, g); img('snowman', -46, -126, 92, 126, g); }
-      return;
-    }
-    if (game.doorOpen) el('circle', { cy: -56, r: 112, fill: 'url(#warm)', class: 'flicker' }, g);
-    if (game.doorOpen) img('door_open', -40, -119, 80, 122, g);
-    else img('door_closed', -39, -115, 78, 115, g);
-  }
-
-  function drawGates() {
-    const box = $('gates');
-    box.textContent = '';
-    const cols = new Map();
-    for (const gt of game.gates) cols.set(gt.c, [...(cols.get(gt.c) || []), gt.r]);
-    for (const [c, rows] of cols) {
-      const top = Math.min(...rows) * T, h = rows.length * T;
-      const a = el('g', { class: 'gateArt', style: `transform:translateY(${game.gatesOpen ? -h * .9 : 0}px)` }, box);
-      img('gate', c * T - 4, top, T + 8, h, a);
-    }
-    for (const p of game.plates) {
-      const x = p.c * T, bottom = (p.r + 1) * T + 2;
-      if (p.down) img('plate_down', x + 1, bottom - 11, T - 2, 11, box);
-      else img('plate_up', x + 1, bottom - 20, T - 2, 20, box);
-    }
-  }
-
-  function drawItems() {
-    const box = $('items');
-    box.textContent = '';
-    game.items.forEach((it, i) => {
-      const g = el('g', { 'data-i': i }, box);
-      if (it.kind === '*') { el('circle', { r: 28, fill: 'url(#cool)' }, g); img('flake', -15, -18, 30, 36, g); }
-      if (it.kind === 'h') { el('circle', { r: 28, fill: 'url(#rose)' }, g); img('heart', -16, -15, 32, 30, g); }
-      if (it.kind === 'o') { el('circle', { r: 28, fill: 'url(#cool)' }, g); img('ball', -17, -17, 34, 34, g); }
-    });
-  }
-
-  function drawGlows() {
-    const box = $('glows');
-    box.textContent = '';
-    ROOMS[game.index].glows.forEach(([x, y, r, fill], i) => {
-      el('circle', { class: 'flicker', cx: x, cy: y, r, fill: `url(#${fill})`, style: `animation-delay:-${i * .9}s` }, box);
-    });
-  }
-
-  /* HUD */
-  const hud = {};
-  function buildHud() {
-    $('hud').innerHTML = `
-      <rect x="8" y="6" width="944" height="32" rx="10" fill="#141c52" opacity=".76"/>
-      <text id="hName" x="22" y="28" fill="#f6f7ff" font-size="18"></text>
-      <image href="${SRC('flake')}" x="222" y="11" width="19" height="22"/>
-      <text id="hFlake" x="246" y="28" fill="#cfe6ff" font-size="17"></text>
-      <image href="${SRC('heart')}" x="312" y="12" width="21" height="20"/>
-      <text id="hHeart" x="338" y="28" fill="#ffb1c9" font-size="17"></text>
-      <g id="hBallWrap"><image href="${SRC('ball')}" x="402" y="12" width="20" height="20"/><text id="hBall" x="428" y="28" fill="#f6f7ff" font-size="17"></text></g>
-      <image href="${SRC('iceblock')}" x="492" y="12" width="20" height="20"/>
-      <text id="hBlocks" x="518" y="28" fill="#cfe6ff" font-size="17"></text>
-      <g class="btn" id="bRestart" role="button" tabindex="0" aria-label="重新开始这一关"><rect x="760" y="11" width="86" height="22" rx="6" fill="#3a4ca6"/><text x="803" y="28" text-anchor="middle" fill="#f6f7ff" font-size="15">重来（R）</text></g>
-      <g class="btn" id="bSound" role="button" tabindex="0" aria-label="开关声音"><rect x="854" y="11" width="88" height="22" rx="6" fill="#3a4ca6"/><text id="tSound" x="898" y="28" text-anchor="middle" fill="#f6f7ff" font-size="15">声音：开</text></g>`;
-    for (const k of ['hName', 'hFlake', 'hHeart', 'hBall', 'hBlocks', 'hBallWrap']) hud[k] = $(k);
-  }
-  function drawHud() {
-    const n = k => { const all = game.items.filter(i => i.kind === k); return [all.filter(i => i.got).length, all.length]; };
-    const [f0, f1] = n('*'), [h0, h1] = n('h'), [b0, b1] = n('o');
-    hud.hName.textContent = `第 ${game.index + 1} 间：${LEVELS[game.index].name}`;
-    hud.hFlake.textContent = `${f0}/${f1}`;
-    hud.hHeart.textContent = `${h0}/${h1}`;
-    hud.hBallWrap.setAttribute('visibility', b1 ? 'visible' : 'hidden');
-    hud.hBall.textContent = `${b0}/${b1}`;
-    hud.hBlocks.textContent = `${game.blocks.length}/${MAX_BLOCKS}`;
-  }
-
-  /* Particles: painted sparkles that fly, and one-shot puffs that swell and fade */
-  const sparks = [];
-  function burst(x, y, kind, n, spread) {
-    const [w, h] = SIZES[`fx_${kind}`];
-    for (let i = 0; i < n && sparks.length < 120; i++) {
-      const a = Math.random() * Math.PI * 2, v = (spread || 120) * (.4 + Math.random() * .8);
-      const size = 9 + Math.random() * 9;
-      const node = img(`fx_${kind}`, -size * w / h / 2, -size / 2, size * w / h, size, $('fx'));
-      sparks.push({ node, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, g: 300, spin: (Math.random() - .5) * 360, rot: Math.random() * 60, s0: 1, s1: .6, life: .5 + Math.random() * .4, max: .9 });
-    }
-  }
-  function puff(kind, x, y, size, life, rise) {
-    const [w, h] = SIZES[`fx_${kind}`];
-    const node = img(`fx_${kind}`, -size * w / h / 2, -size / 2, size * w / h, size, $('fx'));
-    sparks.push({ node, x, y, vx: 0, vy: -(rise || 0), g: 0, spin: 0, rot: 0, s0: .55, s1: 1.15, life, max: life });
-  }
-  function drawSparks(dt) {
-    for (let i = sparks.length - 1; i >= 0; i--) {
-      const p = sparks[i];
-      p.life -= dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.spin * dt;
-      if (p.life <= 0) { p.node.remove(); sparks.splice(i, 1); continue; }
-      const t = 1 - p.life / p.max, sc = p.s0 + (p.s1 - p.s0) * Math.min(1, t * 1.6);
-      p.node.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${p.rot.toFixed(0)}) scale(${sc.toFixed(3)})`);
-      p.node.setAttribute('opacity', Math.min(1, p.life / p.max * 2.2).toFixed(2));
-    }
-  }
-
-  /* Sound: an original procedural score (music box, pad, reverb), wind, effects and the narrator */
-  let audio = null, muted = false, bus = null, voiceOn = null, voiceWanted = null;
-  const VO = ['p1', 'p2', 'p3', 'c1', 'c2', 'c3', 'c4', 'win', 'end', ...Object.keys(LINES.say).map(k => 's_' + k), ...LINES.memory.map(m => m.id)], voBuf = {};
-  // key: tonic as a MIDI note; prog: [semitones from the tonic, 'M' | 'm'] per bar; beats per bar
-  const THEMES = {
-    title: { bpm: 70, beats: 4, key: 62, minor: true, prog: [[0, 'm'], [-4, 'M'], [3, 'M'], [-2, 'M']], seed: 3 },
-    0: { bpm: 82, beats: 4, key: 62, minor: true, prog: [[0, 'm'], [-2, 'M'], [-4, 'M'], [-5, 'm']], seed: 11 },
-    1: { bpm: 76, beats: 4, key: 57, minor: true, prog: [[0, 'm'], [-4, 'M'], [3, 'M'], [-2, 'M']], seed: 23 },
-    2: { bpm: 96, beats: 4, key: 64, minor: true, prog: [[0, 'm'], [-4, 'M'], [3, 'M'], [-2, 'M'], [0, 'm'], [5, 'm'], [-5, 'M'], [-5, 'M']], seed: 31 },
-    3: { bpm: 132, beats: 3, key: 65, minor: false, prog: [[0, 'M'], [-3, 'm'], [5, 'M'], [7, 'M']], seed: 47 },
-    end: { bpm: 72, beats: 4, key: 62, minor: false, prog: [[0, 'M'], [7, 'M'], [-3, 'm'], [5, 'M']], seed: 59 },
-  };
-  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
-  function rng(seed) { return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  // Each theme gets a fixed eight-bar tune, so every room has its own recognisable melody.
-  for (const th of Object.values(THEMES)) {
-    const r = rng(th.seed), scale = th.minor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
-    let deg = 7;
-    th.tune = [];
-    for (let bar = 0; bar < 8; bar++) {
-      const [off, q] = th.prog[bar % th.prog.length];
-      const chord = [0, q === 'M' ? 4 : 3, 7].map(x => ((off + x) % 12 + 12) % 12);
-      const notes = [];
-      for (let beat = 0; beat < th.beats; beat++) {
-        if (beat && r() < .45) { notes.push(null); continue; }
-        deg = Math.max(3, Math.min(13, deg + Math.round((r() - .5) * 4)));
-        let n = Math.floor(deg / 7) * 12 + scale[deg % 7];
-        if (beat === 0) { // land on a chord tone at the start of every bar
-          let best = n, bd = 99;
-          for (let k = -4; k <= 4; k++) if (chord.includes(((n + k) % 12 + 12) % 12) && Math.abs(k) < bd) { bd = Math.abs(k); best = n + k; }
-          n = best;
-        }
-        notes.push(n);
-      }
-      th.tune.push(notes);
-    }
-  }
-  function impulse(sec) {
-    const len = Math.round(audio.sampleRate * sec), buf = audio.createBuffer(2, len, audio.sampleRate);
-    for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
-    return buf;
-  }
-  let noiseBuf = null;
-  function wakeAudio() {
-    if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    audio = new AC();
-    const master = audio.createGain(); master.gain.value = muted ? 0 : 1;
-    const comp = audio.createDynamicsCompressor();
-    master.connect(comp).connect(audio.destination);
-    const verb = audio.createConvolver(); verb.buffer = impulse(3);
-    const wet = audio.createGain(); wet.gain.value = .55; verb.connect(wet).connect(master);
-    const mk = (v, send) => { const g = audio.createGain(); g.gain.value = v; g.connect(master); if (send) { const s = audio.createGain(); s.gain.value = send; g.connect(s).connect(verb); } return g; };
-    bus = { master, music: mk(0, .9), sfx: mk(.9, .4), voice: mk(1.15, .05), wind: mk(0) };
-    noiseBuf = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate);
-    const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    startWind();
-    VO.forEach(id => { voBuf[id] = fetch(`game/vo_${id}.mp3`).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => audio.decodeAudioData(b, ok, no))).catch(() => null); });
-    setInterval(schedule, 60);
-    const want = song === null ? 'title' : song;
-    song = null;
-    setMusic(want);
-    if (voiceWanted) playVoice(voiceWanted);
-  }
-  function bell(f, t, dur, vol, dest, type) {
-    t = Math.max(t, audio.currentTime);
-    const g = audio.createGain();
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .006); g.gain.exponentialRampToValueAtTime(.0004, t + dur);
-    g.connect(dest);
-    [[f, type || 'sine', 1], [f * 3.01, 'sine', .22], [f * 2, 'triangle', .12]].forEach(([fr, ty, v], k) => {
-      const o = audio.createOscillator(), og = audio.createGain();
-      o.type = ty; o.frequency.value = fr; og.gain.value = v;
-      if (k) { og.gain.setValueAtTime(v, t); og.gain.exponentialRampToValueAtTime(.0004, t + dur * .35); }
-      o.connect(og).connect(g); o.start(t); o.stop(t + dur + .05);
-    });
-  }
-  function pad(freqs, t, dur, vol) {
-    const lp = audio.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
-    const g = audio.createGain();
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + dur * .35); g.gain.linearRampToValueAtTime(0, t + dur * 1.15);
-    lp.connect(g).connect(bus.music);
-    for (const f of freqs) for (const det of [-5, 5]) {
-      const o = audio.createOscillator(); o.type = 'triangle'; o.frequency.value = f; o.detune.value = det;
-      o.connect(lp); o.start(t); o.stop(t + dur * 1.2);
-    }
-  }
-  function noise(t, dur, vol, type, freq, dest, q) {
-    const src = audio.createBufferSource(); src.buffer = noiseBuf; src.playbackRate.value = .8 + Math.random() * .4;
-    const f = audio.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q || .8;
-    const g = audio.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
-    src.connect(f).connect(g).connect(dest); src.start(t, Math.random()); src.stop(t + dur + .02);
-    return f;
-  }
-  function startWind() {
-    const src = audio.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
-    const f = audio.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = .6;
-    const lfo = audio.createOscillator(), depth = audio.createGain(); lfo.frequency.value = .07; depth.gain.value = 260;
-    lfo.connect(depth).connect(f.frequency);
-    const swell = audio.createOscillator(), sd = audio.createGain(), g = audio.createGain();
-    swell.frequency.value = .11; sd.gain.value = .35; g.gain.value = .65; swell.connect(sd).connect(g.gain);
-    src.connect(f).connect(g).connect(bus.wind);
-    src.start(); lfo.start(); swell.start();
-  }
-  /* Music scheduler: eighth notes, looked ahead a quarter second */
-  let song = null, step = 0, nextT = 0;
-  function setMusic(name) {
-    if (name === song && audio) return;
-    song = name;
-    if (!audio) return;
-    const now = audio.currentTime;
-    bus.music.gain.cancelScheduledValues(now);
-    bus.music.gain.setTargetAtTime(0, now, .15);
-    step = 0; nextT = now + .7;
-    bus.music.gain.setTargetAtTime(musicLevel(), now + .7, .4);
-    bus.wind.gain.setTargetAtTime(windBase(), now, 1.2);
-  }
-  const musicLevel = () => voiceOn ? .3 : 1;
-  const windBase = () => song === 'end' ? 0 : song === 1 ? .1 : .07;
-  function schedule() {
-    if (!audio || song === null || audio.state !== 'running') return;
-    const th = THEMES[song], e8 = 30 / th.bpm, per = th.beats * 2;
-    if (nextT < audio.currentTime - .2) nextT = audio.currentTime + .05;
-    while (nextT < audio.currentTime + .25) {
-      const bar = Math.floor(step / per) % 8, i = step % per, [off, q] = th.prog[bar % th.prog.length];
-      const root = th.key + off, chord = [0, q === 'M' ? 4 : 3, 7, 12, q === 'M' ? 16 : 15, 19];
-      if (i === 0) pad([root - 12, root - 5, root + (q === 'M' ? 4 : 3) - 12], nextT, e8 * per, .045);
-      if (i === 0 || (th.beats === 3 && i % 2 === 0)) bell(hz(root - 24 + (i ? 7 : 0)), nextT, 1.4, i ? .05 : .08, bus.music, 'sine');
-      const arp = [0, 1, 2, 3, 4, 3, 2, 1][i % 8];
-      if (song === 2 || i % 2 === 1 || th.beats === 3) bell(hz(root + chord[arp]), nextT, .9, .045, bus.music);
-      if (i % 2 === 0) { const n = th.tune[bar][i / 2]; if (n !== null) bell(hz(th.key + 12 + n), nextT + (Math.random() - .5) * .012, 1.8, .085, bus.music); }
-      nextT += e8; step++;
-    }
-  }
-  /* Narrator: one clip per story page; the music ducks underneath */
-  let voiceSrc = null;
-  function playVoice(id) {
-    stopVoice();
-    voiceWanted = id;
-    if (!audio || !id) return;
-    voBuf[id].then(buf => {
-      if (!buf || voiceWanted !== id || voiceSrc) return;
-      const src = audio.createBufferSource(); src.buffer = buf; src.connect(bus.voice);
-      src.onended = () => { if (voiceSrc === src) { voiceSrc = null; voiceOn = null; voiceWanted = null; bus.music.gain.setTargetAtTime(musicLevel(), audio.currentTime, .5); } };
-      voiceSrc = src; voiceOn = id;
-      bus.music.gain.setTargetAtTime(musicLevel(), audio.currentTime, .3);
-      src.start(audio.currentTime + .15);
-    });
-  }
-  function stopVoice() {
-    voiceWanted = null;
-    if (voiceSrc) { const s = voiceSrc; voiceSrc = null; voiceOn = null; try { s.stop(); } catch (e) {} if (audio) bus.music.gain.setTargetAtTime(musicLevel(), audio.currentTime, .4); }
-  }
-  /* Effects */
-  function tones(notes, type, len, vol) {
-    if (!audio) return;
-    notes.forEach((f, i) => bell(f, audio.currentTime + i * len * .7, len * 2.4, (vol || .06) * 1.5, bus.sfx, type === 'square' ? 'triangle' : type));
-  }
-  function crunch(v) { if (audio) noise(audio.currentTime, .07, .05 * (v || 1), 'bandpass', 2600 + Math.random() * 1400, bus.sfx, 1.2); }
-  function thud() {
-    if (!audio) return;
-    const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(55, t + .12);
-    g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.0005, t + .16);
-    o.connect(g).connect(bus.sfx); o.start(t); o.stop(t + .2);
-    crunch(1.4);
-  }
-  function whoosh(up) {
-    if (!audio) return;
-    const f = noise(audio.currentTime, .32, .07, 'bandpass', up ? 500 : 1800, bus.sfx, 1.5);
-    f.frequency.exponentialRampToValueAtTime(up ? 2400 : 400, audio.currentTime + .3);
-  }
-  function splashSound() {
-    if (!audio) return;
-    const f = noise(audio.currentTime, .55, .16, 'lowpass', 3000, bus.sfx);
-    f.frequency.exponentialRampToValueAtTime(300, audio.currentTime + .5);
-    [0, .09, .2].forEach(d => bell(700 + Math.random() * 500, audio.currentTime + d, .12, .03, bus.sfx));
-  }
-
-  /* Inner voices: short lines in speech bubbles, each said once per game or once per room */
-  const talk = { queue: [], cur: null, game: new Set(), room: new Set(), src: null };
-  function speak(key, delay, perRoom) {
-    const said = perRoom ? talk.room : talk.game;
-    if (said.has(key) || !LINES.say[key]) return;
-    said.add(key);
-    const [who, text] = LINES.say[key];
-    talk.queue.push({ key, id: who === 'F' ? 'frost' : 'nuan', text, wait: delay || 0 });
-  }
-  function resetTalk() {
-    talk.queue.length = 0; talk.cur = null; talk.room.clear();
-    if (talk.src) { try { talk.src.stop(); } catch (e) {} talk.src = null; }
-    $('talk').textContent = '';
-  }
-  function drawTalk(dt) {
-    const box = $('talk');
-    box.setAttribute('visibility', story || game.state !== 'play' ? 'hidden' : 'visible');
-    if (story) return;
-    if (!talk.cur && talk.queue.length && game.state === 'play') {
-      const q = talk.queue[0];
-      q.wait -= dt;
-      if (q.wait <= 0) {
-        talk.queue.shift();
-        talk.cur = Object.assign(q, { t: 0, dur: Math.max(2.4, [...q.text].length * .19 + 1) });
-        const frost = q.id === 'frost', w = [...q.text].length * 15 + 30;
-        box.innerHTML = `<g id="bubble"><path d="M-8 0L0 11L8 0Z" fill="${frost ? '#eef6ff' : '#fff3df'}" stroke="${frost ? '#8fb6ea' : '#e2a45e'}" stroke-width="1.5"/>
-          <rect x="${-w / 2}" y="-34" width="${w}" height="34" rx="12" fill="${frost ? '#eef6ff' : '#fff3df'}" stroke="${frost ? '#8fb6ea' : '#e2a45e'}" stroke-width="1.5"/>
-          <path d="M-7 -1L7 -1" stroke="${frost ? '#eef6ff' : '#fff3df'}" stroke-width="3"/>
-          <text x="0" y="-12" text-anchor="middle" font-size="15" fill="${frost ? '#1b2559' : '#4a2c05'}">${q.text}</text></g>`;
-        talk.cur.w = w;
-        if (audio && !muted) voBuf['s_' + q.key].then(buf => {
-          if (!buf || talk.cur !== q) return;
-          const src = audio.createBufferSource(); src.buffer = buf; src.connect(bus.voice); src.start(); talk.src = src;
-        });
-      }
-    }
-    const c = talk.cur;
-    if (!c) return;
-    c.t += dt;
-    if (c.t > c.dur) { talk.cur = null; box.textContent = ''; return; }
-    const s = game.sisters[c.id], b = $('bubble');
-    if (!b) return;
-    const x = s.x + s.w / 2, y = s.y + s.h - (c.id === 'frost' ? 84 : 76) - 10;   // just above the painted head
-    const bx = Math.max(c.w / 2 + 8, Math.min(952 - c.w / 2, x));
-    b.setAttribute('transform', `translate(${bx.toFixed(1)} ${Math.max(78, y).toFixed(1)})`);
-    b.firstElementChild.setAttribute('transform', `translate(${(x - bx).toFixed(1)} 0)`);
-    b.lastElementChild.previousElementSibling.setAttribute('transform', `translate(${(x - bx).toFixed(1)} 0)`);
-    b.setAttribute('opacity', Math.min(1, c.t * 6, (c.dur - c.t) * 4).toFixed(2));
-  }
-  const ROOM_START = [[['start0_f', .6], ['start0_n', .3]], [['start1_f', .8]], [['start2_n', .6], ['start2_f', .3]], [['start3_f', .6], ['start3_n', .3]]];
-
-  /* Mood: the further apart the sisters drift, the more 霜霜 frets and the colder the castle grows */
-  const heart = { mood: 0, aloneT: 0, alone: false, apart: false, togetherT: 0, puffT: 0, windT: 0, warned: false };
-  function updateMood(dt) {
-    if (game.state !== 'play' || story) return;
-    const f = game.sisters.frost, n = game.sisters.nuan;
-    const d = Math.hypot(f.x - n.x, (f.y + f.h - n.y - n.h) * .7);
-    const target = Math.min(1, Math.max(0, (d - 220) / 280));
-    heart.mood += (target - heart.mood) * Math.min(1, dt * (target > heart.mood ? .4 : 1.3));
-    $('chill').setAttribute('opacity', (heart.mood * .85).toFixed(2));
-    $('snowFront').setAttribute('opacity', (.55 + heart.mood * .45).toFixed(2));
-    if (audio && (heart.windT -= dt) < 0) { heart.windT = .3; bus.wind.gain.setTargetAtTime(windBase() + heart.mood * .24, audio.currentTime, .5); }
-    if (heart.mood > .4) heart.apart = true;
-    if (heart.mood > .5 && !heart.warned) { heart.warned = true; flashHint('两姐妹离得太远了。霜霜开始不安，冰堡里的雪越下越大……'); }
-    if (heart.mood > .75) {
-      heart.aloneT += dt;
-      if (heart.aloneT > 3) { speak('alone_f', 0, true); heart.alone = true; }
-      if (heart.aloneT > 8) speak('alone_n', 0, true);
-    } else heart.aloneT = 0;
-    if (heart.alone && heart.mood < .12) { heart.alone = false; speak('reunite_f', 0, true); }
-    const still = s => s.ground && Math.abs(s.vx) < 1 && !s.splash;
-    if (d < 58 && still(f) && still(n)) {
-      heart.togetherT += dt;
-      if (heart.togetherT > 1.2) {
-        if (heart.apart) { speak('together'); speak('together_f', .4); }
-        if ((heart.puffT -= dt) <= 0) { heart.puffT = 1.8; burst((f.x + n.x + f.w) / 2, Math.min(f.y, n.y) - 4, 'heart', 1, 26); }
-      }
-    } else heart.togetherT = 0;
-  }
-
-  /* Memories: one glowing fragment hidden in every room */
-  const memGot = [false, false, false, false];
-  let memNode = null, levelT0 = 0;
-  function drawMemory() {
-    const box = $('memory');
-    box.textContent = '';
-    memNode = null;
-    if (memGot[game.index]) return;
-    const [c, r] = MEMS[game.index];
-    memNode = el('g', { 'data-x': c * T + T / 2, 'data-y': r * T + T / 2 }, box);
-    img('fx_glow', -26, -24, 52, 46, memNode, { opacity: .8 });
-    img('fx_star', -13, -13, 26, 26, memNode);
-  }
-  function updateMemory(now) {
-    if (!memNode || game.state !== 'play' || story) return;
-    const mx = +memNode.dataset.x, my = +memNode.dataset.y;
-    memNode.setAttribute('transform', `translate(${mx} ${(my + Math.sin(now * 2) * 4).toFixed(1)}) scale(${(1 + Math.sin(now * 3.1) * .08).toFixed(3)})`);
-    for (const s of Object.values(game.sisters)) {
-      if (s.splash || mx < s.x - 12 || mx > s.x + s.w + 12 || my < s.y - 12 || my > s.y + s.h + 6) continue;
-      memGot[game.index] = true;
-      memNode.remove(); memNode = null;
-      burst(mx, my, 'star', 10, 110);
-      tones([784, 988, 1175, 1568], 'sine', .2, .05);
-      const m = LINES.memory[game.index];
-      openStory([{ art: m.art, title: m.title, lines: m.lines, vo: m.id, next: '收起回忆' }]);
-      return;
-    }
-  }
-
-  function handleEvents() {
-    let tiles = false;
-    for (const e of game.events) {
-      switch (e.type) {
-        case 'load': tiles = true; rebuild(); break;
-        case 'freeze': tiles = true; puff('ring', e.c * T + 20, e.r * T + 14, 64, .55); burst(e.c * T + 20, e.r * T + 10, 'flake', 5); tones([880, 1175], 'sine', .14); view.frost.castT = .3; speak('freeze1'); break;
-        case 'block': tiles = true; puff('burst', e.c * T + 20, e.r * T + 20, 86, .5); burst(e.c * T + 20, e.r * T + 20, 'flake', 6); tones([660, 990], 'triangle', .12); view.frost.castT = .3; speak('block1'); break;
-        case 'unblock': tiles = true; puff('dust', e.c * T + 20, e.r * T + 30, 44, .5); break;
-        case 'melt': tiles = true; whoosh(false); puff('glow', e.c * T + 20, e.r * T + 20, 96, .7); puff('steam', e.c * T + 20, e.r * T + 4, 70, 1.1, 40); burst(e.c * T + 20, e.r * T + 20, 'heart', 5); tones([392, 523, 659], 'sine', .18); view.nuan.castT = .3; speak('melt1'); break;
-        case 'fizz': burst(e.x, e.y + 20, e.who === 'frost' ? 'flake' : 'heart', 3, 70); tones([220], 'sine', .1, .03); view[e.who].castT = .22; break;
-        case 'jump': whoosh(true); tones([e.who === 'frost' ? 440 : 494], 'sine', .08, .02); break;
-        case 'doublejump': puff('dust', e.x, e.y + 4, 36, .4); burst(e.x, e.y, 'star', 5, 90); whoosh(true); tones([659, 988], 'sine', .08, .035); speak('double1'); break;
-        case 'splash': puff('splash', e.x, e.y - 14, 70, .6); splashSound(); flashHint('掉进水里啦，马上回到岸边。'); break;
-        case 'respawn': if (e.who === 'nuan') { speak('splash_n', .2, true); speak('splash_n2', .3, true); } else speak('splash_f', .2, true); break;
-        case 'collect':
-          burst(e.x, e.y, e.kind === 'h' ? 'heart' : e.kind === 'o' ? 'star' : 'flake', 8);
-          tones(e.kind === 'h' ? [659, 880] : e.kind === 'o' ? [392, 494, 587] : [988, 1319], 'triangle', .12);
-          drawItems(); if (e.kind === 'o') drawGoal();
-          speak(e.kind === 'h' ? 'heart1' : e.kind === 'o' ? 'ball1' : 'flake1');
-          break;
-        case 'open': drawGoal(); tones([523, 659, 784, 1047], 'triangle', .16); flashHint(game.goal === 'snowman' ? '雪人堆好了！两姐妹都走到雪人身边吧。' : '门开了！两姐妹都走到门口吧。'); speak('open' + game.index, .2, true); break;
-        case 'gate': {
-          drawGates(); tones(e.open ? [330, 440] : [440, 330], 'square', .08, .02);
-          const n = game.sisters.nuan;
-          if (e.open && game.plates.some(p => Math.abs(n.x + n.w / 2 - (p.c * T + T / 2)) < 26 && Math.abs(n.y + n.h - (p.r + 1) * T) < 12)) { speak('gate', 0, true); speak('gate_f', .3, true); }
-          break;
-        }
-        case 'clear': showClear(); tones([523, 659, 784, 659, 784, 1047], 'triangle', .17); break;
-        case 'win': showWin(); tones([523, 659, 784, 1047, 1319], 'sine', .24); break;
-      }
-    }
-    game.events.length = 0;
-    if (tiles) drawTiles();
-  }
-
-  let hintTimer = 0;
-  function flashHint(msg) {
-    $('hint').textContent = msg;
-    clearTimeout(hintTimer);
-    hintTimer = setTimeout(() => { $('hint').textContent = LEVELS[game.index].hint; }, 3500);
-  }
-
-  function rebuild() {
-    $('overlay').textContent = '';
-    $('bg').setAttribute('href', SRC(ROOMS[game.index].bg));
-    setMusic(game.index);
-    drawGlows(); drawItems(); drawGoal(); drawGates();
-    resetTalk(); Object.assign(heart, { mood: 0, aloneT: 0, alone: false, apart: false, togetherT: 0 });
-    if (game.state === 'play') { memGot[game.index] = false; levelT0 = game.time; }
-    drawMemory();
-    clearTimeout(hintTimer);
-    $('hint').textContent = LEVELS[game.index].hint;
-    if (game.state === 'play' && game.index !== introShown) showChapter();
-  }
-
-  /* Overlays */
-  let story = null, introShown = -1;
-  const say = (x, y, size, fill, text, extra) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${fill}" ${extra || ''}>${text}</text>`;
-  function showTitle() {
-    const rooms = LEVELS.map((lv, i) => `
-      <g class="btn ${i === 0 ? 'primary' : ''}" role="button" tabindex="0" ${i === 0 ? 'data-story="1"' : `data-room="${i}"`} aria-label="${i === 0 ? '从序章开始' : '进入' + lv.name}">
-        <rect x="${144 + i * 172}" y="444" width="156" height="58" rx="10" fill="#27357f"/>
-        ${say(222 + i * 172, 467, 14, '#f6f7ff', (i === 0 ? '从序章开始' : '第 ' + (i + 1) + ' 间') + (best[i].some(Boolean) ? '  ' + best[i].map(b => b ? '★' : '☆').join('') : ''))}
-        ${say(222 + i * 172, 490, 19, '#f6f7ff', lv.name)}
-      </g>`).join('');
-    $('overlay').innerHTML = `
-      <image href="${SRC('key')}" width="960" height="520" preserveAspectRatio="none"/>
-      <rect width="960" height="520" fill="url(#topFade)"/>
-      ${say(480, 82, 60, '#fffdf4', '霜霜和暖暖的冰堡', 'stroke="#1b2559" stroke-width="7" paint-order="stroke" stroke-linejoin="round"')}
-      ${say(480, 122, 20, '#f6f7ff', '王国陷入了永冬，暖暖要和姐姐一起把春天找回来', 'stroke="#1b2559" stroke-width="4" paint-order="stroke"')}
-      ${rooms}
-      <g class="btn" role="button" tabindex="0" data-profile="1" aria-label="姐妹档案">
-        <rect x="812" y="18" width="128" height="34" rx="9" fill="#27357f" opacity=".92"/>${say(876, 41, 17, '#f6f7ff', '姐妹档案')}</g>`;
-    setMusic('title');
-    $('hint').textContent = '两个人一起玩，或者一个人轮流操作两姐妹都可以。';
-    const first = $('overlay').querySelector('[data-story]');
-    if (first) first.focus({ preventScroll: true });
-  }
-  /* A story page pauses play until the reader continues. */
-  function openStory(pages, done) {
-    story = { pages, i: 0, done };
-    clearInput();
-    $('hint').textContent = '点「继续」，或按空格 / 回车翻页。';
-    renderStory();
-  }
-  function advanceStory() {
-    if (!story) return;
-    stopVoice();
-    story.i++;
-    if (story.i < story.pages.length) { renderStory(); return; }
-    const done = story.done;
-    story = null;
-    $('overlay').textContent = '';
-    if (game.state === 'play') $('hint').textContent = LEVELS[game.index].hint;
-    if (done) done();
-  }
-  function renderStory() {
-    const p = story.pages[story.i];
-    playVoice(p.vo);
-    const last = story.i === story.pages.length - 1;
-    const more = p.next || (last ? '开始吧' : '继续');
-    const ink = 'stroke="#141c52" stroke-width="4" paint-order="stroke"';
-    const n = story.pages.length;
-    const dots = n > 1 ? story.pages.map((_, k) => `<circle cx="${480 + (k - (n - 1) / 2) * 16}" cy="${p.art ? 52 + (p.title ? 34 : 0) + p.lines.length * 32 : 0}" r="4" fill="${k === story.i ? '#ffd27a' : '#8090d6'}"/>`).join('') : '';
-    let body;
-    const btn = (x, y) => `<g class="btn primary" role="button" tabindex="0" data-next="1" aria-label="${more}">
-          <rect x="${x}" y="${y}" width="136" height="36" rx="9" fill="#27357f"/>${say(x + 68, y + 24, 17, '#f6f7ff', more)}</g>`;
-    if (p.profile) {
-      const card = (c, k) => {
-        const x = 30 + k * 460, y = 70;
-        let ty = y + 118;
-        const rows = c.rows.map(([label, text]) => {
-          const ls = wrap(text, 15);
-          const out = `<text x="${x + 186}" y="${ty}" font-size="14" fill="#ffd27a">${label}</text>` + ls.map((l, j) => `<text x="${x + 226}" y="${ty + j * 21}" font-size="15" fill="#eef2ff">${l}</text>`).join('');
-          ty += ls.length * 21 + 10;
-          return out;
-        }).join('');
-        return `<rect x="${x}" y="${y}" width="440" height="380" rx="18" fill="#141c52" opacity=".9" stroke="#4a5aa6"/>
-          <image href="${SRC('portrait_' + c.id)}" x="${x + 16}" y="${y + 16}" width="156" height="208" preserveAspectRatio="xMidYMid slice"/>
-          <rect x="${x + 16}" y="${y + 16}" width="156" height="208" rx="6" fill="none" stroke="${c.color}" stroke-opacity=".6"/>
-          <text x="${x + 186}" y="${y + 52}" font-size="32" fill="${c.color}">${c.name}</text>
-          <text x="${x + 188}" y="${y + 80}" font-size="15" fill="#a9b6e2">${c.tag}</text>${rows}
-          <path d="M${x + 40} ${y + 288}H${x + 400}" stroke="#4a5aa6"/>
-          ${say(x + 220, y + 316, 13, '#a9b6e2', '心里的声音')}${say(x + 220, y + 346, 18, c.color, c.quote)}`;
-      };
-      body = `<image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="none"/><rect width="960" height="520" fill="#0d1438" opacity=".7"/>
-        ${say(480, 48, 30, '#ffd27a', '姐妹档案')}${PROFILE.map(card).join('')}
-        <text x="40" y="490" font-size="14" fill="#cfe6ff">两姐妹待在一起时，霜霜会安下心来；分开太久，冰堡就会越来越冷。</text>${btn(800, 466)}`;
-    } else if (p.clear) {
-      const { got, secs, i } = p.clear;
-      const labels = ['通关', '找到回忆', `${PAR[i]} 秒内（${secs} 秒）`];
-      const stars = got.map((g, k) => `<g transform="translate(${360 + k * 120} 196)"><image href="${SRC('fx_star')}" x="-26" y="-26" width="52" height="52" opacity="${g ? 1 : .18}"/>
-        <text y="44" text-anchor="middle" font-size="14" fill="${g ? '#ffe4a8' : '#7d88c0'}">${labels[k]}</text></g>`).join('');
-      const [who, diary] = DIARY[i], ls = wrap(diary, Math.ceil([...diary].length / Math.ceil([...diary].length / 22)));
-      body = `<rect width="960" height="520" fill="#0d1438" opacity=".45"/>
-        <rect x="200" y="96" width="560" height="${300 + ls.length * 26}" rx="18" fill="#141c52" opacity=".92" stroke="#4a5aa6"/>
-        ${say(480, 142, 32, '#ffd27a', `${LEVELS[i].name} 完成`)}${stars}
-        <path d="M260 274H700" stroke="#4a5aa6"/>
-        ${say(480, 304, 15, '#a9b6e2', who)}
-        ${ls.map((l, k) => say(480, 334 + k * 26, 18, '#f6f7ff', l)).join('')}
-        ${btn(412, 352 + ls.length * 26)}`;
-    } else if (p.art) {
-      const off = p.title ? 34 : 0;
-      body = `<image href="${SRC(p.art)}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
-        <rect width="960" height="${84 + off + p.lines.length * 32}" fill="url(#storyTop)"/>
-        ${p.title ? say(480, 42, 22, '#ffd27a', p.title, ink) : ''}
-        ${p.lines.map((l, k) => say(480, 50 + off + k * 32, 21, '#f6f7ff', l, ink)).join('')}${dots}
-        <g class="btn primary" role="button" tabindex="0" data-next="1" aria-label="${more}">
-          <rect x="800" y="466" width="136" height="36" rx="9" fill="#27357f"/>${say(868, 490, 17, '#f6f7ff', more)}</g>`;
-    } else {
-      const top = 260 - (p.lines.length * 30 + 120) / 2;
-      body = `<rect width="960" height="520" fill="#0d1438" opacity=".55"/>
-        <rect x="170" y="${top}" width="620" height="${p.lines.length * 30 + 130}" rx="18" fill="#141c52" opacity=".9" stroke="#4a5aa6"/>
-        ${say(480, top + 46, 30, '#ffd27a', p.title)}
-        ${p.lines.map((l, k) => say(480, top + 86 + k * 30, 19, '#f6f7ff', l)).join('')}
-        <g class="btn primary" role="button" tabindex="0" data-next="1" aria-label="${more}">
-          <rect x="412" y="${top + p.lines.length * 30 + 76}" width="136" height="36" rx="9" fill="#27357f"/>${say(480, top + p.lines.length * 30 + 100, 17, '#f6f7ff', more)}</g>`;
-    }
-    $('overlay').innerHTML = `<g class="page">${body}</g>`;
-    const b = $('overlay').querySelector('[data-next]');
-    if (b) b.focus({ preventScroll: true });
-  }
-  function showChapter() {
-    introShown = game.index;
-    openStory([{ title: `第 ${game.index + 1} 间 · ${LEVELS[game.index].name}`, lines: CHAPTERS[game.index], vo: `c${game.index + 1}`, next: '出发' }],
-      () => { levelT0 = game.time; ROOM_START[game.index].forEach(([k, d]) => speak(k, d, true)); });
-  }
-  function showClear() {
-    const i = game.index, secs = Math.round(game.time - levelT0);
-    const got = [true, memGot[i], secs <= PAR[i]];
-    best[i] = best[i].map((b, k) => b || got[k]); saveBest();
-    openStory([{ clear: { got, secs, i }, next: i + 1 < LEVELS.length ? '去下一个房间' : '去堆雪人' }], () => { game.clearT = .05; });
-  }
-  function showWin() {
-    $('overlay').innerHTML = `<g class="page">
-      <rect x="290" y="64" width="380" height="84" rx="14" fill="#141c52" opacity=".82"/>
-      ${say(480, 104, 36, '#ffd27a', '雪人堆好啦！')}
-      ${say(480, 134, 17, '#f6f7ff', '暖暖握住了姐姐的手……')}</g>`;
-    $('hint').textContent = '雪人堆好了。';
-    setMusic('end'); playVoice('win');
-    setTimeout(() => {
-      if (game.state !== 'win') return;
-      openStory([{ art: 'story_thaw', vo: 'end', lines: ['霜霜终于明白：让冰雪听话的，不是害怕，而是爱。', '永冬一点点融化，港口的船又能出海了。'], next: '回到开头' }], () => {
-        introShown = -1;
-        game.state = 'title'; game.load(0); handleEvents(); showTitle();
-        $('hint').textContent = '通关了。可以从序章再玩一次，或者直接选房间。';
-      });
-    }, 4600);
-  }
-
-  /* Input */
-  const KEYS = {
-    KeyA: ['frost', 'l'], KeyD: ['frost', 'r'], KeyS: ['frost', 'd'], KeyW: ['frost', 'jump'], KeyF: ['frost', 'act'],
-    ArrowLeft: ['nuan', 'l'], ArrowRight: ['nuan', 'r'], ArrowDown: ['nuan', 'd'], ArrowUp: ['nuan', 'jump'],
-    Enter: ['nuan', 'act'], NumpadEnter: ['nuan', 'act'], KeyL: ['nuan', 'act'],
-  };
-  function clearInput() {
-    for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
-    document.querySelectorAll('#touch button.on').forEach(b => b.classList.remove('on'));
-  }
-  addEventListener('blur', clearInput);
-
-  function activate(target) {
-    wakeAudio();
-    if (story) { advanceStory(); return true; }
-    if (target.closest && target.closest('[data-profile]')) { openStory([{ profile: true, next: '回到标题' }], showTitle); return true; }
-    if (target.closest && target.closest('[data-story]')) { openStory(PROLOGUE, () => { game.start(0); handleEvents(); }); return true; }
-    const room = target.closest && target.closest('[data-room]');
-    if (room) { game.start(+room.dataset.room); handleEvents(); return true; }
-    const btn = target.closest && target.closest('.btn');
-    if (btn && btn.id === 'bRestart' && game.state === 'play') { game.start(game.index); handleEvents(); return true; }
-    if (btn && btn.id === 'bSound') { toggleSound(); return true; }
-    return false;
-  }
-  function toggleSound() {
-    muted = !muted;
-    if (audio) bus.master.gain.setTargetAtTime(muted ? 0 : 1, audio.currentTime, .05);
-    $('tSound').textContent = muted ? '声音：关' : '声音：开';
-  }
-  $('stage').addEventListener('click', e => activate(e.target));
-
-  addEventListener('keydown', e => {
-    wakeAudio();
-    if (story) {
-      if (!e.repeat && ['Enter', 'NumpadEnter', 'Space', 'KeyW', 'ArrowUp', 'KeyF', 'KeyL', 'Escape'].includes(e.code)) { e.preventDefault(); advanceStory(); }
-      return;
-    }
-    const focusBtn = document.activeElement && document.activeElement.closest && document.activeElement.closest('.btn');
-    if ((e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') && focusBtn && (game.state !== 'play' || focusBtn.id === 'bSound' || focusBtn.id === 'bRestart')) {
-      e.preventDefault();
-      if (!e.repeat) { activate(focusBtn); if (game.state === 'play') focusBtn.blur(); }
-      return;
-    }
-    if (e.code === 'KeyM' && !e.repeat) toggleSound();
-    if (e.code === 'KeyR' && !e.repeat && game.state === 'play') { game.start(game.index); handleEvents(); }
-    const k = KEYS[e.code];
-    if (!k) return;
-    e.preventDefault();
-    const [id, what] = k;
-    if (what === 'jump' || what === 'act') { if (!e.repeat) game.press(id, what); }
-    else game.input[id][what] = 1;
-  });
-  addEventListener('keyup', e => {
-    const k = KEYS[e.code];
-    if (k && k[1].length === 1) game.input[k[0]][k[1]] = 0;
-  });
-
-  /* Touch */
-  let active = 'frost';
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  if (isTouch) document.body.classList.add('touch');
-  function bindHold(id, key) {
-    const b = $(id);
-    const on = e => { e.preventDefault(); wakeAudio(); b.classList.add('on'); game.input[active][key] = 1; };
-    const off = () => { b.classList.remove('on'); game.input.frost[key] = 0; game.input.nuan[key] = 0; };
-    b.addEventListener('pointerdown', on);
-    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, off);
-  }
-  const bindTap = (id, fn) => $(id).addEventListener('pointerdown', e => { e.preventDefault(); wakeAudio(); if (story) advanceStory(); else fn(); });
-  bindHold('tLeft', 'l'); bindHold('tRight', 'r');
-  bindTap('tJump', () => game.press(active, 'jump'));
-  bindTap('tAct', () => game.press(active, 'act'));
-  bindTap('tSwitch', () => {
-    clearInput();
-    active = active === 'frost' ? 'nuan' : 'frost';
-    $('tSwitch').textContent = active === 'frost' ? '换成暖暖' : '换成霜霜';
-  });
-  $('tSwitch').textContent = '换成暖暖';
-
-  /* Frame */
-  function pickFrame(id, s, v, now) {
-    if (game.state === 'clear' || game.state === 'win') return 'cheer';
-    if (v.castT > 0) return 'cast';
-    if (!s.ground) return s.vy < 0 ? 'jump' : 'fall';
-    if (Math.abs(s.vx) > 1) return RUN[Math.floor(v.stride / 15) % RUN.length];
-    return (now + (id === 'nuan' ? 1.7 : 0)) % 3.6 < .16 ? 'blink' : 'idle';
-  }
-  function drawSister(id, now, dt) {
-    const s = game.sisters[id], v = view[id];
-    v.castT = Math.max(0, v.castT - dt);
-    v.stride = s.ground && Math.abs(s.vx) > 1 ? v.stride + Math.abs(s.vx) * dt : 0;
-    const hidden = s.splash > 0;
-    v.root.setAttribute('visibility', hidden ? 'hidden' : 'visible');
-    v.shadow.setAttribute('visibility', hidden ? 'hidden' : 'visible');
-    const f = pickFrame(id, s, v, now);
-    if (f !== v.shown && (f === 'run1' || f === 'run4')) crunch(id === 'nuan' ? .8 : 1);
-    if (!s.ground) v.airT += dt;
-    else { if (v.airT > .18 && game.state === 'play' && !s.splash) thud(); v.airT = 0; }
-    if (f !== v.shown) {
-      if (v.shown) v.frames[v.shown].setAttribute('visibility', 'hidden');
-      v.frames[f].removeAttribute('visibility');
-      v.shown = f;
-    }
-    const cx = s.x + s.w / 2, feet = s.y + s.h;
-    const moving = Math.abs(s.vx) > 1 && s.ground;
-    const celebrating = game.state === 'clear' || game.state === 'win';
-    const bob = moving ? 0 : celebrating ? Math.abs(Math.sin(now * 5 + (id === 'nuan' ? 1 : 0))) * 12 : 0;
-    const breath = !moving && s.ground && !celebrating ? 1 + Math.sin(now * 2.2 + (id === 'nuan' ? 1 : 0)) * .012 : 1;
-    v.idleT = s.ground && Math.abs(s.vx) < 1 && game.state === 'play' ? v.idleT + dt : 0;
-    const other = game.sisters[id === 'frost' ? 'nuan' : 'frost'];
-    const lookAt = (v.idleT > 2.5 || heart.togetherT > .5) && v.castT <= 0 ? (other.x > s.x ? 1 : -1) : s.dir;
-    const dir = game.state === 'win' ? (Math.sin(now * 3 + (id === 'nuan' ? 1.5 : 0)) >= 0 ? 1 : -1) : lookAt;
-    const shiver = id === 'frost' && heart.mood > .3 && game.state === 'play' ? Math.sin(now * 47) * heart.mood * 1.3 : 0;
-    v.root.setAttribute('transform', `translate(${(cx + shiver).toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${dir} ${breath.toFixed(3)})`);
-    v.shadow.setAttribute('cx', cx.toFixed(1));
-    v.shadow.setAttribute('cy', (feet + 2).toFixed(1));
-    v.mark.setAttribute('visibility', isTouch && active === id && game.state === 'play' ? 'visible' : 'hidden');
-  }
-  function drawItemBob(now) {
-    const nodes = $('items').children;
-    game.items.forEach((it, i) => {
-      const n = nodes[i];
-      if (!n) return;
-      if (it.got) { n.setAttribute('visibility', 'hidden'); return; }
-      const sway = Math.sin(now * 1.6 + i) * 6;
-      n.setAttribute('transform', `translate(${it.x} ${(it.y + Math.sin(now * 2.4 + i) * 3).toFixed(1)}) rotate(${it.kind === 'h' ? 0 : sway.toFixed(1)})`);
-    });
-  }
-
-  const STEP = 1 / 120;
-  let last = 0, acc = 0, shownBlocks = -1;
-  function frame(ms) {
-    const dt = Math.min(.05, (ms - last) / 1000 || 0);
-    last = ms; acc += dt;
-    if (story) acc = 0;
-    while (acc >= STEP) { game.step(STEP); acc -= STEP; }
-    handleEvents();
-    if (game.blocks.length !== shownBlocks) { shownBlocks = game.blocks.length; drawTiles(); }
-    const now = ms / 1000;
-    drawSister('frost', now, dt);
-    drawSister('nuan', now, dt);
-    const n = game.sisters.nuan;
-    lanternGlow.setAttribute('cx', (n.x + n.w / 2 + n.dir * 6).toFixed(1));
-    lanternGlow.setAttribute('cy', (n.y + n.h - 26).toFixed(1));
-    lanternGlow.setAttribute('visibility', n.splash > 0 ? 'hidden' : 'visible');
-    lanternGlow.setAttribute('opacity', (.72 + Math.sin(now * 7) * .08).toFixed(2));
-    const fr = game.sisters.frost;
-    frostGlow.setAttribute('cx', (fr.x + fr.w / 2).toFixed(1));
-    frostGlow.setAttribute('cy', (fr.y + fr.h - 34).toFixed(1));
-    frostGlow.setAttribute('visibility', fr.splash > 0 ? 'hidden' : 'visible');
-    drawItemBob(now);
-    updateMood(dt);
-    updateMemory(now);
-    drawTalk(dt);
-    drawSparks(dt);
-    drawHud();
-    if (game.state === 'win' && Math.random() < .25) burst(Math.random() * 960, 200 + Math.random() * 180, ['star', 'heart', 'flake'][Math.floor(Math.random() * 3)], 2, 90);
-    requestAnimationFrame(frame);
-  }
-
-  /* Decode every painting first, so frames never flash in empty. */
-  const names = [...new Set(['key', 'story_prologue', 'story_winter', 'story_thaw', 'portrait_frost', 'portrait_nuan', ...LINES.memory.map(m => m.art), 'brick', 'water', 'pinkice', 'frozen', 'iceblock', 'door_open', 'door_closed', 'ball', 'two', 'snowman', 'flake', 'heart', 'gate', 'plate_up', 'plate_down', 'shelf0', 'shelf1', 'shelf2', 'drift0', 'drift1', ...ROOMS.map(r => r.bg), ...Object.keys(SIZES).filter(k => k.startsWith('fx_')), ...Object.keys(SIZES).filter(k => /^(frost|nuan)_/.test(k))])];
-  const loads = names.map(n => { const i = new Image(); i.src = SRC(n); return i.decode().catch(() => {}); });
-
-  buildHud();
-  game.load(0);
-  handleEvents();
-  game.state = 'title';
-  showTitle();
-  const patience = new Promise(ok => setTimeout(ok, 1500));
-  Promise.race([Promise.all(loads), patience]).finally(() => requestAnimationFrame(frame));
-})();
+/*VIEW*/
 </script>

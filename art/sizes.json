@@ -250,5 +250,557 @@
 "fx_splash": [
 140,
 107
+],
+"word_heart": [
+256,
+256
+],
+"word_star": [
+256,
+256
+],
+"word_door": [
+256,
+256
+],
+"word_water": [
+256,
+256
+],
+"word_ice": [
+256,
+256
+],
+"word_fish": [
+256,
+256
+],
+"word_slide": [
+256,
+256
+],
+"word_fast": [
+256,
+256
+],
+"word_down": [
+256,
+256
+],
+"word_push": [
+256,
+256
+],
+"word_open": [
+256,
+256
+],
+"word_gate": [
+256,
+256
+],
+"word_jump": [
+256,
+256
+],
+"alt_word_fast": [
+256,
+256
+],
+"alt_word_push": [
+256,
+256
+],
+"alt_word_open": [
+256,
+256
+],
+"word_up": [
+256,
+256
+],
+"word_high": [
+256,
+256
+],
+"word_bunny": [
+256,
+256
+],
+"word_home": [
+256,
+256
+],
+"word_carrot": [
+256,
+256
+],
+"word_left": [
+256,
+256
+],
+"word_right": [
+256,
+256
+],
+"word_wait": [
+256,
+256
+],
+"word_red": [
+256,
+256
+],
+"word_yellow": [
+256,
+256
+],
+"word_blue": [
+256,
+256
+],
+"word_snowman": [
+256,
+256
+],
+"word_ball": [
+256,
+256
+],
+"alt_word_wait": [
+256,
+256
+],
+"alt_word_up": [
+256,
+256
+],
+"alt_word_high": [
+256,
+256
+],
+"word_hat": [
+256,
+256
+],
+"word_flower": [
+256,
+256
+],
+"word_warm": [
+256,
+256
+],
+"word_spring": [
+256,
+256
+],
+"word_one": [
+256,
+256
+],
+"word_two": [
+256,
+256
+],
+"word_three": [
+256,
+256
+],
+"word_snowflake": [
+256,
+256
+],
+"word_hello": [
+256,
+256
+],
+"word_yay": [
+256,
+256
+],
+"word_music": [
+256,
+256
+],
+"word_sun": [
+256,
+256
+],
+"alt_word_warm": [
+256,
+256
+],
+"alt_word_spring": [
+256,
+256
+],
+"alt_word_hello": [
+256,
+256
+],
+"alt_word_yay": [
+256,
+256
+],
+"ui_book": [
+187,
+192
+],
+"ui_bulb": [
+174,
+192
+],
+"ui_gear": [
+192,
+187
+],
+"ui_fullscreen": [
+192,
+190
+],
+"ui_play": [
+256,
+256
+],
+"ui_next": [
+191,
+192
+],
+"ui_replay": [
+191,
+192
+],
+"ui_back": [
+192,
+192
+],
+"ui_ear": [
+192,
+174
+],
+"ui_mouth": [
+192,
+113
+],
+"ui_sticker": [
+192,
+177
+],
+"ui_wardrobe": [
+183,
+192
+],
+"ui_solo": [
+188,
+192
+],
+"ui_duo": [
+189,
+192
+],
+"ui_meet": [
+217,
+224
+],
+"hat_snowman": [
+120,
+102
+],
+"ui_keys": [
+320,
+281
+],
+"ui_key_left": [
+115,
+107
+],
+"ui_key_right": [
+115,
+108
+],
+"ui_key_up": [
+113,
+105
+],
+"ui_key_space": [
+325,
+114
+],
+"ui_keys_rects": {
+"up": [
+105,
+-1,
+110,
+96
+],
+"left": [
+42,
+98,
+111,
+96
+],
+"right": [
+165,
+99,
+111,
+95
+],
+"space": [
+-1,
+200,
+320,
+80
+]
+},
+"ui_keys_centers": {
+"left": [
+97,
+146
+],
+"right": [
+220,
+146
+],
+"up": [
+160,
+47
+],
+"space": [
+159,
+240
+]
+},
+"fish_1": [
+97,
+66
+],
+"fish_2": [
+97,
+66
+],
+"tile_slope_r": [
+96,
+96
+],
+"tile_slope_l": [
+96,
+96
+],
+"spring_0": [
+96,
+96
+],
+"spring_1": [
+96,
+96
+],
+"flower_0": [
+96,
+96
+],
+"flower_1": [
+96,
+96
+],
+"flower_2": [
+96,
+96
+],
+"bunny_nest": [
+96,
+67
+],
+"note_1": [
+96,
+96
+],
+"note_1_lit": [
+96,
+96
+],
+"note_2": [
+96,
+96
+],
+"note_2_lit": [
+96,
+96
+],
+"note_3": [
+96,
+96
+],
+"note_3_lit": [
+96,
+96
+],
+"note_4": [
+96,
+96
+],
+"note_4_lit": [
+96,
+96
+],
+"note_5": [
+96,
+96
+],
+"note_5_lit": [
+96,
+96
+],
+"bunny_idle": [
+66,
+78
+],
+"bunny_hop1": [
+66,
+78
+],
+"bunny_hop2": [
+66,
+78
+],
+"bunny_hop3": [
+66,
+78
+],
+"bunny_hop4": [
+66,
+78
+],
+"bunny_home": [
+66,
+78
+],
+"floe_m": [
+96,
+96
+],
+"floe_l": [
+96,
+96
+],
+"floe_r": [
+96,
+96
+],
+"floe": [
+96,
+96
+],
+"sticker_hall": [
+189,
+192
+],
+"sticker_lake": [
+188,
+192
+],
+"sticker_slope": [
+188,
+192
+],
+"sticker_tower": [
+189,
+192
+],
+"sticker_spring": [
+187,
+192
+],
+"sticker_bunny": [
+187,
+192
+],
+"sticker_floe": [
+188,
+192
+],
+"sticker_music": [
+188,
+192
+],
+"sticker_ballroom": [
+188,
+192
+],
+"sticker_garden": [
+187,
+192
+],
+"sticker_words5": [
+187,
+192
+],
+"sticker_hall_gold": [
+189,
+192
+],
+"sticker_lake_gold": [
+189,
+192
+],
+"sticker_slope_gold": [
+189,
+192
+],
+"sticker_tower_gold": [
+189,
+192
+],
+"sticker_spring_gold": [
+188,
+192
+],
+"sticker_bunny_gold": [
+188,
+192
+],
+"sticker_floe_gold": [
+188,
+192
+],
+"sticker_music_gold": [
+188,
+192
+],
+"sticker_ballroom_gold": [
+189,
+192
+],
+"sticker_garden_gold": [
+189,
+192
+],
+"sticker_board": [
+1280,
+720
+],
+"bg_slope": [
+1672,
+906
+],
+"bg_spring": [
+1672,
+906
+],
+"bg_bunny": [
+1672,
+906
+],
+"bg_floe": [
+1672,
+906
+],
+"bg_music": [
+1672,
+906
+],
+"bg_garden": [
+1672,
+906
 ]
 }

@@ -1,0 +1,12 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, square 1:1 at the highest available resolution, then copy the generated PNG to ./raw/hats_1.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork, line work and paper texture of the attached reference image precisely (the same ORIGINAL storybook sisters' world).
+
+Subject: a sheet of four small head accessories for a child character, each drawn as it would look when worn on the head of a little girl who is facing to the RIGHT in side view (a gentle three-quarter side view of the object, as if sitting on a head that is turned right). Each accessory is drawn ALONE, on a perfectly flat solid #FF00FF magenta background with no background shadows, no head, no hair, no face, no hands. Arranged in a 2 by 2 grid with very wide gaps, none touching, each roughly the same size on the sheet. They will be shrunk to about 26 pixels wide, so make every one bold, chunky and simple with a clear readable silhouette, thick soft outlines, few large shapes, no tiny fussy details, saturated clean colours.
+
+Top left: a small princess crown in warm gold with three rounded points, each tipped with a pearl, and one ice-blue gem in the middle, seen from the side-front so the band curves.
+Top right: a big soft rose-pink satin hair bow with two loops and a small knot in the middle, a pale lilac inner shade, plain and chunky.
+Bottom left: a flower wreath: a curved band of leaves with about five round blossoms in white, butter yellow and pink, seen from the side-front as a gently curved crescent-shaped band (a wreath resting on a head), not a closed circle.
+Bottom right: a snowflake hair clip: a six-armed ice-blue and white crystal snowflake with a silver-white centre, attached to a short curved silver barrette, bold arms with rounded tips.
+
+Original designs only. No text or labels.

@@ -1,0 +1,11 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 3:2 at the highest available resolution, then copy the generated PNG to ./raw/dress_style.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, adapted for game character art with clean, readable silhouettes. Keep the faces, hair, skin tones, line work and proportions of the two sisters in the attached sheet exactly, but change their outfits to the dresses described below.
+
+Subject: a costume turnaround sheet of the same two ORIGINAL sisters, on a perfectly flat solid #FF00FF magenta background with no background shadows. Full body, same scale, evenly spaced with clear gaps, none touching. Two rows of three figures; in each row: standing facing right, standing facing the viewer, walking facing right.
+
+Top row, the elder sister Shuangshuang, about 12: the same short chin-length silver-lilac bob with the small snowflake hairpin. She wears an ankle-length winter princess gown in periwinkle and deep indigo velvet with a fitted bodice, long sleeves, a softly flared skirt with a hand-painted band of white frost-fern embroidery along the hem, a silver-blue sash, a short indigo hooded capelet trimmed with white fur, and small white boots peeking out. Elegant but child-friendly, opaque fabrics.
+
+Bottom row, the younger sister Nuannuan, about 9, warm brown skin: the same black curly hair in two round puff buns. She wears a knee-length rust-red velvet winter dress with a round white collar, a band of mustard-and-cream folk embroidery of little flowers and hearts at the hem, a mustard knit shawl tied at the chest, red mittens, cream wool stockings and tan boots, and she holds the same small brass lantern.
+
+No text or labels.

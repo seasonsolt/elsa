@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/mem_door.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the palette, brushwork and paper texture of the first attached reference precisely. The two ORIGINAL sisters must match the second attached costume sheet in face, hair and skin tone, but drawn younger as described. This is a soft, faded memory: slightly hazy vignetted edges, gentle and child-friendly.
+
+Subject: a memory illustration. A quiet castle corridor at dusk. A small girl about 7 (warm brown skin, two curly black puff buns, a little rust-red dress) kneels and slides a crayon drawing of two girls and a snowman with a red scarf under a tall closed wooden door whose edges are rimmed with delicate white frost ferns. Her small brass lantern glows on the floor beside her. Lonely but hopeful. Leave the top quarter of the image calm and uncluttered. No text.

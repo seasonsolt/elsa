@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, portrait 3:4 at the highest available resolution, then copy the generated PNG to ./raw/portrait_nuan.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the attached costume sheet exactly: identical face, hair, skin tone, dress and colours.
+
+Subject: a storybook character portrait, head and shoulders down to the waist, of ONLY the younger sister with the curly black puff buns and the rust-red dress with mustard shawl (bottom row of the sheet). Three-quarter view, a bright, determined, warm grin, holding her glowing brass lantern up near her face. Soft painted background of warm amber lantern light fading into blue. No text.

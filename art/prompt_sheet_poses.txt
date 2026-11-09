@@ -1,0 +1,7 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 3:2 at the highest available resolution, then copy the generated PNG to ./raw/sheet_poses.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the attached reference image(s) precisely.
+
+Subject: more poses of exactly the same two ORIGINAL sisters shown in the reference character sheet, with identical faces, costumes and proportions. Flat solid #FF00FF magenta background, no background shadows, full body, same scale as the reference, all facing right, evenly spaced, none touching, no magic effects drawn, no text.
+Top row, the elder sister: arms raised high cheering; a gentle idle variant with eyes closed and smiling; falling with arms up; casting pose with both hands forward and no sparkle.
+Bottom row, the younger sister: arms raised high cheering with the lantern held up; a gentle idle variant with eyes closed and smiling; falling with arms up; casting pose with one hand forward and no sparkle.

@@ -1,0 +1,21 @@
+# Tool environments (rebuilt per PLAN.md §2.4)
+.tools/
+.venv/
+__pycache__/
+*.pyc
+
+# Intermediate output; published assets live in /game
+art/game/
+
+# Local test copies and preview config
+_test.html
+.claude/launch.json
+.claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+*.blend1

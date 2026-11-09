@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/mem_gloves.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the palette, brushwork and paper texture of the first attached reference precisely. The two ORIGINAL sisters must match the second attached costume sheet in face, hair and skin tone, but drawn younger as described. This is a soft, faded memory: slightly hazy vignetted edges, gentle and child-friendly.
+
+Subject: a memory illustration. A dim moonlit bedroom. A girl about 10 with a short silver-lilac bob sits alone on the edge of her bed wearing pale blue gloves, holding a child's crayon drawing of two sisters and a snowman, looking at it tenderly and sadly. Frost ferns creep across the window and the floor around her feet. A single candle. Quiet, aching, tender. Leave the top quarter of the image calm and uncluttered. No text.

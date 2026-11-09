@@ -1,0 +1,9 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, square 1:1 at the highest available resolution, then copy the generated PNG to ./raw/sheet_fx.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction and match the palette and brushwork of the attached reference.
+
+Subject: a sheet of hand-painted game effect sprites on a perfectly flat solid #000000 black background, so the effects can be added with a screen blend. Evenly spaced in a 3 by 3 grid with wide gaps, none touching, each centred in its cell:
+Row 1: a radial burst of ice-blue crystal shards and frost sparkles; a soft warm golden-pink glow with tiny floating hearts; a ring of white frost mist.
+Row 2: one small six-armed glowing snowflake; one small glowing pink heart; one small four-point golden star sparkle.
+Row 3: a soft puff of white steam; a low flat puff of powder snow dust; a splash of blue water droplets.
+No text or labels.

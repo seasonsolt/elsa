@@ -1,0 +1,1039 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>霜霜和暖暖的冰堡</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap">
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+}}
+</script>
+<style>
+/* Layout: the cinematic stage fills the screen with a quiet band of hints and keys below it. */
+:root {
+  --night: #0a1228;
+  --panel: #101d40;
+  --line: #3a5286;
+  --ice: #bfe9ff;
+  --frost: #f2fbff;
+  --gold: #ffcf6b;
+  --ember: #ffb36b;
+  --muted: #9db4d8;
+  --display: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--frost);
+  font-family: var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  overscroll-behavior: none;
+}
+#stage {
+  position: relative;
+  width: min(100%, calc((100dvh - 132px) * 1.846));
+  aspect-ratio: 960 / 520;
+  max-width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0d1a3a;
+  user-select: none; -webkit-user-select: none;
+  touch-action: none;
+  container-type: inline-size;
+}
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#hud {
+  position: absolute; inset: 1.1cqw 1.1cqw auto;
+  display: flex; align-items: center; gap: 2.4cqw;
+  padding: .55cqw 1.4cqw;
+  background: rgb(8 15 36 / .72);
+  border-radius: 1cqw;
+  font-family: var(--display);
+  font-size: max(11px, 1.8cqw);
+}
+#hud .ok { color: var(--ice); } #hud .warm { color: var(--ember); } #hud .dim { color: var(--muted); }
+#hud .spacer { flex: 1; }
+#hud button, .start {
+  appearance: none; border: 0; cursor: pointer; font: inherit; color: var(--frost);
+  background: #27468f; border-radius: .7cqw; padding: .25cqw 1cqw;
+}
+#hud button:hover { background: #3f63b8; }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  gap: 1.4cqw; padding: 3cqw; box-sizing: border-box;
+  text-align: center;
+  background: linear-gradient(to bottom, rgb(8 15 36 / .1), rgb(8 15 36 / .25) 45%, rgb(8 15 36 / .86));
+}
+#overlay[hidden] { display: none; }
+#overlay h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 6cqw; line-height: 1.1; text-wrap: balance; text-shadow: 0 .3cqw 2cqw rgb(4 9 28 / .9); }
+#overlay p { margin: 0; font-size: max(12px, 1.9cqw); color: var(--ice); text-wrap: balance; max-width: 62cqw; text-shadow: 0 1px 8px rgb(4 9 28 / .9); }
+.start {
+  font-family: var(--display); font-size: max(15px, 2.4cqw); color: #4a2c05; background: var(--gold);
+  padding: .9cqw 3.4cqw; border-radius: 1cqw;
+}
+.start:hover { background: #ffe09a; }
+.start[disabled] { background: #3a5286; color: var(--muted); cursor: progress; }
+#info {
+  width: min(100%, calc((100dvh - 132px) * 1.846));
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px 28px; align-items: start;
+  font-size: 13px; line-height: 1.55;
+}
+#hint { min-width: 0; color: var(--ice); text-wrap: pretty; }
+.keys { color: var(--muted); white-space: nowrap; }
+.keys b { font-weight: 600; display: block; }
+.keys.frost b { color: var(--ice); } .keys.nuan b { color: var(--ember); }
+kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--frost); }
+#touch { display: none; width: min(100%, 720px); gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+#touch button {
+  appearance: none; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--frost);
+  font-family: var(--display); font-size: 17px; padding-block: 14px; touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+#touch button.on { background: #3f63b8; }
+#touch #tSwitch { color: var(--gold); }
+body.touch #touch { display: grid; }
+body.touch #info { grid-template-columns: minmax(0, 1fr); }
+body.touch .keys { display: none; }
+@media (max-width: 640px) {
+  #info { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #hint { grid-column: 1 / -1; }
+  .keys { white-space: normal; }
+}
+</style>
+
+<div id="stage">
+  <canvas id="view" aria-label="霜霜和暖暖在冰堡大厅里的游戏画面"></canvas>
+  <div id="hud" hidden>
+    <span id="hName"></span>
+    <span class="ok">雪花 <span id="hFlake">0/0</span></span>
+    <span class="warm">爱心 <span id="hHeart">0/0</span></span>
+    <span class="dim">冰块 <span id="hBlocks">0/3</span></span>
+    <span class="spacer"></span>
+    <button id="bRestart" aria-label="重新开始这一关">重来（R）</button>
+    <button id="bSound" aria-label="开关声音">声音：开</button>
+  </div>
+  <div id="overlay">
+    <h1 id="oTitle">霜霜和暖暖的冰堡</h1>
+    <p id="oText">正在搭建城堡……</p>
+    <button class="start" id="oStart" disabled>请稍候</button>
+  </div>
+</div>
+
+<div id="touch">
+  <button id="tLeft">向左</button><button id="tRight">向右</button><button id="tJump">跳</button><button id="tAct">魔法</button><button id="tSwitch">换人</button>
+</div>
+
+<div id="info">
+  <div id="hint">这是 3D 样板，只有第一间城堡大厅。两个人一起玩，或一个人轮流操作两姐妹都可以。</div>
+  <div class="keys frost"><b>霜霜：造冰块</b><kbd>A</kbd> <kbd>D</kbd> 走 <kbd>W</kbd> 跳 <kbd>S</kbd> 下 <kbd>F</kbd> 魔法</div>
+  <div class="keys nuan"><b>暖暖：二段跳、融化粉冰墙</b><kbd>←</kbd> <kbd>→</kbd> 走 <kbd>↑</kbd> 跳 <kbd>↓</kbd> 下 <kbd>Enter</kbd> 魔法</div>
+</div>
+
+<script id="logic">
+const T = 40, COLS = 24, ROWS = 13;
+const PHYS = { gravity: 1800, speed: 220, jump: 575, maxFall: 900, coyote: 0.09, buffer: 0.12 };
+const MAX_BLOCKS = 3;
+
+const LEVELS = [
+  {
+    name: '城堡大厅',
+    hint: '霜霜收蓝雪花，暖暖收红爱心。墙太高时，霜霜用魔法造冰块当台阶，暖暖可以连跳两下。暖暖走到粉冰墙边用魔法融化它，然后两人一起走到门口。',
+    map: [
+      '########################',
+      '#................#.....#',
+      '#................#.....#',
+      '#................#.....#',
+      '#.........h......#.....#',
+      '#................#.....#',
+      '#.......====.....#.....#',
+      '#................#.....#',
+      '#.........*......#.....#',
+      '#......#####.....X.....#',
+      '#......#####.....X.....#',
+      '#EA.h..#####.*...X..D..#',
+      '########################',
+    ],
+  },
+  {
+    name: '冰湖长廊',
+    hint: '水很冷，掉下去会回到岸边。霜霜站在水边用魔法，就能把湖面冻成冰路。最多同时存在 3 块冰块，再造时最早的一块会消失。',
+    map: [
+      '########################',
+      '#..................#...#',
+      '#..................#...#',
+      '#..h.........*.....#...#',
+      '#=====.......====..#...#',
+      '#..................#...#',
+      '#..................#...#',
+      '#.......========...#...#',
+      '#..................#...#',
+      '#...*..............X...#',
+      '#EA................X.D.#',
+      '######~~~~~~~~~~~#######',
+      '########################',
+    ],
+  },
+  {
+    name: '机关塔楼',
+    hint: '金色踏板被压住时，铁门才会打开。可以让一位姐妹站在上面，也可以让霜霜放一块冰块压住它。',
+    map: [
+      '########################',
+      '#...........#......#...#',
+      '#..h........#...h..#...#',
+      '#=====......#..====#...#',
+      '#...........#......#...#',
+      '#.......===.#......#...#',
+      '#...........#.===..#...#',
+      '#..*........#......#...#',
+      '#====.......#..*...#...#',
+      '#...........G.===..X...#',
+      '#...........G......X...#',
+      '#EA.....P...G......X.D.#',
+      '########################',
+    ],
+  },
+  {
+    name: '星光舞厅',
+    hint: '找到 3 个大雪球，谁捡都可以。雪人堆好后，两姐妹一起站到雪人身边就完成了。',
+    goal: 'snowman',
+    map: [
+      '########################',
+      '#......................#',
+      '#.o..................o.#',
+      '#=====............=====#',
+      '#......................#',
+      '#...........o..........#',
+      '#.......========.......#',
+      '#......................#',
+      '#..h................*..#',
+      '#=====............=====#',
+      '#......................#',
+      '#.........EA.S.........#',
+      '#####~~~##########~~~###',
+    ],
+  },
+];
+
+function createGame() {
+  const g = {
+    state: 'title', index: 0, grid: [], items: [], blocks: [], events: [],
+    sisters: {}, plates: [], gates: [], gatesOpen: false, door: null, goal: 'door',
+    doorOpen: false, clearT: 0, time: 0,
+    input: { frost: { l: 0, r: 0, d: 0 }, nuan: { l: 0, r: 0, d: 0 } },
+  };
+  const emit = (type, data) => g.events.push(Object.assign({ type }, data));
+
+  function makeSister(id, c, r) {
+    const w = 26, h = id === 'frost' ? 58 : 54;
+    const x = c * T + (T - w) / 2, y = (r + 1) * T - h;
+    return { id, x, y, w, h, vx: 0, vy: 0, dir: 1, ground: false, coyote: 0, jumpBuf: 0, actBuf: 0,
+      doubled: false, dropT: 0, splash: 0, atGoal: false, safe: { x, y } };
+  }
+
+  g.load = i => {
+    const lv = LEVELS[i];
+    g.index = i; g.items = []; g.blocks = []; g.plates = []; g.gates = [];
+    g.gatesOpen = false; g.doorOpen = false; g.goal = lv.goal || 'door';
+    g.grid = lv.map.map((row, r) => row.split('').map((ch, c) => {
+      if (ch === 'E') { g.sisters.frost = makeSister('frost', c, r); return '.'; }
+      if (ch === 'A') { g.sisters.nuan = makeSister('nuan', c, r); return '.'; }
+      if (ch === '*' || ch === 'h' || ch === 'o') {
+        g.items.push({ kind: ch, c, r, x: c * T + T / 2, y: r * T + T / 2, got: false });
+        return '.';
+      }
+      if (ch === 'D' || ch === 'S') { g.door = { c, r, x: c * T + T / 2, bottom: (r + 1) * T }; return '.'; }
+      if (ch === 'P') g.plates.push({ c, r, down: false });
+      if (ch === 'G') g.gates.push({ c, r });
+      return ch;
+    }));
+    emit('load');
+  };
+
+  const cell = (c, r) => (c < 0 || c >= COLS || r < 0 || r >= ROWS) ? '#' : g.grid[r][c];
+  const hardSolid = ch => ch === '#' || ch === 'X' || ch === 'I' || ch === 'B' || (ch === 'G' && !g.gatesOpen);
+
+  function overlapsTile(s, c, r) {
+    return s.x < (c + 1) * T && s.x + s.w > c * T && s.y < (r + 1) * T && s.y + s.h > r * T;
+  }
+
+  function hits(s, x, y) {
+    const c0 = Math.floor(x / T), c1 = Math.floor((x + s.w - 0.001) / T);
+    const r0 = Math.floor(y / T), r1 = Math.floor((y + s.h - 0.001) / T);
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+      if (hardSolid(cell(c, r))) return { c, r };
+    }
+    return null;
+  }
+
+  function moveX(s, dx) {
+    if (!dx) return;
+    const hit = hits(s, s.x + dx, s.y);
+    if (!hit) { s.x += dx; return; }
+    s.x = dx > 0 ? hit.c * T - s.w : (hit.c + 1) * T;
+    s.vx = 0;
+  }
+
+  function moveY(s, dy) {
+    s.ground = false;
+    if (dy > 0) {
+      const oldBottom = s.y + s.h, newBottom = oldBottom + dy;
+      const hit = hits(s, s.x, s.y + dy);
+      if (hit) { s.y = hit.r * T - s.h; s.vy = 0; s.ground = true; return; }
+      if (s.dropT <= 0) {
+        const r = Math.floor((newBottom - 0.001) / T);
+        const top = r * T;
+        if (oldBottom <= top + 0.001 && newBottom > top) {
+          const c0 = Math.floor(s.x / T), c1 = Math.floor((s.x + s.w - 0.001) / T);
+          for (let c = c0; c <= c1; c++) if (cell(c, r) === '=') {
+            s.y = top - s.h; s.vy = 0; s.ground = true; return;
+          }
+        }
+      }
+      s.y += dy;
+    } else if (dy < 0) {
+      const hit = hits(s, s.x, s.y + dy);
+      if (hit) { s.y = (hit.r + 1) * T; s.vy = 0; return; }
+      s.y += dy;
+    }
+  }
+
+  function freeze(fromC, r, dir) {
+    let n = 0;
+    for (let c = fromC; n < 3 && cell(c, r) === '~'; c += dir, n++) {
+      g.grid[r][c] = 'I';
+      emit('freeze', { c, r });
+    }
+    return n;
+  }
+
+  function canBlock(c, r) {
+    const ch = cell(c, r);
+    if (ch !== '.' && ch !== 'P') return false;
+    if (g.items.some(it => !it.got && it.c === c && it.r === r)) return false;
+    if (g.door && c === g.door.c && (r === g.door.r || r === g.door.r - 1)) return false;
+    return !Object.values(g.sisters).some(s => overlapsTile(s, c, r));
+  }
+
+  function frostMagic(s) {
+    const fc = s.dir > 0 ? Math.floor((s.x + s.w - 0.001) / T) + 1 : Math.floor(s.x / T) - 1;
+    const fr = Math.floor((s.y + s.h - 0.001) / T);
+    const own = Math.floor((s.x + s.w / 2) / T);
+    for (let r = fr; r <= fr + 3; r++) {
+      if (cell(fc, r) === '~' && freeze(fc, r, s.dir)) { emit('magic', { who: 'frost' }); return; }
+      if (cell(own, r) === '~' && freeze(own, r, s.dir)) { emit('magic', { who: 'frost' }); return; }
+    }
+    for (const r of [fr, fr - 1]) {
+      if (canBlock(fc, r)) {
+        if (g.blocks.length >= MAX_BLOCKS) removeBlock(g.blocks[0]);
+        g.blocks.push({ c: fc, r, under: g.grid[r][fc] });
+        g.grid[r][fc] = 'B';
+        emit('block', { c: fc, r });
+        return;
+      }
+    }
+    emit('fizz', { who: 'frost', x: s.x + s.w / 2, y: s.y });
+  }
+
+  function removeBlock(b) {
+    g.blocks.splice(g.blocks.indexOf(b), 1);
+    g.grid[b.r][b.c] = b.under;
+    emit('unblock', { c: b.c, r: b.r });
+  }
+
+  function nuanMagic(s) {
+    const pad = 26;
+    const box = { x: s.x - pad, y: s.y - 10, w: s.w + pad * 2, h: s.h + 20 };
+    const seeds = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (g.grid[r][c] === 'X' && overlapsTile(box, c, r)) seeds.push([c, r]);
+    }
+    if (!seeds.length) { emit('fizz', { who: 'nuan', x: s.x + s.w / 2, y: s.y }); return; }
+    while (seeds.length) {
+      const [c, r] = seeds.pop();
+      if (cell(c, r) !== 'X') continue;
+      g.grid[r][c] = '.';
+      emit('melt', { c, r });
+      seeds.push([c + 1, r], [c - 1, r], [c, r + 1], [c, r - 1]);
+    }
+    emit('magic', { who: 'nuan' });
+  }
+
+  function updateSister(s, dt) {
+    if (s.splash > 0) {
+      s.splash -= dt;
+      if (s.splash <= 0) { s.x = s.safe.x; s.y = s.safe.y; s.vx = 0; s.vy = 0; s.ground = false; emit('respawn', { who: s.id }); }
+      return;
+    }
+    const inp = g.input[s.id];
+    const move = (inp.r ? 1 : 0) - (inp.l ? 1 : 0);
+    s.vx = move * PHYS.speed;
+    if (move) s.dir = move;
+    if (inp.d) s.dropT = 0.18;
+    s.dropT = Math.max(0, s.dropT - dt);
+    s.coyote = s.ground ? PHYS.coyote : Math.max(0, s.coyote - dt);
+    s.jumpBuf = Math.max(0, s.jumpBuf - dt);
+
+    if (s.jumpBuf > 0) {
+      if (s.coyote > 0) {
+        s.vy = -PHYS.jump; s.jumpBuf = 0; s.coyote = 0; s.ground = false; s.doubled = false;
+        emit('jump', { who: s.id });
+      } else if (s.id === 'nuan' && !s.doubled) {
+        s.vy = -PHYS.jump; s.jumpBuf = 0; s.doubled = true;
+        emit('doublejump', { x: s.x + s.w / 2, y: s.y + s.h });
+      }
+    }
+    if (s.actBuf > 0) {
+      s.actBuf = 0;
+      if (s.id === 'frost') frostMagic(s); else nuanMagic(s);
+    }
+
+    s.vy = Math.min(PHYS.maxFall, s.vy + PHYS.gravity * dt);
+    moveX(s, s.vx * dt);
+    moveY(s, s.vy * dt);
+    if (s.ground) s.doubled = false;
+
+    const footR = Math.floor((s.y + s.h - 6) / T), midC = Math.floor((s.x + s.w / 2) / T);
+    if (cell(midC, footR) === '~') {
+      s.splash = 0.75;
+      emit('splash', { x: s.x + s.w / 2, y: s.y + s.h });
+      return;
+    }
+    if (s.ground) {
+      const below = Math.floor((s.y + s.h + 1) / T);
+      const left = cell(Math.floor(s.x / T), below), right = cell(Math.floor((s.x + s.w - 0.001) / T), below);
+      const steady = ch => ch === '#' || ch === 'I' || ch === '=';
+      if (steady(left) && steady(right)) s.safe = { x: s.x, y: s.y };
+    }
+  }
+
+  function updateGates() {
+    const sisters = Object.values(g.sisters);
+    let pressed = false;
+    for (const p of g.plates) {
+      p.down = cell(p.c, p.r) === 'B' || sisters.some(s => s.splash <= 0 && overlapsTile(s, p.c, p.r));
+      pressed = pressed || p.down;
+    }
+    const blocked = g.gates.some(gt => sisters.some(s => overlapsTile(s, gt.c, gt.r)));
+    const next = pressed || (g.gatesOpen && blocked);
+    if (next !== g.gatesOpen) { g.gatesOpen = next; emit('gate', { open: next }); }
+  }
+
+  function collect() {
+    for (const it of g.items) {
+      if (it.got) continue;
+      for (const s of Object.values(g.sisters)) {
+        if (s.splash > 0) continue;
+        if ((it.kind === '*' && s.id !== 'frost') || (it.kind === 'h' && s.id !== 'nuan')) continue;
+        const dx = Math.abs(s.x + s.w / 2 - it.x), dy = Math.abs(s.y + s.h / 2 - it.y);
+        if (dx < 28 && dy < s.h / 2 + 14) {
+          it.got = true;
+          emit('collect', { kind: it.kind, x: it.x, y: it.y });
+          break;
+        }
+      }
+    }
+    const open = g.items.every(it => it.got);
+    if (open && !g.doorOpen) { g.doorOpen = true; emit('open'); }
+  }
+
+  function checkGoal() {
+    const list = Object.values(g.sisters);
+    for (const s of list) {
+      s.atGoal = g.doorOpen && s.ground && s.splash <= 0
+        && Math.abs(s.x + s.w / 2 - g.door.x) < 44
+        && Math.abs(s.y + s.h - g.door.bottom) < 4;
+    }
+    if (list.every(s => s.atGoal)) {
+      g.state = 'clear'; g.clearT = 1.5;
+      emit('clear');
+    }
+  }
+
+  g.start = i => { g.load(i); g.state = 'play'; };
+  g.press = (id, what) => {
+    if (g.state !== 'play') return;
+    const s = g.sisters[id];
+    if (what === 'jump') s.jumpBuf = PHYS.buffer;
+    if (what === 'act') s.actBuf = 1;
+  };
+  g.step = dt => {
+    g.time += dt;
+    if (g.state === 'clear') {
+      g.clearT -= dt;
+      if (g.clearT <= 0) {
+        if (g.index + 1 < LEVELS.length) g.start(g.index + 1);
+        else { g.state = 'win'; emit('win'); }
+      }
+      return;
+    }
+    if (g.state !== 'play') return;
+    updateSister(g.sisters.frost, dt);
+    updateSister(g.sisters.nuan, dt);
+    updateGates();
+    collect();
+    checkGoal();
+  };
+  return g;
+}
+
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const $ = id => document.getElementById(id);
+LEVELS.length = 1;
+const game = createGame();
+const gx = px => px / T, gy = px => ROWS - px / T;   // game pixels to world units
+
+/* Renderer: matches the Cycles plate camera exactly, so 3D sits inside the painted room. */
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas: $('view'), antialias: false, powerPreference: 'high-performance' });
+} catch (err) {
+  $('oText').textContent = '这个浏览器没有开启 WebGL，无法显示 3D 画面。请换用新版 Chrome、Edge 或 Safari。';
+  throw err;
+}
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const FOV = THREE.MathUtils.radToDeg(2 * Math.atan(6.5 / 27));
+const camera = new THREE.PerspectiveCamera(FOV, 960 / 520, .5, 120);
+camera.position.set(12, 7.6, 27);
+camera.lookAt(12, 6.5, 0);
+
+const target = new THREE.WebGLRenderTarget(960, 520, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, target);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(960, 520), .42, .7, .9);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+let quality = Math.min(devicePixelRatio || 1, 1.5);
+function resize() {
+  const r = $('stage').getBoundingClientRect();
+  renderer.setPixelRatio(quality);
+  renderer.setSize(r.width, r.height, false);
+  composer.setPixelRatio(quality);
+  composer.setSize(r.width, r.height);
+}
+new ResizeObserver(resize).observe($('stage'));
+
+/* Lights: cool moonlight from behind-above, soft front fill that casts the play shadows, warm room sources. */
+const moon = new THREE.DirectionalLight(0xa9c8ff, 1.5);
+moon.position.set(8, 22, -14); scene.add(moon);
+const fill = new THREE.DirectionalLight(0xdce9ff, 1.5);
+fill.position.set(5, 19, 20); fill.target.position.set(12, 5, 0);
+fill.castShadow = true;
+fill.shadow.mapSize.set(2048, 2048);
+Object.assign(fill.shadow.camera, { left: -16, right: 16, top: 12, bottom: -12, near: 1, far: 60 });
+fill.shadow.bias = -.0006; fill.shadow.normalBias = .03; fill.shadow.radius = 4;
+scene.add(fill, fill.target);
+const hearth = new THREE.PointLight(0xff8a3c, 26, 14, 2); hearth.position.set(12, 2.2, -6); scene.add(hearth);
+const chand = new THREE.PointLight(0xffc27a, 30, 16, 2); chand.position.set(12, 9.6, -3.8); scene.add(chand);
+const lantern = new THREE.PointLight(0xffa24a, 3.2, 5, 2); scene.add(lantern);
+
+/* Materials */
+const texLoader = new THREE.TextureLoader();
+function tex(file, srgb) {
+  const t = texLoader.load('assets/' + file);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const brickMat = new THREE.MeshStandardMaterial({
+  map: tex('brick_albedo.jpg', true), normalMap: tex('brick_normal.jpg'), roughnessMap: tex('brick_rough.jpg'),
+  color: 0xc4cedd, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 1, envMapIntensity: .9,
+});
+const iceClear = new THREE.MeshPhysicalMaterial({
+  color: 0xdff4ff, roughness: .1, transmission: .92, thickness: .9, ior: 1.31,
+  attenuationColor: new THREE.Color(0x7fc8ff), attenuationDistance: 1.6, envMapIntensity: 1.6, specularIntensity: 1,
+});
+const icePink = iceClear.clone();
+icePink.color.set(0xffe2ec); icePink.attenuationColor = new THREE.Color(0xff8fbc); icePink.attenuationDistance = 2.6;
+icePink.emissive = new THREE.Color(0xff4f90); icePink.emissiveIntensity = .28; icePink.roughness = .18;
+const shelfIce = new THREE.MeshPhysicalMaterial({
+  color: 0xcbeaff, roughness: .14, transmission: .55, thickness: .35, ior: 1.31, envMapIntensity: 1.5,
+  attenuationColor: new THREE.Color(0x8fd0ff), attenuationDistance: 1,
+});
+const snowMat = new THREE.MeshStandardMaterial({ color: 0xf3f8ff, roughness: .82, envMapIntensity: .9 });
+const flakeMat = new THREE.MeshPhysicalMaterial({ color: 0xd8f3ff, roughness: .08, metalness: .1, emissive: 0x5fc4ff, emissiveIntensity: .75, envMapIntensity: 2 });
+const gemMat = new THREE.MeshPhysicalMaterial({ color: 0xff2f62, roughness: .08, clearcoat: 1, emissive: 0xff1248, emissiveIntensity: .42, envMapIntensity: 2 });
+
+/* Static room geometry: merged, world-mapped so the masonry runs continuously across tiles. */
+const world = new THREE.Group(); scene.add(world);
+function buildBricks() {
+  const pos = [], nor = [], uv = [], idx = [];
+  const quad = (a, b, c, d, n, uvOf) => {
+    const i = pos.length / 3;
+    for (const p of [a, b, c, d]) { pos.push(...p); nor.push(...n); uv.push(...uvOf(p)); }
+    idx.push(i, i + 1, i + 2, i, i + 2, i + 3);
+  };
+  const solid = (c, r) => r >= 0 && r < ROWS && c >= 0 && c < COLS && game.grid[r][c] === '#';
+  const front = p => [p[0] / 4, p[1] / 2], top = p => [p[0] / 4, p[2] / 2], side = p => [p[2] / 4, p[1] / 2];
+  const hz = .5;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (!solid(c, r)) continue;
+    const x0 = c, x1 = c + 1, y1 = ROWS - r, y0 = y1 - 1;
+    quad([x0, y0, hz], [x1, y0, hz], [x1, y1, hz], [x0, y1, hz], [0, 0, 1], front);
+    if (!solid(c, r - 1)) quad([x0, y1, hz], [x1, y1, hz], [x1, y1, -hz], [x0, y1, -hz], [0, 1, 0], top);
+    if (!solid(c, r + 1)) quad([x0, y0, -hz], [x1, y0, -hz], [x1, y0, hz], [x0, y0, hz], [0, -1, 0], top);
+    if (!solid(c + 1, r)) quad([x1, y0, hz], [x1, y0, -hz], [x1, y1, -hz], [x1, y1, hz], [1, 0, 0], side);
+    if (!solid(c - 1, r)) quad([x0, y0, -hz], [x0, y0, hz], [x0, y1, hz], [x0, y1, -hz], [-1, 0, 0], side);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  const m = new THREE.Mesh(g, brickMat);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+
+function instanced(geo, mat, list) {
+  const m = new THREE.InstancedMesh(geo, mat, list.length);
+  const o = new THREE.Object3D();
+  list.forEach((p, i) => {
+    o.position.set(p.x, p.y, p.z || 0);
+    o.rotation.y = p.flip ? Math.PI : 0;
+    o.updateMatrix(); m.setMatrixAt(i, o.matrix);
+  });
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+
+const P = {};   // Blender props by name
+const dyn = { walls: new Map(), blocks: new Map(), items: [], door: null, anims: [] };
+
+function buildLevel() {
+  world.clear();
+  dyn.walls.clear(); dyn.blocks.clear(); dyn.items = []; dyn.anims = [];
+  world.add(buildBricks());
+  const caps = [[], [], []], ledges = [[], [], []];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const ch = game.grid[r][c], up = r > 0 ? game.grid[r - 1][c] : '#';
+    const v = (c * 7 + r * 3) % 3;
+    if (ch === '#' && r > 0 && up !== '#' && up !== 'X') caps[v].push({ x: c + .5, y: ROWS - r, flip: (c + r) % 2 });
+    if (ch === '=') ledges[v].push({ x: c + .5, y: ROWS - r, flip: (c + r) % 2 });
+    if (ch === 'X') addWall(c, r);
+  }
+  caps.forEach((l, i) => l.length && world.add(instanced(P['cap' + i].geometry, snowMat, l)));
+  ledges.forEach((l, i) => l.length && world.add(instanced(P['ledge' + i].geometry, shelfIce, l)));
+  game.items.forEach((it, i) => {
+    const m = new THREE.Mesh(it.kind === '*' ? P.flake.geometry : P.heart.geometry, it.kind === '*' ? flakeMat : gemMat);
+    m.position.set(gx(it.x), gy(it.y), 0);
+    m.scale.setScalar(it.kind === '*' ? 1 : .9);
+    m.castShadow = true;
+    world.add(m);
+    const glow = new THREE.PointLight(it.kind === '*' ? 0x7fd0ff : 0xff4f80, 1.1, 3, 2);
+    m.add(glow);
+    dyn.items.push({ it, m, phase: i * 1.7 });
+  });
+  buildDoor();
+}
+
+function addWall(c, r) {
+  const m = new THREE.Mesh(P.iceWall.geometry, icePink);
+  m.position.set(c + .5, ROWS - r - .5, 0);
+  m.castShadow = true;
+  world.add(m);
+  dyn.walls.set(c + ',' + r, m);
+}
+
+function archGeometry(w, peak) {
+  const n = 14, spring = peak - w * Math.sin(Math.PI / 3), s = new THREE.Shape();
+  s.moveTo(-w / 2, 0);
+  for (let i = 0; i <= n; i++) { const a = i / n * Math.PI / 3; s.lineTo(w / 2 - w * Math.cos(a), spring + w * Math.sin(a)); }
+  for (let i = n - 1; i >= 0; i--) { const a = i / n * Math.PI / 3; s.lineTo(w * Math.cos(a) - w / 2, spring + w * Math.sin(a)); }
+  s.lineTo(w / 2, 0);
+  return new THREE.ShapeGeometry(s);
+}
+
+function buildDoor() {
+  const d = game.door, g = new THREE.Group();
+  g.position.set(gx(d.x), gy(d.bottom), -.62);
+  const frame = P.door.frame.clone();
+  frame.material = shelfIce; frame.castShadow = true;
+  const leafL = P.door.left.clone(), leafR = P.door.right.clone();
+  const glow = new THREE.Mesh(archGeometry(1.5, 2.15), new THREE.MeshBasicMaterial({ color: new THREE.Color(.95, .68, .36) }));
+  glow.position.set(0, 0, -.18);
+  const glowLight = new THREE.PointLight(0xffc27a, 0, 7, 2); glowLight.position.set(0, 1.2, 1);
+  g.add(glow, frame, leafL, leafR, glowLight);
+  world.add(g);
+  dyn.door = { leafL, leafR, glow, glowLight, open: 0 };
+}
+
+/* Sisters */
+const sisters = {};
+function setupSister(id, gltf) {
+  const root = new THREE.Group();
+  const model = gltf.scene;
+  model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+  root.add(model);
+  scene.add(root);
+  const mixer = new THREE.AnimationMixer(model);
+  const actions = {};
+  for (const clip of gltf.animations) {
+    // Keep rotations and the root bob; the game itself owns position.
+    actions[clip.name] = mixer.clipAction(clip);
+  }
+  actions.cast.setLoop(THREE.LoopOnce); actions.cast.clampWhenFinished = true;
+  actions.idle.play();
+  sisters[id] = { root, model, mixer, actions, now: 'idle', yaw: 1, castT: 0, eyes: model.getObjectByName('eyes'), hand: model.getObjectByName('foreArmR') };
+}
+
+function setClip(s, name, fade = .14) {
+  if (s.now === name) return;
+  const a = s.actions[name];
+  a.reset().play();
+  s.actions[s.now].crossFadeTo(a, fade, false);
+  s.now = name;
+}
+
+const tmp = new THREE.Vector3();
+function drawSister(id, dt, t) {
+  const s = sisters[id], g = game.sisters[id];
+  s.root.visible = g.splash <= 0;
+  s.root.position.set(gx(g.x + g.w / 2), gy(g.y + g.h), 0);
+  s.castT = Math.max(0, s.castT - dt);
+  const cheering = game.state === 'clear' || game.state === 'win';
+  const moving = Math.abs(g.vx) > 1;
+  setClip(s, cheering ? 'cheer' : s.castT > 0 ? 'cast' : !g.ground ? 'jump' : moving ? 'run' : 'idle');
+  const want = (cheering || game.state === 'title' ? .5 * g.dir : 1.12 * g.dir) * 1;
+  s.yaw += (want - s.yaw) * Math.min(1, dt * 14);
+  s.root.rotation.y = s.yaw;
+  s.mixer.update(dt);
+  if (s.eyes) s.eyes.scale.y = (t + (id === 'nuan' ? 1.7 : 0)) % 3.6 < .13 ? .1 : 1;
+}
+
+/* Particles */
+const SPARK_MAX = 240;
+const sparkGeo = new THREE.BufferGeometry();
+const sparkPos = new Float32Array(SPARK_MAX * 3), sparkCol = new Float32Array(SPARK_MAX * 3);
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+sparkGeo.setAttribute('color', new THREE.BufferAttribute(sparkCol, 3));
+function softDot() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.3, 'rgba(255,255,255,.8)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const dot = softDot();
+scene.add(new THREE.Points(sparkGeo, new THREE.PointsMaterial({ size: .22, map: dot, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
+const sparks = [];
+function burst(x, y, color, n, speed = 3) {
+  const c = new THREE.Color(color);
+  for (let i = 0; i < n && sparks.length < SPARK_MAX; i++) {
+    const a = Math.random() * Math.PI * 2, b = Math.random() * Math.PI - Math.PI / 2, v = speed * (.3 + Math.random());
+    sparks.push({ x, y, z: 0, vx: Math.cos(a) * Math.cos(b) * v, vy: Math.sin(b) * v + 1.2, vz: Math.sin(a) * Math.cos(b) * v, life: .5 + Math.random() * .5, c });
+  }
+}
+function drawSparks(dt) {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const p = sparks[i];
+    p.life -= dt;
+    if (p.life <= 0) { sparks.splice(i, 1); continue; }
+    p.vy -= 6 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+  }
+  sparks.forEach((p, i) => {
+    sparkPos.set([p.x, p.y, p.z], i * 3);
+    const k = Math.min(1, p.life * 2.4) * 2;
+    sparkCol.set([p.c.r * k, p.c.g * k, p.c.b * k], i * 3);
+  });
+  sparkGeo.setDrawRange(0, sparks.length);
+  sparkGeo.attributes.position.needsUpdate = sparkGeo.attributes.color.needsUpdate = true;
+}
+
+const SNOW_N = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
+const snowPos = new Float32Array(SNOW_N * 3), snowSeed = new Float32Array(SNOW_N);
+for (let i = 0; i < SNOW_N; i++) {
+  snowPos.set([Math.random() * 22 + 1, 1 + Math.random() * 11, Math.random() * 11 - 9], i * 3);
+  snowSeed[i] = Math.random() * 7;
+}
+const snowGeo = new THREE.BufferGeometry();
+snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+scene.add(new THREE.Points(snowGeo, new THREE.PointsMaterial({ size: .1, map: dot, color: 0xe8f4ff, transparent: true, opacity: .8, depthWrite: false })));
+function drawSnow(dt, t) {
+  for (let i = 0; i < SNOW_N; i++) {
+    const k = i * 3;
+    snowPos[k] += Math.sin(t * .6 + snowSeed[i]) * dt * .25;
+    snowPos[k + 1] -= dt * (.45 + snowSeed[i] * .08);
+    if (snowPos[k + 1] < 1) snowPos[k + 1] = 12;
+  }
+  snowGeo.attributes.position.needsUpdate = true;
+}
+
+/* Sound */
+let audio = null, muted = false;
+function wakeAudio() {
+  if (audio) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (AC) audio = new AC();
+}
+function tones(notes, type, len, vol) {
+  if (!audio || muted) return;
+  notes.forEach((f, i) => {
+    const t = audio.currentTime + i * len * .7;
+    const o = audio.createOscillator(), a = audio.createGain();
+    o.type = type || 'triangle'; o.frequency.value = f;
+    a.gain.setValueAtTime(vol || .06, t);
+    a.gain.exponentialRampToValueAtTime(.0008, t + len);
+    o.connect(a).connect(audio.destination);
+    o.start(t); o.stop(t + len);
+  });
+}
+
+/* Game events */
+let hintTimer = 0;
+function flashHint(msg) {
+  $('hint').textContent = msg;
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => { $('hint').textContent = LEVELS[game.index].hint; }, 3500);
+}
+function animate(fn, dur, done) { dyn.anims.push({ fn, t: 0, dur, done }); }
+
+function handleEvents() {
+  for (const e of game.events) {
+    switch (e.type) {
+      case 'load': buildLevel(); $('hint').textContent = LEVELS[game.index].hint; break;
+      case 'block': {
+        const m = new THREE.Mesh(P.iceBlock.geometry, iceClear);
+        m.position.set(e.c + .5, ROWS - e.r - .5, 0); m.castShadow = true; m.scale.setScalar(.01);
+        world.add(m); dyn.blocks.set(e.c + ',' + e.r, m);
+        animate(k => m.scale.setScalar(.01 + .99 * (1 - (1 - k) ** 3)), .22);
+        burst(e.c + .5, ROWS - e.r - .5, 0xbfe9ff, 16); tones([660, 990], 'triangle', .12); sisters.frost.castT = .45;
+        break;
+      }
+      case 'unblock': {
+        const key = e.c + ',' + e.r, m = dyn.blocks.get(key);
+        dyn.blocks.delete(key);
+        burst(e.c + .5, ROWS - e.r - .5, 0x7fd0fa, 10);
+        if (m) animate(k => m.scale.setScalar(1 - k), .18, () => world.remove(m));
+        break;
+      }
+      case 'melt': {
+        const key = e.c + ',' + e.r, m = dyn.walls.get(key);
+        dyn.walls.delete(key);
+        burst(e.c + .5, ROWS - e.r - .5, 0xff9cc2, 24, 2.4);
+        if (m) animate(k => { m.scale.set(1 - k * .3, 1 - k, 1 - k * .3); m.position.y -= .004; }, .6, () => world.remove(m));
+        tones([392, 523, 659], 'sine', .18); sisters.nuan.castT = .45;
+        break;
+      }
+      case 'fizz': burst(gx(e.x), gy(e.y) - .4, e.who === 'frost' ? 0xbfe9ff : 0xff9cc2, 6, 1.6); tones([220], 'sine', .1, .03); sisters[e.who].castT = .3; break;
+      case 'jump': tones([e.who === 'frost' ? 440 : 494], 'triangle', .09, .035); break;
+      case 'doublejump': burst(gx(e.x), gy(e.y), 0xffcf6b, 10, 2); tones([659], 'triangle', .1, .04); break;
+      case 'collect': {
+        const d = dyn.items.find(i => i.it.x === e.x && i.it.y === e.y);
+        if (d) { d.it.got = true; animate(k => d.m.scale.setScalar((1 - k) * (1 + k)), .3, () => world.remove(d.m)); }
+        burst(gx(e.x), gy(e.y), e.kind === 'h' ? 0xff7aa8 : 0xe4f8ff, 22);
+        tones(e.kind === 'h' ? [659, 880] : [988, 1319], 'triangle', .12);
+        break;
+      }
+      case 'open':
+        tones([523, 659, 784, 1047], 'triangle', .16);
+        flashHint('门开了！两姐妹都走到门口吧。');
+        animate(k => {
+          const a = dyn.door, e2 = 1 - (1 - k) ** 2;
+          a.leafL.rotation.y = -e2 * 1.9; a.leafR.rotation.y = e2 * 1.9; a.glowLight.intensity = e2 * 6;
+        }, 1.1);
+        break;
+      case 'clear': tones([523, 659, 784, 659, 784, 1047], 'triangle', .17); break;
+      case 'win': showEnd(); tones([523, 659, 784, 1047, 1319], 'sine', .24); break;
+    }
+  }
+  game.events.length = 0;
+}
+
+function showEnd() {
+  $('overlay').hidden = false;
+  $('oTitle').textContent = '大厅闯关成功';
+  $('oText').textContent = '这是 3D 样板的第一间。质感满意的话，其余三间会按同样的方式做出来。';
+  $('oStart').textContent = '再玩一次';
+  $('oStart').focus({ preventScroll: true });
+}
+
+/* Input */
+const KEYS = {
+  KeyA: ['frost', 'l'], KeyD: ['frost', 'r'], KeyS: ['frost', 'd'], KeyW: ['frost', 'jump'], KeyF: ['frost', 'act'],
+  ArrowLeft: ['nuan', 'l'], ArrowRight: ['nuan', 'r'], ArrowDown: ['nuan', 'd'], ArrowUp: ['nuan', 'jump'],
+  Enter: ['nuan', 'act'], NumpadEnter: ['nuan', 'act'], KeyL: ['nuan', 'act'],
+};
+function clearInput() {
+  for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
+  document.querySelectorAll('#touch button.on').forEach(b => b.classList.remove('on'));
+}
+addEventListener('blur', clearInput);
+
+function begin() {
+  wakeAudio();
+  $('overlay').hidden = true; $('hud').hidden = false;
+  game.start(0);
+  document.activeElement?.blur?.();
+}
+function toggleSound() {
+  muted = !muted;
+  $('bSound').textContent = muted ? '声音：关' : '声音：开';
+}
+$('oStart').addEventListener('click', begin);
+$('bRestart').addEventListener('click', () => { wakeAudio(); if (game.state === 'play') game.start(0); $('bRestart').blur(); });
+$('bSound').addEventListener('click', () => { wakeAudio(); toggleSound(); $('bSound').blur(); });
+
+addEventListener('keydown', e => {
+  wakeAudio();
+  if (game.state !== 'play') return;
+  if (e.code === 'KeyM' && !e.repeat) toggleSound();
+  if (e.code === 'KeyR' && !e.repeat) game.start(0);
+  const k = KEYS[e.code];
+  if (!k) return;
+  e.preventDefault();
+  const [id, what] = k;
+  if (what === 'jump' || what === 'act') { if (!e.repeat) game.press(id, what); }
+  else game.input[id][what] = 1;
+});
+addEventListener('keyup', e => {
+  const k = KEYS[e.code];
+  if (k && k[1].length === 1) game.input[k[0]][k[1]] = 0;
+});
+
+let active = 'frost';
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
+function bindHold(id, key) {
+  const b = $(id);
+  const on = e => { e.preventDefault(); wakeAudio(); b.classList.add('on'); game.input[active][key] = 1; };
+  const off = () => { b.classList.remove('on'); game.input.frost[key] = 0; game.input.nuan[key] = 0; };
+  b.addEventListener('pointerdown', on);
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, off);
+}
+const bindTap = (id, fn) => $(id).addEventListener('pointerdown', e => { e.preventDefault(); wakeAudio(); fn(); });
+bindHold('tLeft', 'l'); bindHold('tRight', 'r');
+bindTap('tJump', () => game.press(active, 'jump'));
+bindTap('tAct', () => game.press(active, 'act'));
+bindTap('tSwitch', () => {
+  clearInput();
+  active = active === 'frost' ? 'nuan' : 'frost';
+  $('tSwitch').textContent = active === 'frost' ? '换成暖暖' : '换成霜霜';
+});
+$('tSwitch').textContent = '换成暖暖';
+
+/* Frame */
+const STEP = 1 / 120;
+let last = 0, acc = 0, slow = 0, frames = 0;
+function hudTick() {
+  const n = k => { const all = game.items.filter(i => i.kind === k); return `${all.filter(i => i.got).length}/${all.length}`; };
+  $('hName').textContent = LEVELS[game.index].name;
+  $('hFlake').textContent = n('*'); $('hHeart').textContent = n('h');
+  $('hBlocks').textContent = `${game.blocks.length}/${MAX_BLOCKS}`;
+}
+function frame(ms) {
+  const dt = Math.min(.05, (ms - last) / 1000 || 0);
+  last = ms; acc += dt;
+  while (acc >= STEP) { game.step(STEP); acc -= STEP; }
+  handleEvents();
+  const t = ms / 1000;
+  for (let i = dyn.anims.length - 1; i >= 0; i--) {
+    const a = dyn.anims[i];
+    a.t += dt;
+    const k = Math.min(1, a.t / a.dur);
+    a.fn(k);
+    if (k >= 1) { dyn.anims.splice(i, 1); a.done?.(); }
+  }
+  for (const d of dyn.items) {
+    d.m.position.y = gy(d.it.y) + Math.sin(t * 2.2 + d.phase) * .07;
+    d.m.rotation.y = t * 1.4 + d.phase;
+  }
+  drawSister('frost', dt, t);
+  drawSister('nuan', dt, t);
+  sisters.nuan.hand.getWorldPosition(tmp);
+  lantern.position.set(tmp.x, tmp.y - .2, tmp.z + .35);
+  hearth.intensity = 24 + Math.sin(t * 9) * 2.4 + Math.sin(t * 23) * 1.6;
+  drawSparks(dt); drawSnow(dt, t);
+  if (game.state === 'win' && Math.random() < .3) burst(4 + Math.random() * 16, 4 + Math.random() * 7, [0xffcf6b, 0xff7aa8, 0xbfe9ff][Math.floor(Math.random() * 3)], 5, 2);
+  hudTick();
+  composer.render();
+  // Drop resolution once if the device cannot hold about 40 fps.
+  if (++frames > 60 && dt > .026) slow++;
+  if (slow > 90 && quality > 1) { quality = 1; slow = 0; resize(); }
+  requestAnimationFrame(frame);
+}
+
+/* Load */
+async function load() {
+  // Binary assets ship as base64 text because the host does not serve .glb or .hdr.
+  const bytes = async name => {
+    const res = await fetch(`assets/${name}.b64.txt`);
+    if (!res.ok) throw new Error(`${name}: ${res.status}`);
+    const bin = atob((await res.text()).trim()), out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out.buffer;
+  };
+  const gltf = new GLTFLoader();
+  const load1 = async name => {
+    const buf = await bytes(name);
+    return new Promise((ok, no) => gltf.parse(buf, '', ok, no));
+  };
+  const loadEnv = async () => {
+    const d = new RGBELoader().parse(await bytes('hall_env.hdr'));
+    const t = new THREE.DataTexture(d.data, d.width, d.height, THREE.RGBAFormat, d.type);
+    t.minFilter = t.magFilter = THREE.LinearFilter;
+    t.generateMipmaps = false; t.flipY = true; t.needsUpdate = true;
+    return t;
+  };
+  const [plate, env, props, frost, nuan] = await Promise.all([
+    new Promise((ok, no) => texLoader.load('assets/hall_plate.jpg', ok, undefined, no)),
+    loadEnv(), load1('props.glb'), load1('frost.glb'), load1('nuan.glb'),
+  ]);
+  plate.colorSpace = THREE.SRGBColorSpace;
+  scene.background = plate;
+  env.mapping = THREE.EquirectangularReflectionMapping;
+  const pm = new THREE.PMREMGenerator(renderer);
+  scene.environment = pm.fromEquirectangular(env).texture;
+  scene.environmentIntensity = 1.5;
+  env.dispose(); pm.dispose();
+  props.scene.updateMatrixWorld(true);
+  for (const n of ['ledge0', 'ledge1', 'ledge2', 'cap0', 'cap1', 'cap2', 'iceWall', 'iceBlock', 'flake', 'heart']) P[n] = props.scene.getObjectByName(n);
+  const woodMat = new THREE.MeshPhysicalMaterial({ color: 0x24487c, roughness: .34, clearcoat: .6, envMapIntensity: 1.3 });
+  P.door = { frame: props.scene.getObjectByName('doorFrame'), left: props.scene.getObjectByName('doorLeafL'), right: props.scene.getObjectByName('doorLeafR') };
+  for (const leaf of [P.door.left, P.door.right]) leaf.traverse(o => { if (o.isMesh) { o.castShadow = true; if (!o.material.metalness) o.material = woodMat; } });
+  setupSister('frost', frost);
+  setupSister('nuan', nuan);
+  game.load(0);
+  handleEvents();
+  game.state = 'title';
+  game.sisters.frost.x = 9.4 * T; game.sisters.frost.y = 11.9 * T - 58;
+  resize();
+  $('oText').textContent = '两姐妹要穿过城堡大厅。霜霜能造冰块当台阶，暖暖能二段跳，还能融化粉色冰墙。';
+  $('oStart').disabled = false;
+  $('oStart').textContent = '开始';
+  $('oStart').focus({ preventScroll: true });
+  requestAnimationFrame(frame);
+}
+load().catch(err => {
+  console.error(err);
+  $('oText').textContent = '城堡素材加载失败，请刷新页面再试。';
+});
+</script>

@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/hall_style.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction.
+
+Subject: the interior of a grand ice castle hall at night, seen straight-on as a side-scrolling game backdrop. Three tall pointed-arch windows with frosted panes showing a soft aurora and moon, slender ice pillars, a stone-and-ice hearth with a small warm fire at the back wall, a crystal chandelier with candles hanging high up, a polished ice floor at the very bottom edge. The middle of the picture stays calm, low contrast and slightly hazy so gameplay characters read clearly in front of it. No people, no creatures.

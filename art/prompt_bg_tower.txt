@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/bg_tower.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the attached reference image(s) precisely.
+
+Subject: the inside of a tall round clockwork tower of ice: huge brass cogwheels half-frozen into the walls, spiral stairs winding upward into blue haze, chains, a narrow slit window with stars, warm lamp glow on brass. Seen straight-on as a side-scrolling game backdrop, in the same castle as the reference. A polished ice floor at the very bottom edge. The middle of the picture stays calm, low contrast and slightly hazy so gameplay characters read clearly in front of it. No people, no creatures.

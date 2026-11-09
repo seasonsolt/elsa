@@ -1,0 +1,11 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 3:2 at the highest available resolution, then copy the generated PNG to ./raw/sisters_style.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, adapted for game character art with clean silhouettes.
+
+Subject: a character action sheet of two ORIGINAL young sisters in a child-friendly storybook style, on a perfectly flat solid #FF00FF magenta background with no shadows on the background. All figures are full body, same scale, evenly spaced with clear gaps, none touching, in two rows, all facing right.
+
+Top row, the elder sister Shuangshuang, about 12 years old: short chin-length silver-lilac bob haircut with a small snowflake hairpin, wearing a navy-periwinkle hooded winter parka that reaches her knees with white fur trim, an ice-blue scarf, dark tights and white snow boots. Five poses left to right: standing relaxed; running stride one; running stride two; jumping with knees up; casting magic with both hands forward.
+
+Bottom row, the younger sister Nuannuan, about 9 years old, warm brown skin: black curly hair in two round puff buns, a mustard-yellow knit sweater with rust stripes, a short red plaid skirt, brown leggings, tan boots, red mittens, carrying a small brass lantern. The same five poses in the same order.
+
+Keep the same face, costume and proportions across all poses. No text or labels.

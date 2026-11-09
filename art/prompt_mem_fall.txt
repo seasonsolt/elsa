@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/mem_fall.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the palette, brushwork and paper texture of the first attached reference precisely. The two ORIGINAL sisters must match the second attached costume sheet in face, hair and skin tone, but drawn younger as described. This is a soft, faded memory: slightly hazy vignetted edges, gentle and child-friendly.
+
+Subject: a memory illustration. The castle hall long ago, at night. A small girl with a silver-lilac bob (about 7) stands with her hands raised and a wild swirl of snow escaping from them, her face frightened. In front of her a smaller girl (about 4, warm brown skin, curly puff buns) has tumbled softly backwards into a big pillow-like snowdrift, unhurt but surprised, her little lantern rolling away. A half-built snowman with a red scarf. Gentle, not scary. Leave the top quarter of the image calm and uncluttered. No text.

@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/key_art.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the attached reference image(s) precisely.
+
+Subject: the title painting for the game: the same two ORIGINAL sisters from the character sheet, shown larger from the knees up in the center-lower part of the picture, standing together in the castle hall from the other reference. The elder sister raises one hand with a little swirl of snowflakes; the younger holds up her glowing brass lantern, laughing. Warm lantern light on their faces, moonlit hall behind. Keep the top third of the picture calm for a title to be overlaid later. Do not draw any text.

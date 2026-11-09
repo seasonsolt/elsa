@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, portrait 3:4 at the highest available resolution, then copy the generated PNG to ./raw/portrait_frost.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the attached costume sheet exactly: identical face, hair, skin tone, dress and colours.
+
+Subject: a storybook character portrait, head and shoulders down to the waist, of ONLY the elder sister with the silver-lilac bob and the periwinkle gown with fur capelet (top row of the sheet). Three-quarter view, a reserved, thoughtful expression with a small hopeful smile, one gloved hand held close to her chest where a few snowflakes hover. Soft painted background of cool moonlit blue with drifting snow. No text.

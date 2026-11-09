@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/story_thaw.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the palette, brushwork and paper texture of the attached reference precisely, but shift the light to a warm sunrise.
+
+Subject: a storybook illustration of the same blue ice castle on a mountain at sunrise as winter melts away: golden sunlight pours through, icicles drip, snow turns into drifting pink and white blossom petals, green grass and spring flowers appear on the slopes, and a frozen waterfall begins to flow again. A small warm-hearted moment in the foreground: two ORIGINAL sisters seen small from behind, holding hands — the elder in a periwinkle gown with a silver-lilac bob, the younger in a rust-red dress with two curly black puff buns and a brass lantern. Hopeful, tender, luminous. Leave the top third of the image calm and uncluttered. No text.

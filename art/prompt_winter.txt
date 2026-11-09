@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/story_winter.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the palette, brushwork and paper texture of the attached reference precisely.
+
+Subject: a storybook illustration of a small northern harbour town with painted wooden houses and festival bunting at dusk, suddenly gripped by magical winter: frost ferns racing across the cobbles, the harbour water freezing into swirling ice around wooden sailing boats, snow beginning to fall on lanterns and a summer flower market. Far in the distance on a mountain, a pale blue ice castle glows. Tiny townsfolk silhouettes wrapped in shawls look up in wonder. Dramatic but gentle and child-friendly. Leave the top third of the image calm and uncluttered. No text.

@@ -1,0 +1,8 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, square 1:1 at the highest available resolution, then copy the generated PNG to ./raw/sheet_goals.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the attached reference image(s) precisely.
+
+Subject: a game prop sheet on a perfectly flat solid #FF00FF magenta background with no background shadows. Items are front views, evenly spaced in a 4 by 2 grid with wide gaps, none touching:
+Row 1: a closed pointed-arch castle door of blue painted wood with ice frame and brass bands; the same door standing open with warm golden light pouring out; one sparkling six-armed ice-blue snowflake crystal; one faceted glowing ruby heart.
+Row 2: one big round snowball; a snowman of two stacked snowballs; a complete friendly snowman of three stacked snowballs with a black top hat, a rose knitted scarf, coal eyes and a carrot nose, twig arms; a small pile of three snowballs.
+No text or labels.

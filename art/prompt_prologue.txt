@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, landscape 16:9 at the highest available resolution, then copy the generated PNG to ./raw/story_prologue.png in this folder. Report only the final path.
+
+Follow ./STYLE.md and match the palette, brushwork and paper texture of the attached reference precisely.
+
+Subject: a storybook illustration. Night, inside a tall moonlit castle hall with blue stone arches and big windows. Two very small ORIGINAL sisters in nightgowns, about 7 and 4 years old (the elder with a silver-lilac bob, the younger with warm brown skin and two curly black puff buns), laugh as they finish a little snowman with a red scarf and a carrot nose on the polished floor. Glittering snowflakes swirl up from the elder girl's raised hands and soft snow covers the floor around them. Warm candlelight from a doorway on the left. Joyful, cosy, magical. Leave the top third of the image calm and uncluttered. No text.

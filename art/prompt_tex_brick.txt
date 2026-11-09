@@ -1,0 +1,5 @@
+Use the imagegen skill and the built-in image_gen tool. Generate exactly one image, square 1:1 at the highest available resolution, then copy the generated PNG to ./raw/tex_brick.png in this folder. Report only the final path.
+
+Follow ./STYLE.md for the art direction, and match the palette, brushwork and paper texture of the attached reference image(s) precisely.
+
+Subject: one seamless, tileable texture of ice-castle masonry, viewed flat-on: running-bond blocks of pale blue-grey ice stone with frost in the joints, in the same painted gouache style, even lighting, no perspective, no vignette, edges wrapping perfectly on all four sides. Exactly 4 rows of blocks and 2 blocks per row.

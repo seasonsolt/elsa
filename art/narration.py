@@ -59,9 +59,9 @@ SPEAKERS = ('narrator', 'frost', 'nuan')
 # Used when lines.json carries no "voices" block; mirrors PLAN A4.
 DEFAULT_VOICES = {
     # Compatibility alias for old content; current lessons are spoken by Anna.
-    'narrator': {'zh': ['zh-CN-XiaoyiNeural', '+4%', '+8Hz'], 'en': ['en-US-AriaNeural', '-10%', '+4Hz']},
+    'narrator': {'zh': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz'], 'en': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz']},
     'frost': {'zh': ['zh-CN-XiaoxiaoNeural', '-6%', '-4Hz'], 'en': ['en-US-JennyNeural', '-15%', '-4Hz']},
-    'nuan': {'zh': ['zh-CN-XiaoyiNeural', '+4%', '+8Hz'], 'en': ['en-US-AriaNeural', '-10%', '+4Hz']},
+    'nuan': {'zh': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz'], 'en': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz']},
 }
 PUNCT_ONLY = re.compile(r'^[\W_]*$', re.UNICODE)   # nothing a voice could say
 
@@ -99,6 +99,8 @@ class Content:
                 v = self.voices.get(who, {}).get(lang)
                 if not (isinstance(v, list) and len(v) == 3):
                     raise Fail(f'voices.{who}.{lang} must be [voice, rate, pitch]')
+        if (self.voices['nuan']['zh'][0], self.voices['nuan']['zh'][2]) != (self.voices['nuan']['en'][0], self.voices['nuan']['en'][2]):
+            raise Fail('Anna must use one voice identity and pitch for both Chinese and English')
         self.lines = dict(doc.get('pages') or {})
         self.lines.update(doc['lines'])
         words = load_json(words_path, 'words')

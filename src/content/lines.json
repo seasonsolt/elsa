@@ -1,8 +1,8 @@
 {
   "voices": {
-    "narrator": {"zh": ["zh-CN-XiaoyiNeural", "+4%", "+8Hz"], "en": ["en-US-AriaNeural", "-10%", "+4Hz"]},
+    "narrator": {"zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"]},
     "frost": {"zh": ["zh-CN-XiaoxiaoNeural", "-6%", "-4Hz"], "en": ["en-US-JennyNeural", "-15%", "-4Hz"]},
-    "nuan": {"zh": ["zh-CN-XiaoyiNeural", "+4%", "+8Hz"], "en": ["en-US-AriaNeural", "-10%", "+4Hz"]}
+    "nuan": {"zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"]}
   },
   "lines": {
     "p1": {"who": "nuan", "say": ["姐姐，你手里的雪花好漂亮！我是安娜，我会陪着你，一起在冰堡里探险。"], "art": "story_prologue"},

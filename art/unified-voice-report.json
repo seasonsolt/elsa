@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-09",
+  "request": "英文单词和人物用同一声线",
+  "root_cause": "上一版仅统一了安娜的角色归属：中文为 Xiaoyi、英文为 Aria，实际仍是两个发声模型；旧测试只比较英文教学之间，没有比较中英文声线。",
+  "resolution": "安娜的中文对白、英文单词和混读均使用同一个支持中英文的双语声音；音高保持一致，英文仅放慢语速。人物中文声音也一起更新。",
+  "voice": {
+    "id": "en-US-EmmaMultilingualNeural",
+    "pitch": "+8Hz",
+    "zh_rate": "-5%",
+    "en_rate": "-19%",
+    "provider_documentation": "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice",
+    "availability": "已通过当前 edge_tts.list_voices 与实际中英文合成验证"
+  },
+  "validation": {
+    "replaced_clips": 368,
+    "elsa_chinese_unchanged": 25,
+    "all_replacements_decoded": true,
+    "sha256_equal_between_staging_and_game": true,
+    "voice_id_and_pitch_equal_in_both_languages": true,
+    "max_clip_seconds": 17.04375,
+    "clip_durations_fit_scene_timeouts": true,
+    "unit_tests_source": 130,
+    "unit_tests_built": 130,
+    "asr_sample": {
+      "zh_segments": 4,
+      "en_segments": 1,
+      "DIFF": 0,
+      "NEAR": 1,
+      "note": "冰识别为同音字兵，NEAR；英文 ice 正确。"
+    },
+    "runtime_guard": "生成工具拒绝安娜中文和英文的模型或音高不一致的配置",
+    "new_regression": "narrationRejectsDifferentActorsForAnnasTwoLanguages",
+    "browser_flow": "没有更改浏览器交互逻辑，本轮未重复前一角色调整的 44 项浏览器检查。所有新音频已解码且播放时长在现有界面超时范围内。",
+    "human_listening_performed": false
+  },
+  "release_package": {
+    "path": "/Users/Thin/.codex/visualizations/2026/11/09/01a1bf57-3d0c-7473-a164-ef37a15cef79/elsa-anna-unified-voice.zip",
+    "zip_bytes": 16768891,
+    "runtime_bytes": 17900928,
+    "audio_files": 393,
+    "asset_version": "21becb6eb65c",
+    "sha256": "06b827b40b6a64d3dab5702b74bf3eadfe157eca0760cb368044e6170c320f78"
+  },
+  "supersedes_voice_configuration_in": "art/elsa-lead-report.json",
+  "deployed": false
+}

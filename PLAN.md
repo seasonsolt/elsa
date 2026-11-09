@@ -4,6 +4,8 @@
 
 > 最新主配角决定：艾莎固定为单人模式主角，安娜由 AI 辅助。英文学习、引导、卡片、菜单以及剧情回忆均用安娜的角色声线；剧情以安娜对姐姐说话的口吻呈现，不使用第三人称旁白。艾莎保留中文对白。旧存档保留进度和换装，玩家角色迁移为艾莎；单人模式不再提供换人教学或操作。
 
+> 声线修正：安娜的中文和英文必须使用同一个双语发声模型和音高，不能只挂在同一个角色名下。当前统一为 en-US-EmmaMultilingualNeural；英文仅放慢语速。旧的 Xiaoyi 中文 + Aria 英文组合已弃用。
+
 > 状态：**第 3 稿**（已纳入 2026-11-09 的两轮 review 决定，见 §7），待最终确认。通过后由 Sonnet 5.5（high）以 workflow 分阶段开发。
 > 本文件是开发 agent 唯一的上下文来源：agent 看不到之前的对话，凡是需要知道的都写在这里。
 
@@ -341,9 +343,9 @@ art/build_page.py      → 按文件名顺序拼接 src/*.js 和 src/view/*.js�
 ```json
 {
   "voices": {
-    "narrator": { "zh": ["zh-CN-XiaoyiNeural", "+4%", "+8Hz"], "en": ["en-US-AriaNeural", "-10%", "+4Hz"] },
+    "narrator": { "zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"] },
     "frost":    { "zh": ["zh-CN-XiaoxiaoNeural", "-6%", "-4Hz"], "en": ["en-US-JennyNeural", "-15%", "-4Hz"] },
-    "nuan":     { "zh": ["zh-CN-XiaoyiNeural", "+4%", "+8Hz"], "en": ["en-US-AriaNeural", "-10%", "+4Hz"] }
+    "nuan":     { "zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"] }
   },
   "lines": {
     "hall_heart": { "who": "nuan", "say": ["看，是", { "w": "heart" }, "，爱心！"] },

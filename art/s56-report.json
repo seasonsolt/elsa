@@ -1,0 +1,119 @@
+{
+  "date": "2026-11-09",
+  "stages": {
+    "S5": "代码与内容审查完成",
+    "S6": "本地全量验收完成；发布包就绪，未上线"
+  },
+  "basis": "按用户确认的 Elsa / 艾莎、Anna / 安娜方案验收，保留 frost / nuan 存档标识。",
+  "findings_fixed": [
+    {
+      "issue": "语音刚开始或资源缺失时即累计学习次数",
+      "fix": "仅实际完整播放且声音开启时计数；中断、静音、缺失均不计数",
+      "regression": "4 项 voice 单元测试"
+    },
+    {
+      "issue": "跳过课前介绍或中断配音可导致核心词不足 8 次",
+      "fix": "过关复习按本轮真实已听次数补足；复习结束前键盘无法跳过；缺失音频仍可退出",
+      "regression": "十关、30 核心词均达到 8 次；半数关卡故意跳过介绍"
+    },
+    {
+      "issue": "家长设置打开后物理与键盘仍可推进",
+      "fix": "模态设置暂停关卡并清空按键",
+      "regression": "单元测试与浏览器验证"
+    },
+    {
+      "issue": "上一关回顾误计入当前关卡",
+      "fix": "按 words.json 中的学习关卡归属计数",
+      "regression": "learning.recallCountsForTheWordLearningRoom"
+    },
+    {
+      "issue": "剧情、回忆与认识角色图标仍混用旧人物",
+      "fix": "13 张剧情/回忆插图重新生成并检查；认识角色图标使用确认后的头像",
+      "regression": "13 张均为 1280×720，已检查实际构建画面"
+    },
+    {
+      "issue": "更新后浏览器可能继续显示旧角色或配音",
+      "fix": "构建时按资源内容生成稳定版本参数；换装帧匹配兼容查询参数",
+      "regression": "浏览器已确认跳跃帧与头饰均使用新版本 URL，构建结果稳定"
+    },
+    {
+      "issue": "外部字体样式可能阻塞首屏",
+      "fix": "字体样式非阻塞加载，保留系统字体回退",
+      "regression": "本地验收页可操作界面初始化 31 ms；不是公网冷启动指标"
+    }
+  ],
+  "automated_tests": {
+    "unit_tests": 125,
+    "physics_solution_routes": 30,
+    "source_and_built_page": "passed, zero failures / zero skipped",
+    "browser_checks": 41,
+    "browser_timing": "验收夹具使用独立存档与加速音频/过场；真实 AudioBuffer 完成回调仍生效。物理通关由 30 条输入驱动解法另行验证。",
+    "core_word_hearings": {
+      "words": 30,
+      "minimum_per_word_per_run": 8,
+      "all_ten_rooms": "passed"
+    },
+    "layouts": {
+      "1280x720": "10/10，无横向溢出；游戏中只有数字，不要求读中文",
+      "1920x1080": "10/10，无横向溢出"
+    },
+    "manual_browser_interactions": [
+      "贴纸拖放与刷新恢复",
+      "家长设置点击不开启、长按 2 秒开启",
+      "返回首页长按保护",
+      "换装选择、头饰与跳跃帧保持",
+      "最终构建加载新剧情插图、无控制台错误"
+    ]
+  },
+  "assets": {
+    "audio_expected": 590,
+    "audio_decoded": 590,
+    "errors": [],
+    "webp_decoded": 253,
+    "extra_dress_frames": 48,
+    "dress_bytes": 956862,
+    "total_runtime_bytes": 21429799,
+    "subtitles_match": true
+  },
+  "asr_review": {
+    "sample_segments": 34,
+    "raw_flags": 3,
+    "context_resolved": [
+      "蘑菇：完整游戏台词被正确识别"
+    ],
+    "lexical_ambiguities_reviewed": [
+      {
+        "expected": "浮冰",
+        "asr": "伏兵 / 扶兵",
+        "phonetics": "均为 fú bīng",
+        "result": "同音词形歧义，脚本和画面对应正确；不据此认定配音错误"
+      },
+      {
+        "expected": "flower",
+        "asr": "flour",
+        "phonetics": "英语同音词 /ˈflaʊə(r)/",
+        "result": "同音拼写歧义，脚本和花朵卡片对应正确；不据此认定配音错误"
+      }
+    ],
+    "human_listening_performed": false,
+    "raw_logs": ".tools/s4/asr.log and .tools/s4/asr-recheck.json"
+  },
+  "release_package": {
+    "path": "/Users/Thin/.codex/visualizations/2026/11/09/01a1bf57-3d0c-7473-a164-ef37a15cef79/elsa-anna-reviewed.zip",
+    "zip_bytes": 19205726,
+    "runtime_bytes": 20593490,
+    "audio_files": 590,
+    "asset_version": "053a96d0f75d",
+    "sha256": "5a01e881b3ed5f7e808f86cfd644ddb7bc1cd7ace109c4184b973e8da92ad26f"
+  },
+  "publication": {
+    "deployed": false,
+    "original_plan_destination": "https://claude.ai/artifact/4pg9Q16Yds3Jhc4oaf1nTV",
+    "note": "当前交付为本地验收与可发布静态包，没有变更线上服务或改用其他托管平台。"
+  },
+  "limits": [
+    "未进行儿童真人试玩，40–60 分钟为设计估计而非实测。",
+    "未做真人听感确认；ASR 同音词审查和全文件解码不能替代真人听感。",
+    "本地快速首屏不能代表公网冷缓存速度。"
+  ]
+}

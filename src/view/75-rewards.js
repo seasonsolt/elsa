@@ -9,7 +9,7 @@
 
   const RW_UNLOCK = { dress1: 3, dress2: 6, bow: 3, clip: 6, wreath: 10, crown: 10 };   // stickers needed (PLAN B2: 3 / 6 / 10)
   const RW_HATS = ['bow', 'clip', 'wreath', 'crown'];
-  const RW_DRESS_COL = { frost: ['#6f6ccf', '#3fb597', '#c94566'], nuan: ['#b8352f', '#1f8a8a', '#7b4fb0'] };
+  const RW_DRESS_COL = { frost: ['#78bce2', '#75d8b8', '#ef6e9f'], nuan: ['#285e9b', '#2b8c89', '#8055ad'] };
   const RW_HAT_W = 28, RW_HAT_SINK = 7;   // hat width in game units, and how far its lower edge sits into the hair
   const RW_BOARD = { x: 40, y: 78, w: 672, h: 378 };
   const RW_STICKER = 76;                  // size of a sticker on the board
@@ -298,7 +298,7 @@
         st.imgs = {};
         for (const c of node.children) {
           if (c.tagName !== 'image') continue;
-          const m = /\/([a-z]+)_([a-z0-9]+)\.webp$/.exec(c.getAttribute('href') || '');
+          const m = /\/([a-z]+)_([a-z0-9]+)\.webp$/.exec((c.getAttribute('href') || '').split('?')[0]);
           if (m && m[1] === id && FRAMES.includes(m[2])) st.imgs[m[2]] = c;
         }
       }

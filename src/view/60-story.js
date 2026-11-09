@@ -189,8 +189,9 @@
     /* B: word cards, each said once; sparkle badge (no text) the first time */
     const phaseWords = () => {
       s.phase = 2; const ok = mark();
+      let ready = false;
       stars.style.transform = 'translate(480px,52px) scale(.42)';
-      s.onKey = () => { if (ok()) phaseQuiz(); };
+      s.onKey = () => { if (ok() && ready) phaseQuiz(); };
       const rec = words.map(w => uxWordRec(w.id));
       const isNew = rec.map(r => !r.seen);
       body.innerHTML = uxCardRow(words, 128, 200, 238, 30, (wd, k) => ({ isNew: isNew[k] }));
@@ -205,8 +206,26 @@
           await uxWordVoice(words[k].id);
           await uxWait(250);
         }
+        // The child may skip chapter cards or interrupt pickup speech. Complete the room's
+        // eight hearings here, counting only audible clips that actually finished.
+        const baseline = (typeof playFlow === 'object' && playFlow.wordBaseline) || {};
+        for (let round = 0; round < 8 && ok() && uxSetting('sound'); round++) {
+          let pending = false;
+          for (const wd of words) {
+            if (!ok()) return;
+            if ((uxWordRec(wd.id).heard || 0) - (baseline[wd.id] || 0) >= 8) continue;
+            pending = true;
+            const card = body.querySelector(`[data-word="${wd.id}"]`);
+            if (card) card.classList.add('ux-pulse');
+            const heard = await uxWordVoice(wd.id);
+            if (card) card.classList.remove('ux-pulse');
+            if (!heard) { ready = true; break; } // missing audio must never strand the child
+            await uxWait(200);
+          }
+          if (!pending || ready) break;
+        }
         uxSaveNow();
-        if (ok()) { setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse'); }
+        if (ok()) { ready = true; setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse'); }
       })();
     };
 

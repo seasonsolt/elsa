@@ -31,7 +31,7 @@
     let p = null;
     try { if (typeof voice !== 'undefined' && voice && typeof voice.word === 'function') p = voice.word(id); } catch (e) {}
     if (!p || typeof p.then !== 'function') return uxWait(900);
-    return Promise.race([p.then(() => {}, () => {}), uxWait(8000)]);
+    return Promise.race([p.catch(() => false), uxWait(8000).then(() => false)]);
   }
   function uxUiVoice(name) { try { if (typeof voice !== 'undefined' && voice && typeof voice.ui === 'function') voice.ui(name); } catch (e) {} }
   function uxStopVoice() { try { if (typeof voice !== 'undefined' && voice && typeof voice.stop === 'function') voice.stop(); } catch (e) {} }
@@ -303,7 +303,7 @@
     const html = `<g class="page">
       <image href="${SRC('key')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
       <rect width="960" height="520" fill="url(#topFade)"/>
-      <text x="480" y="92" text-anchor="middle" font-size="62" fill="#fffdf4" stroke="#1b2559" stroke-width="8" paint-order="stroke" stroke-linejoin="round">霜霜和暖暖的冰堡</text>
+      <text x="480" y="92" text-anchor="middle" font-size="62" fill="#fffdf4" stroke="#1b2559" stroke-width="8" paint-order="stroke" stroke-linejoin="round">艾莎和安娜的冰堡</text>
       ${uxButton({ act: 'play', ui: cont ? 'continue' : 'start', icon: 'play', x: 480, y: 318, r: 66, plate: 'gold', cls: 'ux-pulse' })}
       ${uxButton({ act: 'rooms', ui: 'rooms', x: 372, y: 448, r: 36 })}
       ${uxButton({ act: 'words', ui: 'words', x: 480, y: 448, r: 36 })}
@@ -361,13 +361,13 @@
   /* ---------- meet them ---------- */
   function showMeet() {
     const tok = uxScreen('meet', false);
-    const ppl = [{ id: 'frost', x: 270, hue: '#cfe6ff' }, { id: 'nuan', x: 690, hue: '#ffd9a8' }];
+    const ppl = [{ id: 'frost', name: 'Elsa · 艾莎', x: 270, hue: '#cfe6ff' }, { id: 'nuan', name: 'Anna · 安娜', x: 690, hue: '#ffd9a8' }];
     const cards = ppl.map(p => `<g transform="translate(${p.x} 0)"><g class="ux-card-wrap" data-person="${p.id}">
       <clipPath id="uxClip_${p.id}"><rect x="-135" y="76" width="270" height="360" rx="22"/></clipPath>
       <ellipse cx="0" cy="456" rx="130" ry="14" fill="#0d1438" opacity=".4"/>
-      <g class="ux-person" data-act="person" data-who="${p.id}" tabindex="0" role="button" aria-label="${p.id}" style="cursor:pointer" data-ui="">
+      <g class="ux-person" data-act="person" data-who="${p.id}" tabindex="0" role="button" aria-label="${p.name}" style="cursor:pointer" data-ui="">
         <rect x="-135" y="76" width="270" height="360" rx="22" fill="${p.hue}" filter="url(#softShadow)"/>
-        <g clip-path="url(#uxClip_${p.id})">${uxPic('portrait_' + p.id, -135, 76, 270, 360, `<rect x="-135" y="76" width="270" height="360" fill="${p.hue}" opacity=".8"/>`)}</g>
+        <text x="0" y="64" text-anchor="middle" fill="#fffdf4" font-size="26">${p.name}</text><g clip-path="url(#uxClip_${p.id})">${uxPic('portrait_' + p.id, -135, 76, 270, 360, `<rect x="-135" y="76" width="270" height="360" fill="${p.hue}" opacity=".8"/>`)}</g>
         <rect x="-135" y="76" width="270" height="360" rx="22" fill="none" stroke="${p.hue}" stroke-width="6"/>
       </g></g></g>`).join('');
     const html = `<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".55"/>
@@ -436,6 +436,7 @@
   /* ---------- parent settings ---------- */
   function showSettings() {
     uxInit();
+    uxInputReset();
     const render = () => {
       const opt = (key, val, x, y, w, label, icon) => {
         const cur = uxSetting(key), on = (cur === val) || (typeof val === 'boolean' && !!cur === val);

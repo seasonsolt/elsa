@@ -267,4 +267,9 @@ for k in range(5,11):
     if os.path.exists(p): Image.open(p).convert('RGB').resize((1280,720),Image.LANCZOS).save(f'{OUT}/mem_m{k}.webp',quality=80,method=6)
 
 
+from character_atlas import import_atlas
+if os.path.exists('raw/elsa-anna-atlas.jpg'):
+    import_atlas(sizes, OUT)
+    from recolor import publish_outfits
+    publish_outfits(OUT, sizes)
 import json; json.dump(sizes,open('sizes.json','w'),indent=0); print(sizes)

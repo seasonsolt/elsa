@@ -17,6 +17,8 @@
 Run from anywhere:  python3 art/build_page.py
 """
 import json
+import hashlib
+import re
 from pathlib import Path
 
 ART = Path(__file__).resolve().parent
@@ -45,6 +47,14 @@ assert logic_files and view_files, 'no sources found under src/'
 
 logic = join(logic_files)
 view = join(view_files)
+asset_hash = hashlib.sha256()
+for asset in sorted((ROOT / 'game').iterdir()):
+    if asset.suffix not in ('.webp', '.mp3', '.json'):
+        continue
+    asset_hash.update(asset.name.encode())
+    asset_hash.update(hashlib.sha256(asset.read_bytes()).digest())
+asset_version = asset_hash.hexdigest()[:12]
+view = once(view, "/*ASSET_VERSION*/'dev'", json.dumps(asset_version), 'view')
 view = once(view, '/*SIZES*/{}', json.dumps(json.load(open(ART / 'sizes.json', encoding='utf8')), separators=(',', ':')), 'view')
 view = once(view, '/*LINES*/{}', json.dumps(json.load(open(SRC / 'content' / 'lines.json', encoding='utf8')), ensure_ascii=False, separators=(',', ':')), 'view')
 view = once(view, '/*WORDS*/[]', json.dumps(json.load(open(SRC / 'content' / 'words.json', encoding='utf8')), ensure_ascii=False, separators=(',', ':')), 'view')
@@ -52,6 +62,7 @@ for name, text in (('logic', logic), ('view', view)):
     assert '</script' not in text.lower(), f'{name} contains </script>'
 
 page = (ART / 'page.template.html').read_text(encoding='utf8')
+page = re.sub(r'href="(game/[^"?]+)"', lambda m: f'href="{m[1]}?v={asset_version}"', page)
 page = once(page, '/*LOGIC*/\n', logic, 'template')
 page = once(page, '/*VIEW*/\n', '(() => {\n' + view + '})();\n', 'template')
 OUT.write_text(page, encoding='utf8')

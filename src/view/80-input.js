@@ -20,7 +20,7 @@
   let touchDuoId = 'frost';
 
   /* True while the room is live and nothing is covering it. */
-  function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen(); }
+  function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen() && !uxState.modal; }
   /* The sister the arrow keys steer right now. */
   const steered = () => (game.mode === 'solo' ? game.player || 'nuan' : 'nuan');
 

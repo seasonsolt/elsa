@@ -3,11 +3,11 @@
 Run from art/ with the tools venv:
     ../.tools/venv/bin/python recolor.py                    # SAMPLE: idle + run3, both sisters, both colours -> ../.tools/outfit-sample/
     ../.tools/venv/bin/python recolor.py --frames idle,run3 --out DIR
-    ../.tools/venv/bin/python recolor.py --frames all --out DIR   # all 12 frames per sister (NOT run in S3: waits for user approval)
+    ../.tools/venv/bin/python recolor.py --publish                # approved full set: 48 frames + 4 hats, metadata
 
 How it works (all numbers are in PARAMS below):
- 1. soft mask = hue band * saturation ramp * value ramp * sprite alpha. Frost's dress is periwinkle (hue ~230-265), Nuan's is rust-red
-    (hue ~350-15 wrapping through 0). Skin, hair, fur trim, white embroidery, boots, lantern, shawl are outside the band or too unsaturated.
+ 1. soft mask = hue band * saturation ramp * value ramp * sprite alpha. Elsa's gown is icy blue; Anna's skirt is blue.
+    Skin, hair, boots and Anna's magenta cape stay outside the mask.
  2. tiny isolated mask islands are dropped (speckle in the hair / lantern glow), the mask is feathered by a tiny blur.
  3. inside the mask the hue is replaced by the target hue (the original wander around the dress hue is kept at `keep` so the painted
     brushwork stays alive), saturation is scaled, and the luminance is matched back to the original so folds and shadows survive.
@@ -29,12 +29,12 @@ FRAMES_ALL = ('idle', 'blink', 'jump', 'fall', 'cast', 'cheer', 'run1', 'run2', 
 # smin: saturation ramp start (full at smin+sramp). vmin: value ramp start (full at vmin+.08). island: min mask-island size in px.
 # center: the dress's average hue (used to keep a fraction `keep` of the painted hue wander).
 PARAMS = {
-    'frost': dict(hue=(214, 268), feather=6, smin=0.14, sramp=0.05, vmin=0.22, island=30, center=248,
+    'frost': dict(hue=(185, 235), feather=6, smin=0.14, sramp=0.05, vmin=0.22, island=30, center=210,
                   colours={
                       'd1': dict(name='mint',  hue=156, sat=0.85, keep=0.30, lum=0.35, vgain=1.30),
                       'd2': dict(name='rose',  hue=346, sat=1.30, keep=0.30, lum=0.35, vgain=1.35),
                   }),
-    'nuan':  dict(hue=(346, 14), feather=5, smin=0.52, sramp=0.08, vmin=0.22, island=30, center=2,
+    'nuan':  dict(hue=(204, 246), feather=5, smin=0.22, sramp=0.06, vmin=0.16, island=30, center=222,
                   colours={
                       'd1': dict(name='teal',  hue=178, sat=0.80, keep=0.30, lum=0.80),
                       'd2': dict(name='lilac', hue=272, sat=0.62, keep=0.30, lum=0.80),
@@ -103,7 +103,8 @@ def dress_mask(rgba, p):
         sizes = ndi.sum(np.ones_like(m), lab, index=np.arange(1, n + 1))
         keepl = np.concatenate([[False], sizes >= p['island']])
         m = m * ndi.binary_dilation(keepl[lab], iterations=2)
-    return np.clip(ndi.gaussian_filter(m, .6), 0, 1)
+    # Feather within the colour band so the blur cannot recolour adjacent skin or hair.
+    return np.clip(ndi.gaussian_filter(m, .6), 0, 1) * mh * ms * mv * (rgba[..., 3] / 255.0)
 
 
 def recolor(rgba, p, col):
@@ -131,7 +132,7 @@ def load(sister, frame):
 
 def save(arr, path, q=82):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    Image.fromarray(arr, 'RGBA').save(path, quality=q, method=6)
+    Image.fromarray(arr, 'RGBA').save(path, lossless=True, method=6)
 
 
 def compare(out_dir, frames=FRAMES_SAMPLE, zoom=3, extra=True):
@@ -188,7 +189,7 @@ def key_cutout(path):
     return np.dstack([np.clip(rgb, 0, 255), alpha * 255]).astype(np.uint8)
 
 
-def cut_hats(sheet, out_dir):
+def cut_hats(sheet, out_dir=None):
     """2x2 grid -> hat_<name>.png (tight crop, full-res) in out_dir; returns {name: rgba}"""
     rgba = key_cutout(sheet)
     m = rgba[..., 3] > 40
@@ -207,8 +208,9 @@ def cut_hats(sheet, out_dir):
     out = {}
     for name, (_, _, crop) in zip(HAT_NAMES, top):
         out[name] = crop
-        os.makedirs(out_dir, exist_ok=True)
-        Image.fromarray(crop, 'RGBA').save(os.path.join(out_dir, f'hat_{name}.png'))
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+            Image.fromarray(crop, 'RGBA').save(os.path.join(out_dir, f'hat_{name}.png'))
     return out
 
 
@@ -271,13 +273,68 @@ def hats_mock(out_dir, sheet):
               open(os.path.join(out_dir, 'hat_offsets.json'), 'w'), indent=1)
 
 
+def head_position(rgba):
+    """Find hair/face, excluding raised hands: the largest warm-coloured upper-body island."""
+    h, s, v = rgb2hsv(rgba[..., :3].astype(float) / 255)
+    warm = (h > 10) & (h < 68) & (s > .12) & (v > .25) & (rgba[..., 3] > 128)
+    warm[round(len(warm) * .58):] = False
+    labels, n = ndi.label(ndi.binary_closing(warm, iterations=1))
+    if not n:
+        raise ValueError('No head found for hat placement')
+    areas = np.bincount(labels.ravel()); areas[0] = 0
+    ys, xs = np.where(labels == areas.argmax())
+    top = int(ys.min())
+    # Use the upper hair/face area so the braid does not pull the anchor backwards.
+    return float(np.median(xs[ys <= top + 15])), top
+
+
+def publish_outfits(game_dir=GAME, sizes=None):
+    """Publish a complete wardrobe; same-sized frames keep the base sprite anchors."""
+    import json
+    if sizes is None:
+        with open(os.path.join(HERE, 'sizes.json')) as f:
+            sizes = json.load(f)
+    offsets = {}
+    for sister, p in PARAMS.items():
+        offsets[sister] = {}
+        for fr in FRAMES_ALL:
+            name = f'{sister}_{fr}'
+            src = np.asarray(Image.open(os.path.join(game_dir, name + '.webp')).convert('RGBA'))
+            for tag, col in p['colours'].items():
+                out, mask = recolor(src, p, col)
+                if np.count_nonzero(mask > .5) < 20:
+                    raise ValueError(f'Empty dress mask: {name}')
+                save(out, os.path.join(game_dir, f'{name}_{tag}.webp'))
+                sizes[f'{name}_{tag}'] = list(sizes[name])
+            hx, hy = head_position(src)
+            offsets[sister][fr] = [round((hx - sizes[name][2]) * 84 / 170, 2),
+                                   round(hy * 84 / 170 - 4, 2), .46, 0]
+    for name, crop in cut_hats(os.path.join(HERE, 'raw', 'hats_1.png')).items():
+        im = Image.fromarray(crop, 'RGBA')
+        im.thumbnail((128, 128), Image.Resampling.LANCZOS)
+        path = os.path.join(game_dir, f'hat_{name}.webp')
+        im.save(path, lossless=True, method=6)
+        sizes[f'hat_{name}'] = list(im.size)
+    sizes['hat_offsets'] = offsets
+    return sizes
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--frames', default=','.join(FRAMES_SAMPLE), help="comma list, or 'all'")
     ap.add_argument('--out', default=os.path.join(ROOT, '.tools', 'outfit-sample'))
     ap.add_argument('--masks', action='store_true', help='also write <sister>_<frame>_mask.png debug overlays')
     ap.add_argument('--hats', metavar='SHEET', help='cut a 2x2 hat sheet (magenta bg) into hat_*.png and render hats_mock.png')
+    ap.add_argument('--publish', action='store_true', help='publish 48 outfits and 4 hats into game/, update sizes.json')
     a = ap.parse_args()
+    if a.publish:
+        import json
+        sizes = publish_outfits()
+        with open(os.path.join(HERE, 'sizes.json'), 'w') as f:
+            json.dump(sizes, f, indent=0)
+            f.write('\n')
+        print('Published 48 outfit frames, 4 hats and 24 head offsets.')
+        return
     if a.hats:
         hats_mock(a.out, a.hats); print('hats ->', a.out); return
     frames = FRAMES_ALL if a.frames == 'all' else tuple(a.frames.split(','))

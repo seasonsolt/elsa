@@ -124,7 +124,8 @@
     if (typeof wordId !== 'string' || !wordId) return;
     const w = save.words[wordId] || (save.words[wordId] = { heard: 0, quiz: 0 });
     w.heard++;
-    const lv = LEVELS[game.index], room = (lv && lv.id) || '?';
+    const word = WORDS.find(w => w.id === wordId);
+    const lv = LEVELS[game.index], room = (word && word.room) || (lv && lv.id) || '?';
     const byRoom = heardLog[wordId] || (heardLog[wordId] = {});
     byRoom[room] = (byRoom[room] || 0) + 1;
     saveSoon();
@@ -163,7 +164,9 @@
   game.player = setting('player');
   /* SIZES and LINES are JSON inlined by art/build_page.py; the placeholders keep this file valid JS on its own. */
   const SIZES = /*SIZES*/{};
-  const SRC = n => `game/${n}.webp`;
+  const ASSET_VERSION = /*ASSET_VERSION*/'dev';
+  const assetURL = file => `game/${file}?v=${ASSET_VERSION}`;
+  const SRC = n => assetURL(`${n}.webp`);
 
   function el(tag, attrs, parent) {
     const n = document.createElementNS(NS, tag);

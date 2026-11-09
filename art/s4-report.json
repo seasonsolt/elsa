@@ -1,0 +1,82 @@
+{
+  "stage": "S4",
+  "date": "2026-11-09",
+  "status": "assets_integrated_asr_lexical_ambiguities_reviewed_in_s56",
+  "audio": {
+    "expected_clips": 590,
+    "decoded_clips": 590,
+    "missing_clips": 0,
+    "bytes": 11852056,
+    "subtitles_match_source": true,
+    "generation": "Full 590-clip Elsa/Anna batch completed earlier in this chat; this stage revalidated it. Six representative room 5–10 lines were re-rendered into 10 sample clips / 34 segments for ASR."
+  },
+  "wardrobe": {
+    "extra_frames": 48,
+    "colours": {
+      "Elsa": [
+        "mint",
+        "rose"
+      ],
+      "Anna": [
+        "teal",
+        "lilac"
+      ]
+    },
+    "frame_bytes": 956862,
+    "hats": [
+      "bow",
+      "clip",
+      "wreath",
+      "crown"
+    ],
+    "pose_offsets": 24,
+    "dimensions_alpha_anchors": "passed",
+    "skin_hair_anna_cape_unchanged": "passed"
+  },
+  "verification": {
+    "source_unit_tests": 119,
+    "built_unit_tests": 119,
+    "room_solutions": "passed with no skips",
+    "browser": [
+      "all swatches and four hats available",
+      "dress and hat selection",
+      "reload persistence using isolated QA save",
+      "outfits maintained while moving and jumping",
+      "no console errors"
+    ]
+  },
+  "asr": {
+    "sample_line_keys": [
+      "ch_slope",
+      "ch_bunny",
+      "guide_spring_1",
+      "guide_floe_1",
+      "guide_music_1",
+      "guide_garden_1"
+    ],
+    "zh_segments": 22,
+    "en_segments": 12,
+    "raw_flagged_segments": 3,
+    "recheck": [
+      {
+        "line": "guide_spring_1",
+        "result": "The actual complete game clip recognizes 蘑菇 correctly; initial short-segment result was 模固."
+      },
+      {
+        "line": "guide_floe_1",
+        "result": "浮冰 is recognized as 伏兵 / 扶兵. Homophone ambiguity; not marked as a pronunciation pass."
+      },
+      {
+        "line": "guide_garden_1",
+        "result": "flower is recognized as flour by small and base.en. Homophone ambiguity; not marked as a pronunciation pass."
+      }
+    ],
+    "logs": ".tools/s4/ (local, ignored)",
+    "optional_listening_samples": [
+      "game/vo_guide_floe_1__frost.mp3",
+      "game/vo_guide_garden_1__frost.mp3"
+    ],
+    "resolution": "See art/s56-report.json: source/context and known homophones reviewed; no human audition claimed."
+  },
+  "released": false
+}

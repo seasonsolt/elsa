@@ -59,8 +59,8 @@ SPEAKERS = ('narrator', 'frost', 'nuan')
 # Used when lines.json carries no "voices" block; mirrors PLAN A4.
 DEFAULT_VOICES = {
     'narrator': {'zh': ['zh-CN-XiaoxiaoNeural', '-8%', '+0Hz'], 'en': ['en-US-JennyNeural', '-20%', '+0Hz']},
-    'frost': {'zh': ['zh-CN-XiaoyiNeural', '-6%', '-6Hz'], 'en': ['en-US-AnaNeural', '-15%', '-6Hz']},
-    'nuan': {'zh': ['zh-CN-XiaoyiNeural', '+4%', '+18Hz'], 'en': ['en-US-AnaNeural', '-10%', '+12Hz']},
+    'frost': {'zh': ['zh-CN-XiaoxiaoNeural', '-6%', '-4Hz'], 'en': ['en-US-JennyNeural', '-15%', '-4Hz']},
+    'nuan': {'zh': ['zh-CN-XiaoyiNeural', '+4%', '+8Hz'], 'en': ['en-US-AriaNeural', '-10%', '+4Hz']},
 }
 PUNCT_ONLY = re.compile(r'^[\W_]*$', re.UNICODE)   # nothing a voice could say
 

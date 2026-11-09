@@ -9,6 +9,13 @@ node test/run.mjs --only lake --trace          # one room, print every step with
 node test/run.mjs --no-unit                    # skip test/unit
 ```
 
+Browser acceptance: run `node test/build-browser-review.mjs`, serve the repository, open
+`/.tools/s56/review.html`, and click **Run acceptance**. This uses its own save key and accelerates
+audio/scene timing only in the generated fixture. It checks all ten chapter/clear/quiz flows,
+eight completed hearings per core word (including skipped chapters), progress/settings persistence,
+parent-modal pause, stickers, and 10/20-second hints. This complements the 30 input-driven physics
+solutions; accelerated audio is not a human listening test or a child play-time measurement.
+
 Exit code 1 when anything fails. `SKIP` is not a failure but a finished room has none: every room has a `solo` solution.
 
 ## What runs

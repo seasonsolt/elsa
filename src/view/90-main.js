@@ -39,6 +39,7 @@
   function onSettingChanged(key, value) {
     if (key === 'mode') { game.mode = value; clearInput(); }
     else if (key === 'player') game.player = value;
+    else if (key === 'sound' && !value) voice.stop();
   }
   function applySettings() {
     game.mode = setting('mode');
@@ -91,6 +92,7 @@
   async function enterRoom(i) {
     const tok = newToken();
     const lv = LEVELS[i];
+    playFlow.wordBaseline = Object.fromEntries((lv.words || []).map(id => [id, (save.words[id] || {}).heard || 0]));
     playFlow.phase = 'intro';
     playFlow.tutoring = false;
     game.kbd.teach = null;

@@ -1,0 +1,124 @@
+{
+  "style": "storybook gouache watercolor, 16:9 single scene",
+  "count": 13,
+  "succeeded": 13,
+  "files": [
+    {
+      "output": "art/raw/story_prologue.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/1.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1686811,
+      "note": null
+    },
+    {
+      "output": "art/raw/story_winter.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/2.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1799179,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_door.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/3.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1560457,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_lake.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/4.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1698452,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_m5.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/5.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1701709,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_gloves.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/6.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1689770,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_m6.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/7.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1544327,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_m7.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/8.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1655559,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_m8.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/9.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1614135,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_m9.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/10.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1682035,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_fall.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/11.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1629490,
+      "note": null
+    },
+    {
+      "output": "art/raw/mem_m10.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/12.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1672511,
+      "note": null
+    },
+    {
+      "output": "art/raw/story_thaw.png",
+      "success": true,
+      "native_source": "/Users/Thin/.grok/sessions/%2FUsers%2FThin%2Forca%2Fworkspaces%2Felsa%2Fkillifish/01a1bf97-c3f8-7373-9174-e5659f733fe7/images/13.jpg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 1899950,
+      "note": null
+    }
+  ]
+}

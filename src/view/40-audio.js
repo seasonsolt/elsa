@@ -193,13 +193,13 @@
     function loadSubs() {   // subtitle table written by narration.py; small, fetched once, never awaited
       if (subsAsked || typeof fetch !== 'function') return;
       subsAsked = true;
-      fetch('game/subs.json').then(r => r.ok ? r.json() : null).then(j => { if (j && j.lines) SUBS = j; }).catch(() => {});
+      fetch(assetURL('subs.json')).then(r => r.ok ? r.json() : null).then(j => { if (j && j.lines) SUBS = j; }).catch(() => {});
     }
     function load(file) {
       if (!audio) return Promise.resolve(null);
       let p = bufs.get(file);
       if (p) bufs.delete(file);
-      else p = fetch(`game/${file}`).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && new Promise((ok, no) => audio.decodeAudioData(b, ok, no))).catch(() => null);
+      else p = fetch(assetURL(file)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && new Promise((ok, no) => audio.decodeAudioData(b, ok, no))).catch(() => null);
       bufs.set(file, p);
       while (bufs.size > CACHE_MAX) bufs.delete(bufs.keys().next().value);
       return p;
@@ -213,7 +213,6 @@
     function start(job) {
       cur = job;
       clearTimeout(subTimer);
-      for (const id of job.words) countWordHeard(id);
       emitSub(job.sub && job.segments.length ? { key: job.key, who: job.who, segments: job.segments, bubble: (job.who === 'frost' || job.who === 'nuan') && inPlay() } : null);
       duck();
       const go = buf => {
@@ -221,7 +220,8 @@
         if (!buf || !audio || !bus) { job.silent = true; job.timer = setTimeout(() => finish(job), SILENT_MS); return; }
         const src = audio.createBufferSource();
         src.buffer = buf; src.connect(bus.voice);
-        src.onended = () => finish(job);
+        job.audible = soundWanted();
+        src.onended = () => finish(job, true);
         job.src = src;
         src.start(audio.currentTime + .08);
       };
@@ -230,9 +230,11 @@
         Promise.race([load(job.file), new Promise(ok => { t = setTimeout(() => ok(null), FILE_WAIT); })]).then(b => { clearTimeout(t); go(b); });
       } else Promise.resolve().then(() => go(null));
     }
-    function finish(job) {
+    function finish(job, completed = false) {
       if (cur !== job) return;
       cur = null;
+      const heard = completed && job.audible && soundWanted();
+      if (heard) for (const id of job.words) countWordHeard(id);
       clearTimeout(job.timer);
       if (job.src) { job.src.onended = null; try { job.src.stop(); } catch (e) {} job.src = null; }
       pump();
@@ -242,9 +244,9 @@
         if (job.silent) { const keep = Math.max(0, Math.min(8000, job.segments.reduce((n, s) => n + s.text.length, 0) * 220) - SILENT_MS); subTimer = setTimeout(() => emitSub(null), Math.max(900, keep)); }
         else emitSub(null);
       }
-      job.resolve();
+      job.resolve(!!heard);
     }
-    function drop(job) { clearTimeout(job.expire); job.resolve(); }
+    function drop(job) { clearTimeout(job.expire); job.resolve(false); }
     function pump() { while (!cur && queue.length) { const j = queue.shift(); clearTimeout(j.expire); start(j); } }
     function submit(job) {
       if (job.tag) for (let i = queue.length - 1; i >= 0; i--) if (queue[i].tag === job.tag) drop(queue.splice(i, 1)[0]);

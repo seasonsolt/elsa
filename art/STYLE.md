@@ -1,3 +1,3 @@
 Shared art direction for every image in this game:
 Hand-painted children's storybook illustration in gouache and soft watercolor, visible brush texture and paper grain, gentle hand-drawn ink edges, luminous moonlit palette of deep indigo, periwinkle, ice blue and pale aqua, with warm amber accents from candles and hearths. Rich and crafted, like a printed picture book. Not 3D, not CGI, not vector flat art, not anime screenshot. No text, no logos, no watermark, no signature.
-Must be wholly original: do not resemble or reference any existing film, franchise, studio or character.
+Characters are Elsa (艾莎) and Anna (安娜) from Frozen. Preserve their recognizable hairstyles, costumes and colors in every pose and story illustration. Elsa: platinum blonde side braid, ice blue gown, translucent cape. Anna: auburn twin braids, freckles, black bodice, blue skirt, magenta cape.

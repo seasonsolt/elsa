@@ -8,14 +8,15 @@
      node test/run.mjs --no-unit            skip test/unit
 
    Per level: map size, tile characters, structure, item reachability (smoke), the 'duo' solution, and the 'solo' solution
-   once with Nuan and once with Frost as the player (SKIPPED only while a room's `solo` is null, which a finished room must not be). Then every test in test/unit/*.test.mjs.
-   Then test/content_keys.mjs (view line keys vs src/content/lines.json). Exit code 1 when anything failed. SKIPPED is not a failure. */
+   with Elsa (frost) as the player and Anna as the companion (SKIPPED only while a room's `solo` is null, which a finished room must not be). Then every test in test/unit/*.test.mjs.
+   Then test/content_keys.mjs (view line keys vs src/content/lines.json) and the exposure report (test/exposure.mjs, report only). Exit code 1 when anything failed. SKIPPED is not a failure. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-import { ROOT, loadLogic, makeHarness, loadMap } from './harness.mjs';
+import { ROOT, loadLogic, loadLib, makeHarness, loadMap } from './harness.mjs';
 import { checkContentKeys } from './content_keys.mjs';
+import { exposureReport } from './exposure.mjs';
 import { checkMapSize, checkTiles, checkStructure, checkLevelList, checkReach, legalChars } from './checks.mjs';
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -77,21 +78,18 @@ async function levelResults(logic, index, o) {
 
   const { mod, error } = await loadSolutions(lv.id);
   if (error) {
-    res.duo = fail(error); res.nuan = fail(error); res.frost = fail(error);
+    res.duo = fail(error); res.solo = fail(error);
     return res;
   }
   res.duo = typeof mod.duo === 'function' ? await runSolution(logic, lv.id, 'duo', mod.duo, o, null) : fail("solution file must export `duo` (async (h) => {...})");
   if (!('solo' in mod)) {
-    const m = fail("solution file must export `solo` (null until companion exists)");
-    res.nuan = m; res.frost = m;
+    res.solo = fail("solution file must export `solo` (null until companion exists)");
   } else if (mod.solo == null) {
-    res.nuan = skip('solo null'); res.frost = skip('solo null');
+    res.solo = skip('solo null');
   } else if (typeof mod.solo !== 'function') {
-    const m = fail('`solo` must be null or an async function (h, me) => {...}');
-    res.nuan = m; res.frost = m;
+    res.solo = fail('`solo` must be null or an async function (h, me) => {...}');
   } else {
-    res.nuan = await runSolution(logic, lv.id, 'solo', mod.solo, o, 'nuan');
-    res.frost = await runSolution(logic, lv.id, 'solo', mod.solo, o, 'frost');
+    res.solo = await runSolution(logic, lv.id, 'solo', mod.solo, o, 'frost');
   }
   return res;
 }
@@ -101,7 +99,7 @@ async function unitResults(logic, o) {
   const dir = path.join(TEST_DIR, 'unit');
   const out = [];
   if (!fs.existsSync(dir)) return out;
-  const ctx = { logic, loadLogic, makeHarness, loadMap, assert, ROOT, options: o };
+  const ctx = { logic, loadLogic, loadLib, makeHarness, loadMap, assert, ROOT, options: o };
   for (const f of fs.readdirSync(dir).filter(n => n.endsWith('.test.mjs')).sort()) {
     const base = f.replace(/\.test\.mjs$/, '');
     let mod;
@@ -135,7 +133,7 @@ const selected = logic.levels.map((lv, i) => [lv, i]).filter(([lv]) => !o.only |
 if (!selected.length) { console.error(`no level with id '${o.only}'`); process.exit(2); }
 for (const [lv, i] of selected) rows.push({ id: lv.id, res: await levelResults(logic, i, o) });
 
-const COLS = [['map', 'map'], ['tiles', 'tiles'], ['shape', 'shape'], ['reach', 'reach'], ['duo', 'duo'], ['nuan', 'solo/nuan'], ['frost', 'solo/frost']];
+const COLS = [['map', 'map'], ['tiles', 'tiles'], ['shape', 'shape'], ['reach', 'reach'], ['duo', 'duo'], ['solo', 'solo/frost']];
 const cell = r => r.status + (r.status === OK && r.note ? ` ${r.note}` : '');
 const width = COLS.map(([k, title]) => Math.max(title.length, ...rows.map(r => cell(r.res[k]).length)));
 const idW = Math.max(5, ...rows.map(r => r.id.length));
@@ -161,10 +159,18 @@ if (o.unit) {
 }
 
 /* every voice line the view asks for exists in lines.json (test/content_keys.mjs); not tied to --only / --no-unit */
-let keyProblems = [];
+let keyProblems;
 try { keyProblems = checkContentKeys(logic); } catch (e) { keyProblems = [`content key check crashed: ${e.stack || e.message}`]; }
 console.log(`\ncontent keys  ${keyProblems.length ? FAIL : OK}`);
 if (keyProblems.length) { failures++; details.push(`content keys:\n  ${keyProblems.join('\n  ')}`); }
+
+/* word exposure per room and core word (test/exposure.mjs): a REPORT for now, the numbers never fail the run (PLAN-2 2C makes them a gate);
+   only a crash of the script does, because then the report cannot be trusted */
+try {
+  const rep = exposureReport(logic);
+  console.log(`\nexposure (report only, in-context hearings per core word; threshold 6)\n${rep.text.split('\n').map(l => '  ' + l).join('\n')}\n  ${rep.summary}`);
+  if (rep.stale) console.log(`  ${rep.doc} is stale: run node test/exposure.mjs --write`);
+} catch (e) { failures++; details.push(`exposure report:\n  ${e.stack || e.message}`); console.log(`\nexposure  ${FAIL}`); }
 
 const skipped = rows.reduce((n, r) => n + Object.values(r.res).filter(x => x.status === SKIP).length, 0);
 if (details.length) console.log('\nFAILURES\n' + details.join('\n\n'));

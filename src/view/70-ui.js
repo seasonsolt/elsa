@@ -6,7 +6,7 @@
      degrades to silence instead of throwing. Nothing in this file calls into another file while the script is loading. */
 
   const uxState = { inited: false, tok: null, modal: null, hudBuilt: false, lit: {}, sig: '', player: '', tick: 0, seen: {} };
-  const uxLocal = { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true };
+  const uxLocal = { subtitles: false, english: 'words+phrases', mode: 'solo', sound: true };
   const uxWait = ms => new Promise(r => setTimeout(r, ms));
   const uxInk = '#4a3a8c';
   const UX_HUE = ['#ff9cc0', '#ffd27a', '#9fd6ff', '#b9e3a5', '#d4b4ff', '#ffb98a'];
@@ -112,7 +112,6 @@
       case 'duo': return `<circle cx="-.4" cy="-.38" r=".24" ${fl}/><path d="M-.8 .65Q-.8 .1 -.4 .1Q0 .1 0 .65Z" ${fl}/><circle cx=".42" cy="-.3" r=".28" ${fl}/><path d="M-.02 .7Q-.02 .15 .42 .15Q.86 .15 .86 .7Z" ${fl}/>`;
       case 'meet': return `<circle cx="-.38" cy="-.1" r=".36" fill="#cfe6ff" stroke="${c}" stroke-width=".12"/><circle cx=".38" cy="-.1" r=".36" fill="#ffd9a8" stroke="${c}" stroke-width=".12"/><path d="M-.6 .7Q-.38 .35 -.16 .7M.16 .7Q.38 .35 .6 .7" ${st} stroke-width=".12"/>`;
       case 'rooms': return `<rect x="-.7" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x="-.7" y=".1" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y=".1" width=".6" height=".6" rx=".1" ${fl}/>`;
-      case 'swap': return `<path d="M-.6 -.25H.5M.15 -.6L.55 -.25L.15 .1M.6 .35H-.5M-.15 0L-.55 .35L-.15 .7" ${st} stroke-width=".15"/>`;
       case 'home': return `<path d="M-.7 0L0 -.7L.7 0M-.5 -.1V.65H.5V-.1" ${st}/>`;
       case 'close': return `<path d="M-.5 -.5L.5 .5M.5 -.5L-.5 .5" ${st} stroke-width=".26"/>`;
       case 'lock': return `<path d="M-.3 -.1V-.35A.3 .3 0 0 1 .3 -.35V-.1" ${st} stroke-width=".16"/><rect x="-.5" y="-.1" width="1" height=".8" rx=".14" ${fl}/>`;
@@ -122,7 +121,7 @@
   }
   /* Picture with a placeholder. Browsers draw a broken-image icon for a missing <image>, so a picture is only emitted
      once a probe has loaded it; until then (or if it never exists) the placeholder shapes stand in. A successful probe
-     swaps every placeholder of that name that is already on screen. */
+     replaces every placeholder of that name that is already on screen. */
   const uxImgState = {};
   function uxProbe(name) {
     if (uxImgState[name]) return;
@@ -134,7 +133,7 @@
   }
   const uxImgTag = (name, x, y, w, h, extra) => `<image href="${SRC(name)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" ${extra || ''}/>`;
   function uxUpgrade(name) {
-    document.querySelectorAll('[data-pic="' + name + '"]').forEach(g => {
+    document.querySelectorAll('[data-pic="' + name + '"]').forEach(/** @param {HTMLElement} g */ g => {
       const b = g.dataset.box.split(',');
       g.insertAdjacentHTML('afterend', uxImgTag(name, b[0], b[1], b[2], b[3], g.dataset.extra || ''));
       g.remove();
@@ -147,7 +146,7 @@
   }
   /* A ui_<name> icon centred on 0,0 inside a plate of radius r. Names without a delivered picture stay a drawn glyph. */
   const UX_IMG_ALIAS = { words: 'book', stickers: 'sticker' };
-  const UX_GLYPH_ONLY = ['rooms', 'home', 'close', 'swap', 'lock', 'check'];
+  const UX_GLYPH_ONLY = ['rooms', 'home', 'close', 'lock', 'check'];
   function uxIcon(name, r, ink) {
     const s = r * 0.62, glyph = `<g transform="scale(${s.toFixed(2)})">${uxGlyph(name, ink)}</g>`;
     if (UX_GLYPH_ONLY.includes(name)) return glyph;
@@ -391,7 +390,7 @@
       ${cards}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
     const root = uxPaint(html);
     uxBind(root, { back: () => { uxStopVoice(); showTitle(); } });
-    root.querySelectorAll('.ux-person').forEach(n => {
+    root.querySelectorAll('.ux-person').forEach(/** @param {HTMLElement} n */ n => {
       n.addEventListener('click', ev => {
         ev.stopPropagation(); uxWake();
         const who = n.dataset.who;
@@ -594,11 +593,10 @@
     const st = g.stars ? [g.stars.got, g.stars.total] : cnt('+');
     const nb = g.blocks ? g.blocks.length : 0;
     const vals = { flake: [f0 + '/' + f1, f1 > 0], heart: [h0 + '/' + h1, h1 > 0], ball: [b0 + '/' + b1, b1 > 0], block: [nb + '/' + (typeof MAX_BLOCKS !== 'undefined' ? MAX_BLOCKS : 3), nb > 0], star: [st[0] + '/' + st[1], st[1] > 0] };
-    let x = 0, sig = '';
+    let x = 0;
     for (const p of UX_PILLS) {
       const [txt, vis] = vals[p.id], n = $('uxP_' + p.id);
       if (!vis) { if (n.getAttribute('visibility') !== 'hidden') n.setAttribute('visibility', 'hidden'); continue; }
-      sig += p.id + txt + '|';
       if (n.getAttribute('visibility') !== 'visible') n.setAttribute('visibility', 'visible');
       n.setAttribute('transform', `translate(${x} 0)`);
       const t = n.lastElementChild;
@@ -620,5 +618,4 @@
         n.classList.toggle('teach', kbd.teach === k.kbd);
       }
     }
-    $('uxAv').classList.toggle('ux-pulse', solo && kbd.teach === 'tab');
   }

@@ -39,12 +39,10 @@
   /* ---- settings that change the game itself ---- */
   function onSettingChanged(key, value) {
     if (key === 'mode') { game.mode = value; clearInput(); }
-    else if (key === 'player') game.player = value;
     else if (key === 'sound' && !value) voice.stop();
   }
   function applySettings() {
     game.mode = setting('mode');
-    game.player = setting('player');
   }
 
   /* ---- events ---- */
@@ -103,7 +101,7 @@
     game.load(i);
     handleEvents();
     /* a card that fails to open must not strand the child on a blank screen: treat it as already closed */
-    const card = (fn, level) => new Promise(ok => { try { fn(level, ok); } catch (e) { console.error(e); ok(); } });
+    const card = (fn, level) => new Promise(/** @param {(done?: any) => void} ok */ ok => { try { fn(level, ok); } catch (e) { console.error(e); ok(); } });
     if (i > 0 && typeof showRecall === 'function') await card(showRecall, LEVELS[i - 1]);
     if (stale(tok)) return;
     if (typeof showChapter === 'function') await card(showChapter, lv);
@@ -117,7 +115,7 @@
     if (game.index === i) game.state = 'play'; else game.start(i);
     if (companion) companion.reset();
     handleEvents();
-    Object.assign(inputSeen, { move: false, jump: false, magic: false, swap: false });
+    Object.assign(inputSeen, { move: false, jump: false, magic: false });
     playFlow.phase = 'play';
     flashPlayerMark(3);
     if (typeof startMusic === 'function') guarded('startMusic', () => startMusic(LEVELS[i].music));
@@ -208,7 +206,7 @@
   }
 
   /* ---- frame loop ---- */
-  let last = 0, acc = 0, frameNo = 0;
+  let last = 0, acc = 0;
   function frame(ms) {
     try {
       const dt = Math.min(.05, (ms - last) / 1000 || 0);
@@ -244,7 +242,6 @@
       updateFragment(now);
       fxFrame(dt, now, live);
       if (typeof hud === 'function') guarded('hud', () => hud(game));
-      if (++frameNo % 20 === 0) fitStage();
     } catch (e) {
       if (!reported.has('frame' + e.message)) { reported.add('frame' + e.message); console.error('[frame]', e); }
     }

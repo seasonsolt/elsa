@@ -65,7 +65,7 @@
     v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${dir} ${breath.toFixed(3)})`);
     v.shadow.setAttribute('cx', cx.toFixed(1));
     v.shadow.setAttribute('cy', (feet + 2).toFixed(1));
-    /* a small golden marker above the sister the player steers: always on touch, and for a moment after a room starts or a swap */
+    /* a small golden marker above the sister the player steers: always on touch, and for a moment after a room starts */
     const mine = playerId() === id;
     v.mark.setAttribute('visibility', game.state === 'play' && mine && (isTouch || v.markT > 0) ? 'visible' : 'hidden');
     if (mine) v.mark.setAttribute('transform', `translate(0 ${(Math.sin(now * 6) * 3).toFixed(1)})`);

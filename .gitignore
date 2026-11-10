@@ -4,6 +4,9 @@
 __pycache__/
 *.pyc
 
+# npm dev tooling (lint, type check); package-lock.json is kept
+node_modules/
+
 # Intermediate output; published assets live in /game
 art/game/
 

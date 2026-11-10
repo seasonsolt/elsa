@@ -1,5 +1,5 @@
   /* Input (CONTRACT §5). Solo: ← → ↑ Space controls Elsa; Anna assists. Duo keeps the two-person layout.
-     Everything the keys do goes through g.input / g.press / g.swap; held keys are re-applied every frame by syncInput(). */
+     Everything the keys do goes through g.input / g.press; held keys are re-applied every frame by syncInput(). */
   const SOLO_KEYS = { ArrowLeft: 'l', ArrowRight: 'r', ArrowDown: 'd', ArrowUp: 'jump', Space: 'act', Enter: 'act', NumpadEnter: 'act' };
   const DUO_KEYS = {
     KeyA: ['frost', 'l'], KeyD: ['frost', 'r'], KeyS: ['frost', 'd'], KeyW: ['frost', 'jump'], KeyF: ['frost', 'act'],
@@ -8,19 +8,18 @@
   };
   const heldKeys = new Set();
   /* What the on-screen keyboard diagram (hud) shows: 1 while the key is down, and `teach` = the key the tutorial is
-     currently asking for ('l' | 'r' | 'up' | 'space' | 'tab' | null). */
-  game.kbd = { l: 0, r: 0, up: 0, space: 0, tab: 0, teach: null };
-  const KBD_OF = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'up', Space: 'space', Enter: 'space', NumpadEnter: 'space', Tab: 'tab' };
+     currently asking for ('l' | 'r' | 'up' | 'space' | null). */
+  game.kbd = { l: 0, r: 0, up: 0, space: 0, teach: null };
+  const KBD_OF = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'up', Space: 'space', Enter: 'space', NumpadEnter: 'space' };
   /* What the player has done since the room started, for the tutorial. */
-  const inputSeen = { move: false, jump: false, magic: false, swap: false };
+  const inputSeen = { move: false, jump: false, magic: false };
 
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   if (isTouch) document.body.classList.add('touch');
   const touchHeld = { l: 0, r: 0 };
   let touchDuoId = 'frost';
 
-  /* True while the room is live and nothing is covering it. */
-  function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen() && !uxState.modal; }
+  /* canPlay() (the room is live and nothing covers it) is in src/lib/play-gate.js. */
   /* The sister the arrow keys steer right now. */
   const steered = () => (game.mode === 'solo' ? 'frost' : 'nuan');
 
@@ -28,34 +27,32 @@
     heldKeys.clear();
     touchHeld.l = touchHeld.r = 0;
     for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
-    for (const k of ['l', 'r', 'up', 'space', 'tab']) game.kbd[k] = 0;
+    for (const k of ['l', 'r', 'up', 'space']) game.kbd[k] = 0;
     document.querySelectorAll('#touch button.on').forEach(b => b.classList.remove('on'));
   }
   addEventListener('blur', clearInput);
 
   /* Gamepad: d-pad or left stick walks, A / up jumps, X / B magic; Elsa remains the solo lead. */
-  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false };
+  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false };
   function pollGamepad() {
     let p = null;
     try { p = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(x => x && x.connected) || null; } catch (e) { p = null; }
-    const was = { jump: padState.jump, act: padState.act, swap: padState.swap, any: padState.any, start: padState.start };
-    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false }); return; }
+    const was = { jump: padState.jump, act: padState.act, any: padState.any, start: padState.start };
+    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false }); return; }
     const b = i => !!(p.buttons[i] && p.buttons[i].pressed), ax = p.axes[0] || 0, ay = p.axes[1] || 0;
     padState.l = ax < -.45 || b(14) ? 1 : 0;
     padState.r = ax > .45 || b(15) ? 1 : 0;
     padState.d = ay > .75 || b(13) ? 1 : 0;
     padState.jump = b(0) || b(12) || ay < -.75;
     padState.act = b(2) || b(1) || b(7);
-    padState.swap = false;
     padState.start = b(9);
-    padState.any = padState.jump || padState.act || padState.swap || padState.start;
+    padState.any = padState.jump || padState.act || padState.start;
     if (padState.any && !was.any) wakeOnce();
     /* a scene (chapter card, recall, clear page, quiz) is left with the Start button only, like Enter on the keyboard */
     if (storyIsOpen()) { if (padState.start && !was.start) advanceStoryPage(true); return; }
     if (!canPlay()) return;
     if (padState.jump && !was.jump) pressPlay(steered(), 'jump');
     if (padState.act && !was.act) pressPlay(steered(), 'act');
-    if (padState.swap && !was.swap) swapPlayer();
   }
 
   /* A jump / magic press from any device. */
@@ -109,20 +106,8 @@
       ni.d = k('ArrowDown') || padState.d ? 1 : 0;
     }
     /* the tutorial only counts keys the player pressed, not what the companion is doing */
-    const mine = game.mode === 'solo' ? [game.input[game.player || 'frost']] : [game.input.frost, game.input.nuan];
+    const mine = game.mode === 'solo' ? [game.input.frost] : [game.input.frost, game.input.nuan];
     if (mine.some(i => i.l || i.r)) inputSeen.move = true;
-  }
-
-  /* Legacy hook: the solo story keeps Elsa as lead rather than swapping roles. */
-  function swapPlayer() {
-    return false;
-  }
-  /* Called for the 'swap' event, wherever the swap came from (Tab, the avatar in the hud, the gamepad). */
-  function onPlayerSwapped(e) {
-    if (game.mode === 'solo') game.player = 'frost';
-    setSetting('player', game.player);
-    for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
-    inputSeen.swap = true;
   }
 
   /* ---- keyboard ---- */
@@ -138,7 +123,7 @@
       if (!e.repeat && ADVANCE_KEYS.includes(e.code)) { e.preventDefault(); advanceStoryPage(true); }
       return;
     }
-    const active = document.activeElement;
+    const active = /** @type {HTMLElement | null} */ (document.activeElement);
     const onPseudoButton = active && active.getAttribute && active.getAttribute('role') === 'button' && !/^(BUTTON|A|INPUT)$/.test(active.tagName);
     if (playFlow.phase !== 'play') {
       /* menus: Enter / Space press the focused image button */
@@ -176,7 +161,7 @@
     b.addEventListener('pointerdown', on);
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, off);
   }
-  /* The jump / magic / switch buttons are play controls: while a scene (chapter card, recall, clear page, quiz) is open they do nothing. */
+  /* The jump / magic / duo-switch buttons are play controls: while a scene (chapter card, recall, clear page, quiz) is open they do nothing. */
   function bindTap(id, fn) {
     const b = $(id);
     if (!b) return;
@@ -187,8 +172,8 @@
   bindHold('tLeft', 'l'); bindHold('tRight', 'r');
   bindTap('tJump', () => pressPlay(touchId(), 'jump'));
   bindTap('tAct', () => pressPlay(touchId(), 'act'));
-  bindTap('tSwitch', () => {
-    if (game.mode === 'solo') { swapPlayer(); return; }
+  bindTap('tSwitch', () => {   // duo only (the button is hidden in solo): hand the touch buttons to the other sister
+    if (game.mode === 'solo') return;
     clearInput();
     touchDuoId = touchDuoId === 'frost' ? 'nuan' : 'frost';
     const m = view[touchDuoId].mark;
@@ -219,7 +204,7 @@
       const px = k => parseFloat(cs[k]) || 0;
       const gap = px('rowGap');
       let others = 0, count = 0;
-      for (const n of body.children) {
+      for (const n of /** @type {HTMLElement[]} */ (Array.from(body.children))) {
         if (n === st || /^(SCRIPT|STYLE|LINK|META|TITLE)$/.test(n.tagName)) continue;
         const ns = getComputedStyle(n);
         if (ns.display === 'none' || ns.position === 'fixed' || ns.position === 'absolute') continue;
@@ -239,3 +224,19 @@
   addEventListener('orientationchange', fitStage);
   document.addEventListener('fullscreenchange', fitStage);
   document.addEventListener('webkitfullscreenchange', fitStage);
+  /* Size changes the window events do not announce (the hint line or the touch pad appearing, a font arriving, the parent
+     strip toggling) are caught by a ResizeObserver on the page and on the blocks beside the stage. It only queues one refit
+     for the next animation frame, so a burst of changes costs one layout pass, and the refit changing #info's width settles
+     after one more round (same values, nothing changes). A browser without ResizeObserver refits once a second instead. */
+  let fitQueued = false;
+  function queueFit() {
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(() => { fitQueued = false; fitStage(); });
+  }
+  if (typeof ResizeObserver === 'function') {
+    const fitObserver = new ResizeObserver(queueFit);
+    fitObserver.observe(document.documentElement);
+    fitObserver.observe(document.body);
+    for (const n of document.body.children) if (n !== $('stage') && !/^(SCRIPT|STYLE|LINK|META|TITLE)$/.test(n.tagName)) fitObserver.observe(n);
+  } else setInterval(fitStage, 1000);

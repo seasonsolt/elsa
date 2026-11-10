@@ -40,7 +40,7 @@ export const duo = async (h) => {
 };
 
 /* Solo: the player climbs the steps for everything first (heart, snowflake and the small stars on the way), comes down the left side,
-   and crosses the lake last (Frost freezes it herself, otherwise the companion freezes ahead of the player). */
+   and crosses the lake last (Elsa freezes it herself; Anna melts the pink wall). */
 export const solo = async (h, me) => {
   h.walk(me, 4);                  // snowflake at (4,9)
   h.hop(me, 5, false, { row: 8 });        // low step
@@ -64,15 +64,13 @@ export const solo = async (h, me) => {
   h.walk(me, 7);
   h.walk(me, 4);
   h.walk(me, 5);
-  if (me === 'frost') {           // the lake: otherwise the companion freezes ahead of the player
-    h.act(me);                    // ice on 6..8
-    h.walk(me, 8); h.act(me);     // 9..11
-    h.walk(me, 11); h.act(me);    // 12..14
-    h.walk(me, 14); h.act(me);    // 15..16
-  }
+  h.act(me);                      // the lake: Elsa freezes it herself, ice on 6..8
+  h.walk(me, 8); h.act(me);       // 9..11
+  h.walk(me, 11); h.act(me);      // 12..14
+  h.walk(me, 14); h.act(me);      // 15..16
   h.walk(me, 18);                 // across the water, small star at (10,9) on the way
   h.hop(me, 18);                  // small star at (18,8)
-  if (me === 'nuan') h.act(me);   // Nuan melts the pink wall herself, otherwise the companion does
+                                  // (Anna melts the pink wall for her)
   h.expectStars();
   h.walk(me, 21);                 // the door
   if (!h.g.memoryFound) throw new Error('lake: the memory fragment was not found');

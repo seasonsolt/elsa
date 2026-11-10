@@ -9,33 +9,25 @@
   let memNode = null;
   // Everything else lives in this closure so its generic names (say, room, tick, ...) cannot clash with other view files.
   const TK = (() => {
-    const wordLog = {};
     const KIND_WORD = { h: 'heart', '*': 'snowflake', o: 'ball' };   // collect kind -> core word (exposure.md, request 1)
     const isDev = () => { try { return /[?&]dev=1(&|$)/.test(location.search); } catch (e) { return false; } };
     const storyOpen = () => typeof story !== 'undefined' && !!story;
     const subtitlesOn = () => { try { const v = typeof setting === 'function' ? setting('subtitles') : false; return !!v && v !== 'off' && v !== 'false'; } catch (e) { return false; } };
     const curLevel = () => LEVELS[game.index] || null;
 
-    /* A word counts for the room where it is learned, whichever room it is heard in (recall lines play in the next room). */
-    function wordRoom(id) {
-      const lv = LEVELS.find(l => l.words && l.words.includes(id));
-      if (lv) return lv.id;
-      const info = voice.wordInfo(id);
-      return (info && info.room) || (curLevel() && curLevel().id) || '_';
-    }
+    /* The per-room dev counter (heardLog) lives in src/lib/heard.js next to the saved counter: noteWordHeard feeds both. */
     function countWordHeard(id) {
-      const row = wordLog[id] || (wordLog[id] = {}), room = wordRoom(id);
-      row[room] = (row[room] || 0) + 1;
       try { if (typeof noteWordHeard === 'function') noteWordHeard(id); } catch (e) {}
     }
     function wordStats() {
       const out = {};
-      for (const id of Object.keys(wordLog)) out[id] = Object.assign({}, wordLog[id]);
+      for (const id of Object.keys(heardLog)) out[id] = Object.assign({}, heardLog[id]);
       return out;
     }
     function logRoomWords(lv) {
       if (!isDev() || !lv || !lv.words) return;
-      const rows = lv.words.map(w => ({ word: w, heard: (wordLog[w] || {})[lv.id] || 0, target: 8, ok: ((wordLog[w] || {})[lv.id] || 0) >= 8 }));
+      const stats = wordStats();
+      const rows = lv.words.map(w => ({ word: w, heard: (stats[w] || {})[lv.id] || 0, target: 8, ok: ((stats[w] || {})[lv.id] || 0) >= 8 }));
       try { console.log('word exposure, room ' + lv.id); console.table(rows); } catch (e) {}
     }
 
@@ -61,11 +53,10 @@
       for (const e of events || []) {
         switch (e.type) {
           case 'load': onLoad(g); break;
-          case 'collect': onCollect(e, g); break;
+          case 'collect': onCollect(e); break;
           case 'respawn': onRespawn(e, g); break;
           case 'open': say('open_' + (curLevel() || {}).id, { tag: 'open', maxWait: 8000 }); break;
           case 'memory': onMemory(e, g); break;
-          case 'swap': room.idleT = 0; break;
           case 'clear':
             logRoomWords(curLevel());
             // a room with no door (the garden) never emits 'open': its "everything is open" line plays as the room clears
@@ -187,10 +178,10 @@
       }
       if ((heart.windT -= dt) < 0) { heart.windT = .3; windMood(heart.mood); }
       if (heart.mood > .4) heart.apart = true;
-      // far apart for a few seconds: the companion calls out once (key = the sister being called, i.e. the player)
+      // far apart for a few seconds: Anna calls out to Elsa once
       if (g.mode === 'solo' && heart.mood > .55) {
         room.farT += dt;
-        if (room.farT > 3.5 && !room.farSpoken) { room.farSpoken = true; say('miss_' + (g.player || 'frost'), { tag: 'miss', maxWait: 1500 }); }
+        if (room.farT > 3.5 && !room.farSpoken) { room.farSpoken = true; say('miss_frost', { tag: 'miss', maxWait: 1500 }); }
         if (room.farT > 25) { room.farT = 0; room.farSpoken = false; }
       } else if (heart.mood < .2) { room.farT = 0; room.farSpoken = false; }
       const still = s => s.ground && Math.abs(s.vx) < 1 && !s.splash;
@@ -278,24 +269,10 @@
       memNode.setAttribute('transform', `translate(${mx} ${(my + Math.sin(t * 2) * 4).toFixed(1)}) scale(${(1 + Math.sin(t * 3.1) * .08).toFixed(3)})`);
     }
 
-    const spoken = { game: new Set(), room: new Set() };
-    function speak(key, delay, perRoom) {   // old API: a line once per game / per room
-      const set = perRoom ? spoken.room : spoken.game;
-      if (set.has(key) || !hasLine(key)) return;
-      set.add(key);
-      setTimeout(() => voice.line(key), (delay || 0) * 1000);
-    }
-    function resetTalk() { spoken.room.clear(); hideBubble(); }
-    return { talkOnEvents, countWordHeard, wordStats, tick, drawMemory, speak, resetTalk };
+    return { talkOnEvents, countWordHeard, wordStats, tick, drawMemory };
   })();
   function talkOnEvents(events, g) { return TK.talkOnEvents(events, g); }
   function countWordHeard(id) { return TK.countWordHeard(id); }
   function wordStats() { return TK.wordStats(); }
   function drawMemory() { return TK.drawMemory(); }
 
-  /* ---- old entry points, kept so callers that were not rewritten still run ---- */
-  function speak(key, delay, perRoom) { TK.speak(key, delay, perRoom); }
-  function resetTalk() { TK.resetTalk(); }
-  function drawTalk() { TK.tick(game); }
-  function updateMood() { TK.tick(game); }
-  function updateMemory() { TK.tick(game); }

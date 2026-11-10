@@ -21,7 +21,7 @@
      R  lost bunny (a body standing on the tile below it)      N  bunny home (non-solid, in the row the bunnies stand in)
      M  moving ice floe, a run of M is one floe; it needs `~` directly below every M and is level with the bank when the M row is the
         row of the bank's solid tiles (bank tiles in rows 11-12, water in row 12, stand row 10)
-     1 2 3 4 5  note steps (do re mi fa so; red orange yellow green blue), solid; the room's `melody` says which, in which order
+     1 2 3 4 5  note steps (do re mi so la; red orange yellow green blue), solid; the room's `melody` says which, in which order
      F  ice flower (non-solid, blooms when touched)
 
    Level object:

@@ -1,8 +1,9 @@
 # Game tests
 
-Plain node (v18+), no npm packages.
+The tests are plain node (v18+) and need no npm packages. Lint and the type check are dev tools installed with `npm ci`.
 
 ```bash
+make check                                     # the whole gate: eslint, tsc --checkJs, node test/run.mjs, fresh build == ice-castle.html
 node test/run.mjs                              # logic from src/*.js
 node test/run.mjs --html ice-castle.html       # logic from a built page
 node test/run.mjs --only lake --trace          # one room, print every step with both sisters' positions
@@ -16,12 +17,19 @@ eight completed hearings per core word (including skipped chapters), progress/se
 parent-modal pause, stickers, and 10/20-second hints. This complements the 30 input-driven physics
 solutions; accelerated audio is not a human listening test or a child play-time measurement.
 
+Exit code 1 when anything fails. `make check` is what CI runs (`.github/workflows/check.yml` only calls it); run it before committing. Its last step
+builds the page into `.tools/fresh-ice-castle.html` and requires it to be byte-identical to `ice-castle.html` as it is in the working tree (staged or
+not), so a source change cannot land without the rebuilt page: after changing `src/` or `art/page.template.html` run `make build` (= `python3 art/build_page.py`).
+Lint covers `src/` and `test/` (`eslint.config.mjs`); the type check (`tsconfig.json`) covers `src/*.js`, `src/lib/*.js` and `src/view/*.js` as global scripts,
+with `types/page.d.ts` for vendor-prefixed browser members. `test/`, `art/` and `castle3d/` are not type-checked.
+
 Exit code 1 when anything fails. `SKIP` is not a failure but a finished room has none: every room has a `solo` solution.
+The solo column is `solo/frost`: Elsa is the only solo player, Anna is the companion (there is no run with Anna as the player).
 
 ## What runs
 
 Per room (`src/levels.js`): map is 13 x 24, every tile character is registered (`TILE_CHARS` in `logic.js`), one spawn each and the goal tile that matches `goal` (`door`, `snowman`, or `garden`: no door, at least one `F`), bunnies need a nest, a `melody` needs its steps, a floe needs water under it, an item reachability smoke check, the `duo` solution and
-the `solo` solution (once with Nuan, once with Frost as the player). Then every test in `test/unit/*.test.mjs`.
+the `solo` solution (Elsa drives, the companion Anna does the rest). Then every test in `test/unit/*.test.mjs`.
 
 The reachability check (`checks.mjs`) is deliberately generous: a grid search with approximate jump reach, Frost's ice
 and Nuan's melting. It catches sealed-off items and missing plates, it does not prove a room is solvable. The solutions
@@ -33,6 +41,9 @@ do that. The approximations are listed at the top of the check.
 can ask for (`ch_<lv>`, `learn_<w>`, `pick_<w>_<n>`, `ui_<name>`, ...) exists in `src/content/lines.json` for all rooms, that a
 family it lists is still played by `src/view/*.js`, that no unknown key-like literal appears in the view, that `{"w"}` ids exist,
 and that every `art` / word icon / room background image is in `game/`. Add a family there when the view starts playing a new one.
+It also asks `art/narration.py` (`--dry-run` and `--prune --dry-run`, no network, no ffmpeg) whether `game/` holds exactly the mp3 files the
+content needs: a missing clip and an orphan mp3 (the clip of a removed or renamed line) both fail. After deleting or renaming a line run
+`python3 art/narration.py --prune` to delete the orphans, then `python3 art/narration.py` to generate what is missing and rewrite `game/subs.json`.
 
 ## Writing a solution
 
@@ -47,9 +58,8 @@ export const duo = async (h) => {
   h.drop('nuan');             // down through a one-way platform
   h.wait(0.5);
 };
-export const solo = async (h, me) => {   // drives only `me` ('nuan' or 'frost'); the companion does the rest
+export const solo = async (h, me) => {   // drives only `me` (always 'frost', Elsa); the companion Anna does the rest
   h.walk(me, 4);
-  if (me === 'nuan') h.act(me);           // things only Nuan can do are hers to do when she is the player
   h.expectStars();                        // every small star '+' of the room is in (checked before the door)
 };
 ```
@@ -61,11 +71,9 @@ export const solo = async (h, me) => {   // drives only `me` ('nuan' or 'frost')
   throws with the room id, step name, step number and the sister's position. Falling in the water is an error.
 - The solution ends when both are at the goal (the step loop stops once the state is `clear`). `run.mjs` then asserts
   `clear`, or `win` on the last room.
-- `solo` runs in solo mode (`g.mode = 'solo'`, `KID_PHYS`, the companion stepped before every `g.step`), once with Nuan and once
-  with Frost as `me`. It may only drive `me`; the harness throws if it touches the other sister. In solo both sisters collect
-  everything and both double jump, so `hop(me, col, true)` works for Frost too. The same code runs for both players: branch on
-  `me` only for what only that sister can do (Nuan melts a wall herself, Frost freezes water herself; when the other sister is the
-  companion she does it when the player comes near).
+- `solo` runs in solo mode (`g.mode = 'solo'`, `KID_PHYS`, the companion stepped before every `g.step`) with Elsa (`frost`) as `me`. It
+  may only drive `me`; the harness throws if it touches Anna. In solo both sisters collect everything and both double jump, so
+  `hop(me, col, true)` works for Elsa. Elsa freezes water herself; Anna melts a wall when Elsa comes near.
 - Solo physics are slower (180 px/s) and a hop ends at the first landing, so a landing spot that worked in duo may be a column
   deeper into the platform here. Do not stand beside the door before the last small star: reaching the door ends the room.
 - `h.expectStars()` fails the step unless every `+` is collected, which proves each small star is reachable.
@@ -73,7 +81,7 @@ export const solo = async (h, me) => {   // drives only `me` ('nuan' or 'frost')
 
 ## Hand-made rooms (S3 toys)
 
-`loadMap(rows, extra, { mode, player })` from `test/harness.mjs` (also in the unit-test context as `loadMap`) builds a tiny room on a **private
+`loadMap(rows, extra, { mode })` from `test/harness.mjs` (also in the unit-test context as `loadMap`) builds a tiny room on a **private
 copy of the logic**, so `src/levels.js` stays untouched, and returns an ordinary harness `h` (`h.logic` is that private logic, `h.g` the game).
 `rows` are the BOTTOM rows of the 13 x 24 map (missing top rows are air, row 0 is walls); a row shorter than 24 repeats its last character, so
 `'#####'` is a floor to the edge. It needs one `E` and one `A`. `extra` is merged into the level object (`{ melody: [1, 2, 3], goal: 'garden',
@@ -82,14 +90,38 @@ guide: [...] }`); the id is `adhoc`, it is the last level, so a clear ends in `w
 `h.allowSplash = true` lets a step go through water. `test/unit/toys.test.mjs` is the example: slopes, springs, bunnies, floes, notes, flowers,
 and the level checks (`checks.mjs`) that know them.
 
+## Voice files (`game/`)
+
+Besides the key families, `content_keys.mjs` asks `art/narration.py` about the audio: a missing mp3 (`--dry-run`, reason `missing`), an orphan mp3
+(`--prune --dry-run`) and a `game/vo_manifest.json` that disagrees with the content (`--verify-manifest`: stale, unrecorded or extra clip) each fail the run.
+The manifest holds `sha1(voice, rate, pitch, text)` per clip; a normal `python3 art/narration.py` redoes exactly the clips whose hash changed or whose file
+is missing, `--write-manifest` records the files now present without synthesizing (use it only when the audio is known to match), `--prune` deletes orphans.
+`test/unit/vo-manifest.test.mjs` and `narration.test.mjs` cover these hermetically (temp directories, stand-in `edge_tts` / `ffmpeg`, no network).
+
+## Exposure report
+
+`test/exposure.mjs` statically counts, per room and core word, the hearings in context on a normal playthrough and prints the table (`node test/exposure.mjs`,
+`--write` regenerates `src/content/exposure.md`, `--check` exits 1 below the threshold of 6 or when that file is stale). `run.mjs` prints it as a report only;
+the numbers do not fail the run yet (PLAN-2 2C makes them a gate). It reads the item-kind and toy tables from the view source, so a renamed table fails loudly.
+`test/unit/exposure.test.mjs` pins the counting rules.
+
+## View libs (`src/lib`)
+
+Pure view logic (save sanitizing and merging, the voice queue, the word-heard counters, `canPlay`) lives in `src/lib/*.js` as plain global scripts without
+`document` / `window`. Tests load them as files: `loadLib(names, context, expr)` from `test/harness.mjs` (also in the unit-test context) evaluates the named
+lib files (all of them when `names` is null) in a fresh vm context holding the stand-ins you pass (`audio`, `game`, `LINES` ... as each file header lists),
+and returns the value of `expr`, e.g. `loadLib(['voice', 'heard'], { ...stand-ins }, '({ voice })')`. Code that needs the real page (storage, the storage event,
+`fitStage`) runs the real view fragment in a fake page (`test/unit/input-safety.test.mjs`, `save.test.mjs`, `fit-stage.test.mjs`). Unit tests do not cut view
+sources apart with `source.indexOf` / `source.slice`.
+
 ## Unit tests
 
 Drop `test/unit/<name>.test.mjs`. `test/solo-kit.mjs` (`soloGame`, `prng`) builds a game plus companion that is stepped by hand,
 with `place(sister, col, row)` (via `g.blink`), `run(sec, each)` and an event log; used by `solo.test.mjs` (KID_PHYS, relaxations,
-swap, blink, progress, guide, small stars, memory) and `companion.test.mjs` (follow, jump, wait at water, three blink triggers,
-melt, freeze, plate, assists, role swap, a seeded random-player fuzz, and a check that the companion touches nothing but
+blink, progress, guide, small stars, memory) and `companion.test.mjs` (follow, jump, wait at water, three blink triggers,
+melt, plate, assists, a seeded random-player fuzz, and a check that the companion touches nothing but
 `g.input`, `g.press` and `g.blink`). Objects made by the logic live in another vm realm: compare them with `JSON.parse(JSON.stringify(x))`. Every exported function is one test (a default export counts as well, named after
-the file); it gets `{ logic, loadLogic, makeHarness, assert }` and fails by throwing (`assert` is `node:assert/strict`).
+the file); it gets `{ logic, loadLogic, loadLib, makeHarness, loadMap, assert, ROOT, options }` and fails by throwing (`assert` is `node:assert/strict`).
 
 ## Rule
 

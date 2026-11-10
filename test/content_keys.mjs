@@ -9,11 +9,16 @@
    Both directions are checked, so neither side can drift without a failure:
      1. every key of every family exists in lines.json (all rooms, all words, all variation numbers the view can pick)
      2. every family is still played by the view source (a stale entry here means a renamed prefix there)
-     3. every string literal in src/view/*.js that looks like a line key is covered by a family or by the allow list
+     3. every string literal in src/lib/*.js and src/view/*.js that looks like a line key is covered by a family or by the allow list
    Also: hover names (`ui: 'x'` in the view) have `ui_x`, `{"w"}` ids exist in words.json, every `art` image exists in game/,
-   every word icon exists, and the guide keys of levels.js exist. */
+   every word icon exists, and the guide keys of levels.js exist.
+   Audio files: game/ holds exactly the mp3 files art/narration.py plans for src/content (checkAudioFiles): a missing clip and an orphan
+   (a clip of a removed or renamed line, `python3 art/narration.py --prune` deletes them) both fail.
+   Voice manifest: game/vo_manifest.json holds sha1(voice, rate, pitch, texts) per clip; checkVoiceManifest fails when it and lines.json
+   disagree (a line was edited without redoing its audio, a clip is unlisted, or a listed clip has no line). */
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadLogic } from './harness.mjs';
 
@@ -45,7 +50,7 @@ const FAMILIES = [
   { name: 'splash', src: /'splash_/, keys: () => nums(RANGES.splash).map(n => `splash_${n}`) },
   { name: 'idle', src: /'idle_'/, keys: () => nums(RANGES.idle).map(n => `idle_${n}`) },
   { name: 'together', src: /'together_'/, keys: () => nums(RANGES.together).map(n => `together_${n}`) },
-  { name: 'miss', src: /'miss_' \+ /, keys: () => ['miss_frost', 'miss_nuan'] },
+  { name: 'miss', src: /'miss_frost'/, keys: () => ['miss_frost'] },
   { name: 'memory', src: /'mem_' \+ e\.id/, keys: c => c.levels.filter(l => l.memoryId).map(l => `mem_${l.memoryId}`) },
   { name: 'meet them', src: /'me_' \+ who/, keys: () => ['me_frost', 'me_nuan'] },
   { name: 'guide', src: /tgt\.say/, keys: c => c.levels.flatMap(l => (l.guide || []).map(g => g.say)) },
@@ -61,7 +66,7 @@ const NOT_A_LINE = new Map([
   ['quiz_right', 'sfx name'], ['quiz_wrong', 'sfx name'], ['quiz_skip', 'hover name, covered by the ui_ family'],
   ['ui_key_', 'image name prefix (ui_key_left ...)'], ['win', 'game state / music theme'], ['end', 'music theme'],
   ['star_', 'prefix, joined with n'], ['splash_', 'prefix, joined with n'], ['idle_', 'prefix, joined with n'], ['together_', 'prefix, joined with n'],
-  ['open_', 'prefix, joined with the room id'], ['miss_', 'prefix, joined with the player id'], ['mem_', 'prefix, joined with the memory id'],
+  ['open_', 'prefix, joined with the room id'], ['mem_', 'prefix, joined with the memory id'],
   ['me_', 'prefix, joined with the sister id'], ['ui_', 'prefix, joined with the hover name'],
 ]);
 const KEYISH = /^(p[123]|win|end|tutor_|ch_|learn_|recall_|start_|guide_|pick_|star_|open_|clear_|quiz_|splash_|idle_|miss_|together_|mem_|me_|ui_|cheer_|toy_)/;
@@ -70,20 +75,53 @@ function stripComments(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' ')).replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
 }
 
+/* Missing and orphan mp3 files in `dir` (default game/), asked of art/narration.py itself so the expected set is never re-derived here:
+   `--dry-run` lists the clips a normal run would make ("name | reason | segments"; only reason "missing" is a file problem here, a
+   changed recipe is the manifest check's business), `--prune --dry-run` lists the mp3 files nothing needs. */
+export function checkAudioFiles(dir = 'game') {
+  const run = args => spawnSync('python3', ['art/narration.py', ...args, '--out', dir], { cwd: ROOT, encoding: 'utf8' });
+  const rows = r => r.stdout.split('\n').filter(Boolean).map(l => l.split(' | '));
+  const missing = run(['--dry-run']), orphan = run(['--prune', '--dry-run']);
+  const problems = [];
+  for (const [what, r] of [['dry run', missing], ['prune dry run', orphan]]) {
+    if (r.error || r.status !== 0) problems.push(`audio files: art/narration.py ${what} failed (${r.error ? r.error.message : r.stderr.trim().split('\n').pop()})`);
+  }
+  if (problems.length) return problems;
+  for (const [f, reason] of rows(missing)) if (reason === 'missing') problems.push(`audio: ${dir}/${f} is missing (art/narration.py would generate it)`);
+  for (const [f] of rows(orphan)) problems.push(`audio: ${dir}/${f} is an orphan, no line or word needs it (python3 art/narration.py --prune deletes it)`);
+  return problems;
+}
+
+/* The voice manifest (game/vo_manifest.json, PLAN-2 B3) must agree with lines.json + words.json: every clip the content needs is listed with
+   the hash of its current recipe, nothing else is listed. Asked of `art/narration.py --verify-manifest`, which prints "name | kind" per
+   difference. A failure means the text changed without the audio being redone (python3 art/narration.py regenerates the changed clips and
+   records them) or the manifest is out of date. */
+export function checkVoiceManifest(dir = 'game') {
+  const r = spawnSync('python3', ['art/narration.py', '--verify-manifest', '--out', dir], { cwd: ROOT, encoding: 'utf8' });
+  if (r.error || r.status > 1) return [`voice manifest: art/narration.py --verify-manifest failed (${r.error ? r.error.message : r.stderr.trim().split('\n').pop()})`];
+  const why = { stale: 'its text or voice changed since the audio was made (run art/narration.py)', unrecorded: 'the content needs it but the manifest does not list it',
+    extra: 'listed, but no line or word needs it any more' };
+  const rows = r.stdout.split('\n').filter(Boolean).map(l => l.split(' | '));
+  const problems = rows.map(([f, kind]) => `voice manifest: ${dir}/${f} ${why[kind] || kind}`);
+  if (r.status === 1 && !problems.length) problems.push('voice manifest: art/narration.py --verify-manifest exited 1 without naming a clip');
+  return problems;
+}
+
 export function checkContentKeys(logic = loadLogic()) {
   const problems = [];
   const lines = JSON.parse(read('src/content/lines.json')).lines || {};
   const words = JSON.parse(read('src/content/words.json'));
   const wordIds = new Set(words.map(w => w.id));
-  const viewDir = path.join(ROOT, 'src/view');
-  const view = fs.readdirSync(viewDir).filter(f => f.endsWith('.js')).sort().map(f => [f, stripComments(read(`src/view/${f}`))]);
+  /* src/lib first, then src/view: the same order the build concatenates them in */
+  const view = ['src/lib', 'src/view'].flatMap(dir =>
+    fs.readdirSync(path.join(ROOT, dir)).filter(f => f.endsWith('.js')).sort().map(f => [`${dir.slice(4)}/${f}`, stripComments(read(`${dir}/${f}`))]));
   const all = view.map(v => v[1]).join('\n');
 
   /* hover names: `ui: 'x'` / `ui: cond ? 'a' : 'b'` anywhere in the view, plus the per-room tiles */
   const uiNames = new Set();
   for (const m of all.matchAll(/\bui:\s*([^,}]+)/g)) for (const q of m[1].matchAll(/'([a-z_]+)'/g)) uiNames.add(q[1]);
   if (/data-ui="room_\$\{lv\.id\}"/.test(all)) for (const l of logic.levels) uiNames.add(`room_${l.id}`);
-  if (!uiNames.size) problems.push('found no hover names (ui: ...) in src/view: the scanner is stale');
+  if (!uiNames.size) problems.push('found no hover names (ui: ...) in src/lib or src/view: the scanner is stale');
 
   /* which words a room's items can speak */
   const pickWords = new Set();
@@ -130,6 +168,8 @@ export function checkContentKeys(logic = loadLogic()) {
       else if (!images.has(wd.icon)) problems.push(`word ${w}: icon "${wd.icon}" is not in game/`);
     }
   }
+  problems.push(...checkAudioFiles());
+  problems.push(...checkVoiceManifest());
   return problems;
 }
 

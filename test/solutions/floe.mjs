@@ -12,11 +12,11 @@ export const duo = async (h) => {
   h.walk('nuan', 21);             // the door
 };
 
-/* Solo: one sister rides both floes and takes every small star; the companion waits for the floe and hops on by herself. */
+/* Solo: Elsa rides both floes and takes every small star; the companion waits for the floe and hops on by herself. */
 export const solo = async (h, me) => {
   // Scene: the player rides a floe, the companion stands on the bank. She waits for the floe to come by, hops on and rides with the
   // player: no blink, no splash (the harness fails on any splash).
-  const other = me === 'nuan' ? 'frost' : 'nuan', s = scene('floe', me);
+  const other = 'nuan', s = scene('floe');
   s.place(other, 5, 10); s.place(me, 8, 10);
   const blinks = s.count('blink');
   let rode = 0;

@@ -14,14 +14,14 @@ const hold = (h, id, k, sec = 0) => { Object.assign(h.g.input[id], { l: 0, r: 0,
 /* ------------------------------------------------------------------ slopes */
 
 /* A hill: floor row 9 (y 360) on the left, three `\` ramp tiles (cols 9, 10, 11) step down to the floor at row 12 (y 480). */
-function loadHill({ loadMap }, mode = 'duo', player = 'nuan') {
+function loadHill({ loadMap }, mode = 'duo') {
   return loadMap([
     '.E.A....................',
     '#########\\..............',
     '##########\\.............',
     '###########\\............',
     FLOOR,
-  ], {}, { mode, player });
+  ], {}, { mode });
 }
 
 export function aRampSlidesYouDownhillAndHandsYouToTheFloor(ctx) {
@@ -42,11 +42,11 @@ export function aRampSlidesYouDownhillAndHandsYouToTheFloor(ctx) {
 export function slideSpeedFollowsTheRunSpeedOfTheMode(ctx) {
   const { assert, logic } = ctx;
   for (const [mode, speed] of [['duo', logic.PHYS.speed], ['solo', logic.KID_PHYS.speed]]) {
-    const h = loadHill(ctx, mode, 'nuan');
-    const s = h.g.sisters.nuan;
-    h.place('nuan', 9, 8);
+    const h = loadHill(ctx, mode);
+    const s = h.g.sisters.frost;                         // Elsa: the solo player (Anna would be moved by the companion)
+    h.place('frost', 9, 8);
     let top = 0;
-    for (let i = 0; i < 160; i++) { hold(h, 'nuan', {}, DT); if (s.slope) top = Math.max(top, Math.abs(s.vx)); }
+    for (let i = 0; i < 160; i++) { hold(h, 'frost', {}, DT); if (s.slope) top = Math.max(top, Math.abs(s.vx)); }
     near(assert, top, logic.TOYS.slideBase * speed, 2, `${mode} slide speed`);
   }
 }
@@ -136,7 +136,7 @@ export function slopesLeaveTheOldRulesAlone(ctx) {
 
 /* ---------------------------------------------------------------- spring mushrooms */
 
-const springRoom = (ctx, mode = 'duo', player = 'nuan') => ctx.loadMap(['.E.A....................', '#########J##############'], {}, { mode, player });
+const springRoom = (ctx, mode = 'duo') => ctx.loadMap(['.E.A....................', '#########J##############'], {}, { mode });
 const rise = (h, id, sec) => {
   const s = h.g.sisters[id], f0 = 480; let peak = f0;       // the floor (and the mushroom in it) is row 12: feet on top of it are at 480
   for (let i = 0; i < Math.round(sec / DT); i++) { hold(h, id, {}, DT); peak = Math.min(peak, feet(s)); }
@@ -601,16 +601,13 @@ export function hoppingOnTheSameStepPlaysItAgain(ctx) {
 
 export function inSoloOnlyTheChildsSisterPlaysTheSteps(ctx) {
   const { assert } = ctx;
-  const h = notesRoom(ctx, {}, { mode: 'solo', player: 'nuan' });
-  h.place('frost', 9, 11);                              // the companion on re
+  const h = notesRoom(ctx, {}, { mode: 'solo' });
+  h.place('nuan', 9, 11);                               // the companion on re
   assert.deepEqual(notesOf(h), [], 'she plays nothing');
   assert.equal(h.g.melody.pos, 0);
-  h.place('nuan', 8, 11);
+  h.place('frost', 8, 11);
   assert.deepEqual(notesOf(h), ['1+']);
-  assert.equal(ev(h, 'note')[0].who, 'nuan');
-  const g2 = notesRoom(ctx, {}, { mode: 'solo', player: 'frost' });
-  g2.place('frost', 8, 11);
-  assert.deepEqual(notesOf(g2), ['1+'], 'and the other way round');
+  assert.equal(ev(h, 'note')[0].who, 'frost');
 }
 
 export function noteStepsAreSolidSteps(ctx) {
@@ -670,10 +667,10 @@ export function aFlowerBloomsWhenNuanTouchesItButNotFrostInDuo(ctx) {
 
 export function inSoloEitherSisterMakesFlowersBloom(ctx) {
   const { assert } = ctx;
-  for (const player of ['frost', 'nuan']) {
-    const h = garden(ctx, {}, { mode: 'solo', player });
-    h.walk(player, 9);
-    assert.equal(h.g.flowers[0].open, true, `${player} as the player`);
+  for (const id of ['frost', 'nuan']) {
+    const h = garden(ctx, {}, { mode: 'solo' });
+    h.place(id, 8, 11);                                  // (a set-up move: the companion cannot be driven by a solution)
+    assert.equal(h.g.flowers[0].open, true, `${id} touching it`);
     assert.equal(count(h, 'bloom'), 1);
   }
 }
@@ -912,15 +909,15 @@ export function respawningAfterTheWaterNeverPutsYouInsideABlock(ctx) {
 
 export function inSoloTheBunnyAlwaysFollowsTheChildNotTheCompanion(ctx) {
   const { assert } = ctx;
-  const h = ctx.loadMap([row({ E: 1, A: 3, R: 12 }), FLOOR], {}, { mode: 'solo', player: 'nuan' });
+  const h = ctx.loadMap([row({ E: 1, A: 3, R: 12 }), FLOOR], {}, { mode: 'solo' });
   const b = h.g.bunnies[0];
-  h.place('frost', 11, 11);                              // the companion is the one next to it
+  h.place('nuan', 11, 11);                               // the companion is the one next to it
   h.wait(0.2);
   assert.equal(b.state, 'follow');
-  assert.equal(b.leader, 'nuan');
-  h.walk('nuan', 6);
+  assert.equal(b.leader, 'frost');
+  h.walk('frost', 6);
   h.wait(2);
-  assert.ok(Math.abs(b.x - cx(h.g.sisters.nuan)) < 140, 'it came to the child');
+  assert.ok(Math.abs(b.x - cx(h.g.sisters.frost)) < 140, 'it came to the child');
 }
 
 export function aSpringReachesALedgeSixTilesUpButNotSeven(ctx) {

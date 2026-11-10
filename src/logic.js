@@ -49,9 +49,9 @@ function createGame() {
     sisters: {}, plates: [], gates: [], gatesOpen: false, door: null, goal: 'door',
     doorOpen: false, clearT: 0, time: 0,
     input: { frost: { l: 0, r: 0, d: 0 }, nuan: { l: 0, r: 0, d: 0 } },
-    /* PLAN A1: 'solo' = one child plays g.player, companion.js drives the other sister; 'duo' = two players, the original rules.
-       Set before g.start / g.load. */
-    mode: 'solo', player: 'nuan',
+    /* PLAN A1: 'solo' = one child plays Elsa (g.player, fixed), companion.js drives Anna; 'duo' = two players, the original rules.
+       Set mode before g.start / g.load. */
+    mode: 'solo', player: 'frost',
     progress: 0,                       // counts real progress (the view's stuck timer watches it)
     stars: { total: 0, got: 0 },       // small decorative '+' stars of the room
     memory: null, memoryFound: false,  // hidden memory fragment: { c, r, x, y } of LEVELS[i].memory
@@ -697,14 +697,6 @@ function createGame() {
     const s = g.sisters[id];
     if (what === 'jump') s.jumpBuf = phys().buffer;
     if (what === 'act') s.actBuf = 1;
-  };
-
-  /* Solo: switch the sister the child controls. */
-  g.swap = () => {
-    if (g.mode !== 'solo') return;
-    g.player = otherOf(g.player);
-    for (const id of ['frost', 'nuan']) Object.assign(g.input[id], { l: 0, r: 0, d: 0 });
-    emit('swap', { player: g.player });
   };
 
   /* Magic blink (PLAN A1): teleport sister `id` so that her feet centre is at (x, y) in pixels (y = the ground line, like door.bottom).

@@ -4,11 +4,11 @@
    Rules of the house
    - It may only write g.input[other], call g.press(other, ...) and g.blink(other, ...). It never touches positions or physics.
    - The view calls update(dt) once per fixed step BEFORE g.step(dt), in solo mode only, and reset() when a room is (re)loaded.
-     A new room or a swap of the controlled sister is also noticed here, so reset() is a convenience, not a requirement.
+     A new room is also noticed here, so reset() is a convenience, not a requirement.
    - companion.idle: seconds the player has not moved (the view says an encouraging line after a few).
 
    Priorities, highest first (PLAN A1)
-     1. the room's `assists` (levels.js)                    2. generic help: melt a pink wall (Nuan), freeze water ahead (Frost),
+     1. the room's `assists` (levels.js)                    2. generic help: melt a pink wall (Anna),
      hold the plate while the player passes a closed gate   3. follow 36 px behind, jump walls, wait at water
      4. magic blink: > 6 tiles away, > 3 tiles of height difference, or 2 s without getting closer   5. look at the player
 
@@ -17,7 +17,7 @@
      spring J         solid like a wall; when the player is much higher she walks to a mushroom, lets it throw her up and steers to the
                       player in the air (springHelp); the blink stays the fallback
      lost bunnies R   nothing to do, they follow the player (the logic makes the player their leader in solo)
-     ice floe M       at the water's edge she waits for a floe to come within reach and then steps / hops on; no generic ice in a room with floes
+     ice floe M       at the water's edge she waits for a floe to come within reach and then steps / hops on
      note steps 1..5  she never jumps near them, never blinks onto one and never counts a note step as a place to stand
      ice flowers F    she keeps away from a flower until the player has made one bloom; then her own touch (and, for Nuan, her magic) may
    Positions: `cx` is the horizontal centre of a sister in pixels, her "feet" are s.y + s.h; a tile is T px. */
@@ -241,24 +241,6 @@ function createCompanion(g, opts) {
     return false;
   }
 
-  /* Frost: the player is about to walk into water ahead of her (up to 3 tiles away), freeze a path. */
-  function freezeHelp(p, c, cid) {
-    if (cid !== 'frost' || !p.ground || g.floes.length) return false;     // (near a floe her magic pauses it: no ice in a river room)
-    const pc = Math.floor(cxOf(p) / T), pr = rowOf(p), d = p.dir;
-    for (let k = 1; k <= 3; k++) {
-      const wc = pc + d * k;
-      if (solid(chAt(wc, pr))) return false;
-      let water = false;
-      for (let r = pr; r <= pr + 3 && !water; r++) water = chAt(wc, r) === '~';
-      if (!water) continue;
-      const sc = wc - d;
-      if (!standCell(sc, pr)) return false;
-      const [x, y] = spotOf(sc, pr);
-      return cast(cid, x, y, d);
-    }
-    return false;
-  }
-
   /* ---------- 3 + 4. follow and blink ---------- */
 
   function blinkBehind(p, cid) {
@@ -420,7 +402,7 @@ function createCompanion(g, opts) {
     if (c.splash > 0 || p.splash > 0) { st.stuckT = 0; return; }
     if (runAssists(p, c, cid)) return;
     if (plateHelp(p, c, cid)) { st.stuckT = 0; return; }
-    if (st.helpCool <= 0 && (meltHelp(p, c, cid) || freezeHelp(p, c, cid))) return;
+    if (st.helpCool <= 0 && meltHelp(p, c, cid)) return;
     if (springHelp(p, c, cid, dt)) { st.stuckT = 0; return; }
     if (bloomHelp(p, c, cid)) return;
     follow(p, c, cid, dt);

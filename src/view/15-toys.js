@@ -177,6 +177,7 @@
     return out;
   }
   function tyTee() {
+    /** @type {any} */
     const ev = game.events;
     if (!ev || ev.__toyTee) return;
     ev.__toyTee = true;
@@ -469,5 +470,5 @@
     tyUpdateFloes(dt, now);
     tyUpdateBunnies(dt, now);
     tyUpdateStrip(now);
-    if (typeof rewardsTick === 'function') rewardsTick(dt, now);
+    if (typeof rewardsTick === 'function') rewardsTick(dt);
   }

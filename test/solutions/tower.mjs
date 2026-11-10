@@ -54,7 +54,7 @@ export const duo = async (h) => {
 };
 
 /* Solo: the player climbs everything by the steps and collects everything. The companion stands on the plate while the player goes
-   through the gate and blinks across afterwards; Nuan (as companion or player) melts the pink wall. */
+   through the gate and blinks across afterwards; Anna melts the pink wall. */
 export const solo = async (h, me) => {
   // left side
   h.walk(me, 6);                  // small star at (6,10)
@@ -92,7 +92,7 @@ export const solo = async (h, me) => {
   h.drop(me);
   h.walk(me, 18);
   h.hop(me, 18);                  // small star at (18,8)
-  if (me === 'nuan') h.act(me);   // Nuan melts the pink wall herself, otherwise the companion does
+                                  // (Anna melts the pink wall for her)
   h.expectStars();
   h.walk(me, 21);                 // the door
   if (!h.g.memoryFound) throw new Error('tower: the memory fragment was not found');

@@ -134,8 +134,8 @@ body.touch .keys { display: none; }
 
 <svg id="stage" viewBox="0 0 960 520" role="img" aria-label="艾莎和安娜在冰堡里的游戏画面">
   <defs>
-    <pattern id="brick" width="160" height="160" patternUnits="userSpaceOnUse"><image href="game/brick.webp?v=21becb6eb65c" width="160" height="160"/></pattern>
-    <pattern id="water" width="116" height="30" patternUnits="userSpaceOnUse"><image href="game/water.webp?v=21becb6eb65c" width="116" height="30" preserveAspectRatio="none"/></pattern>
+    <pattern id="brick" width="160" height="160" patternUnits="userSpaceOnUse"><image href="game/brick.webp?v=42285340d575" width="160" height="160"/></pattern>
+    <pattern id="water" width="116" height="30" patternUnits="userSpaceOnUse"><image href="game/water.webp?v=42285340d575" width="116" height="30" preserveAspectRatio="none"/></pattern>
     <radialGradient id="warm"><stop offset="0" stop-color="#ffd089" stop-opacity=".75"/><stop offset=".45" stop-color="#ffb35f" stop-opacity=".26"/><stop offset="1" stop-color="#ffb35f" stop-opacity="0"/></radialGradient>
     <radialGradient id="cool"><stop offset="0" stop-color="#bfe6ff" stop-opacity=".62"/><stop offset="1" stop-color="#bfe6ff" stop-opacity="0"/></radialGradient>
     <radialGradient id="rose"><stop offset="0" stop-color="#ff9cc0" stop-opacity=".6"/><stop offset="1" stop-color="#ff9cc0" stop-opacity="0"/></radialGradient>
@@ -190,11 +190,11 @@ body.touch .keys { display: none; }
    Rules of the house
    - It may only write g.input[other], call g.press(other, ...) and g.blink(other, ...). It never touches positions or physics.
    - The view calls update(dt) once per fixed step BEFORE g.step(dt), in solo mode only, and reset() when a room is (re)loaded.
-     A new room or a swap of the controlled sister is also noticed here, so reset() is a convenience, not a requirement.
+     A new room is also noticed here, so reset() is a convenience, not a requirement.
    - companion.idle: seconds the player has not moved (the view says an encouraging line after a few).
 
    Priorities, highest first (PLAN A1)
-     1. the room's `assists` (levels.js)                    2. generic help: melt a pink wall (Nuan), freeze water ahead (Frost),
+     1. the room's `assists` (levels.js)                    2. generic help: melt a pink wall (Anna),
      hold the plate while the player passes a closed gate   3. follow 36 px behind, jump walls, wait at water
      4. magic blink: > 6 tiles away, > 3 tiles of height difference, or 2 s without getting closer   5. look at the player
 
@@ -203,7 +203,7 @@ body.touch .keys { display: none; }
      spring J         solid like a wall; when the player is much higher she walks to a mushroom, lets it throw her up and steers to the
                       player in the air (springHelp); the blink stays the fallback
      lost bunnies R   nothing to do, they follow the player (the logic makes the player their leader in solo)
-     ice floe M       at the water's edge she waits for a floe to come within reach and then steps / hops on; no generic ice in a room with floes
+     ice floe M       at the water's edge she waits for a floe to come within reach and then steps / hops on
      note steps 1..5  she never jumps near them, never blinks onto one and never counts a note step as a place to stand
      ice flowers F    she keeps away from a flower until the player has made one bloom; then her own touch (and, for Nuan, her magic) may
    Positions: `cx` is the horizontal centre of a sister in pixels, her "feet" are s.y + s.h; a tile is T px. */
@@ -427,24 +427,6 @@ function createCompanion(g, opts) {
     return false;
   }
 
-  /* Frost: the player is about to walk into water ahead of her (up to 3 tiles away), freeze a path. */
-  function freezeHelp(p, c, cid) {
-    if (cid !== 'frost' || !p.ground || g.floes.length) return false;     // (near a floe her magic pauses it: no ice in a river room)
-    const pc = Math.floor(cxOf(p) / T), pr = rowOf(p), d = p.dir;
-    for (let k = 1; k <= 3; k++) {
-      const wc = pc + d * k;
-      if (solid(chAt(wc, pr))) return false;
-      let water = false;
-      for (let r = pr; r <= pr + 3 && !water; r++) water = chAt(wc, r) === '~';
-      if (!water) continue;
-      const sc = wc - d;
-      if (!standCell(sc, pr)) return false;
-      const [x, y] = spotOf(sc, pr);
-      return cast(cid, x, y, d);
-    }
-    return false;
-  }
-
   /* ---------- 3 + 4. follow and blink ---------- */
 
   function blinkBehind(p, cid) {
@@ -606,7 +588,7 @@ function createCompanion(g, opts) {
     if (c.splash > 0 || p.splash > 0) { st.stuckT = 0; return; }
     if (runAssists(p, c, cid)) return;
     if (plateHelp(p, c, cid)) { st.stuckT = 0; return; }
-    if (st.helpCool <= 0 && (meltHelp(p, c, cid) || freezeHelp(p, c, cid))) return;
+    if (st.helpCool <= 0 && meltHelp(p, c, cid)) return;
     if (springHelp(p, c, cid, dt)) { st.stuckT = 0; return; }
     if (bloomHelp(p, c, cid)) return;
     follow(p, c, cid, dt);
@@ -641,7 +623,7 @@ function createCompanion(g, opts) {
      R  lost bunny (a body standing on the tile below it)      N  bunny home (non-solid, in the row the bunnies stand in)
      M  moving ice floe, a run of M is one floe; it needs `~` directly below every M and is level with the bank when the M row is the
         row of the bank's solid tiles (bank tiles in rows 11-12, water in row 12, stand row 10)
-     1 2 3 4 5  note steps (do re mi fa so; red orange yellow green blue), solid; the room's `melody` says which, in which order
+     1 2 3 4 5  note steps (do re mi so la; red orange yellow green blue), solid; the room's `melody` says which, in which order
      F  ice flower (non-solid, blooms when touched)
 
    Level object:
@@ -1075,9 +1057,9 @@ function createGame() {
     sisters: {}, plates: [], gates: [], gatesOpen: false, door: null, goal: 'door',
     doorOpen: false, clearT: 0, time: 0,
     input: { frost: { l: 0, r: 0, d: 0 }, nuan: { l: 0, r: 0, d: 0 } },
-    /* PLAN A1: 'solo' = one child plays g.player, companion.js drives the other sister; 'duo' = two players, the original rules.
-       Set before g.start / g.load. */
-    mode: 'solo', player: 'nuan',
+    /* PLAN A1: 'solo' = one child plays Elsa (g.player, fixed), companion.js drives Anna; 'duo' = two players, the original rules.
+       Set mode before g.start / g.load. */
+    mode: 'solo', player: 'frost',
     progress: 0,                       // counts real progress (the view's stuck timer watches it)
     stars: { total: 0, got: 0 },       // small decorative '+' stars of the room
     memory: null, memoryFound: false,  // hidden memory fragment: { c, r, x, y } of LEVELS[i].memory
@@ -1725,14 +1707,6 @@ function createGame() {
     if (what === 'act') s.actBuf = 1;
   };
 
-  /* Solo: switch the sister the child controls. */
-  g.swap = () => {
-    if (g.mode !== 'solo') return;
-    g.player = otherOf(g.player);
-    for (const id of ['frost', 'nuan']) Object.assign(g.input[id], { l: 0, r: 0, d: 0 });
-    emit('swap', { player: g.player });
-  };
-
   /* Magic blink (PLAN A1): teleport sister `id` so that her feet centre is at (x, y) in pixels (y = the ground line, like door.bottom).
      The spot is nudged to the nearest place where she fits and does not stand in water. Returns true when she moved.
      Emits { type: 'blink', who, from: {x, y}, to: {x, y} } with the same feet-centre convention. */
@@ -1813,29 +1787,37 @@ function createGame() {
 
 <script id="view">
 (() => {
-  const NS = 'http://www.w3.org/2000/svg';
-  const $ = id => document.getElementById(id);
-  const DEV = /[?&]dev=1\b/.test(location.search);
-
-  /* ---------------------------------------------------------------------------------------------------------------
-     Save (PLAN §5, CONTRACT §2). Every storage access is wrapped: in a private window, a preview or a sandboxed frame
-     localStorage throws, and the game must stay playable with the defaults (the save then lives in memory only).
-     --------------------------------------------------------------------------------------------------------------- */
-  /* >>> save-block (unit-tested by test/unit/save.test.mjs: keep it free of DOM and of names from other files) */
-  const SAVE_KEY = 'icecastle.save';
-  const OLD_STARS_KEY = 'icecastle.stars';
-  const LEGACY_IDS = ['hall', 'lake', 'tower', 'ballroom'];   // the order of the old icecastle.stars array
+  /* Word-heard bookkeeping (PLAN-2 B5): the saved counter and the per-room dev counter, fed by one call.
+     Plain global script (see src/lib/save.js). No DOM access.
+     Free names, supplied by the view scope: save, WORDS, LEVELS, game, saveSoon. */
+  /* Dev counter: how often each word was heard, per room (?dev=1, CONTRACT §4 wordStats). */
+  const heardLog = {};
+  function noteWordHeard(wordId) {
+    if (typeof wordId !== 'string' || !wordId) return;
+    const w = save.words[wordId] || (save.words[wordId] = { heard: 0, quiz: 0 });
+    w.heard++;
+    const word = WORDS.find(w => w.id === wordId);
+    const lv = LEVELS[game.index], room = (word && word.room) || (lv && lv.id) || '?';
+    const byRoom = heardLog[wordId] || (heardLog[wordId] = {});
+    byRoom[room] = (byRoom[room] || 0) + 1;
+    saveSoon();
+  }
+  /* When the room is live (PLAN-2 B5). Plain global script (see src/lib/save.js). No DOM access.
+     Free names, supplied by the view scope: playFlow, game, storyIsOpen, uxState. */
+  /* True while the room is live and nothing is covering it. */
+  function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen() && !uxState.modal; }
+  /* Save data: shape, sanitizing, version check and merge. Pure functions, no storage, no DOM (PLAN-2 B5).
+     Plain global script: art/build_page.py inlines it before the view fragments (indented like them), test/harness.mjs
+     `loadLib` runs it in node. Reading and writing localStorage, the `save` object and the storage event stay in view/00-core.js.
+     Free names: none. */
   const SETTING_CHECK = {
     subtitles: v => typeof v === 'boolean',
     english: v => v === 'words' || v === 'words+phrases',
     mode: v => v === 'solo' || v === 'duo',
-    player: v => v === 'frost',
+    player: v => v === 'frost',   // Elsa leads; kept in the save so an old 'nuan' choice is migrated to her instead of dropped
     sound: v => typeof v === 'boolean',
   };
   const SAVE_VERSION = 2;   // what this build writes and understands; a stored v above it belongs to a newer build
-  function lsRead(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
-  function lsWrite(key, text) { try { window.localStorage.setItem(key, text); return true; } catch (e) { return false; } }
-  function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (e) {} }
 
   function defaultSave() {
     return {
@@ -1930,6 +1912,224 @@ function createGame() {
   }
   /* The same merge without touching either argument. */
   function mergeSaves(a, b) { return mergeSaveInto(sanitizeSave(JSON.parse(JSON.stringify(a))), sanitizeSave(JSON.parse(JSON.stringify(b)))); }
+  /* The voice queue (PLAN-2 B5): lazy mp3 clips, priorities, word counting. Plain global script (see src/lib/save.js).
+     It touches no DOM; the audio graph and the page state are reached through names of the shared view scope.
+     Free names, supplied by 40-audio.js and the rest of the view: audio, bus, voiceOn (assigned here), musicLevel, soundWanted,
+     game, story, LINES, setting, assetURL, countWordHeard, and the host globals fetch, setTimeout, clearTimeout, performance, console.
+     Nothing here runs at load except building the `voice` object, so the load order against the view files does not matter. */
+  /* Voice: lazy mp3 clips, one at a time, a small priority queue, the music ducks underneath.
+       voice.line(key, opts)  opts { interrupt, priority 0..2 (default 1), maxWait ms, tag, subtitle:false }
+       voice.word(id) / voice.ui(name) / voice.stop() / voice.busy / voice.preload(keys) / voice.lastReason(key)
+     Every call returns quickly and never rejects: a missing or slow file just plays as silence for ~0.35 s so a story that
+     waits on the promise keeps moving (subtitles, if wanted, stay up for a reading time).
+     The promise resolves true when the clip was heard to the end (audible, not muted, not cut), false otherwise.
+     WHY it was false: voice.lastReason(key) -> the reason of the most recent call for that key (the line key, 'word_<id>'
+     for voice.word, 'ui_<name>' for hover names), set before the promise resolves; null when it completed or was never called.
+       'missing'     no such line, or its mp3 failed to load / decode / arrive in time (played as silence)
+       'interrupted' cut by louder speech or voice.stop(), dropped from the queue, or a hover name that found speech playing
+       'muted'       the clip ran to the end but sound was off, so nothing was heard
+       'expired'     waited in the queue longer than maxWait without getting its turn
+     A failed mp3 load is not cached: the next request fetches it once more (a second failure is cached), one console warning per file.
+     voice.ui (hover names) is priority 0, tag 'ui': it may cut another 'ui' clip but never anything else, it is dropped instead of
+     queued behind speech, and it says nothing at all while a story / learning scene (`story`) is open. */
+  const voice = (() => {
+    const FILE_WAIT = 2500, SILENT_MS = 350, CACHE_MAX = 48, QUEUE_MAX = 4;
+    const bufs = new Map();              // file -> Promise<AudioBuffer | null>, least recently used first
+    const queue = [], listeners = [];
+    let cur = null, seq = 0, SUBS = null, subsAsked = false, subTimer = 0, uiTimer = 0, uiLast = { name: '', t: -1e9 };
+    const warned = new Set(), warnedFiles = new Set(), failures = new Map();   // failures: file -> failed loads so far
+    const reasons = new Map();           // key -> why the latest call for it did not complete (null = it did)
+    const storyOpen = () => typeof story !== 'undefined' && !!story;
+    function settle(job, ok, reason) { reasons.set(job.key, ok ? null : reason); job.resolve(ok); }
+    const speakable = t => /[\p{L}\p{N}]/u.test(t);
+    const lineDef = key => {
+      const L = typeof LINES === 'object' && LINES;
+      return (L && ((L.lines && L.lines[key]) || (L.pages && L.pages[key]))) || null;
+    };
+    const isEn = s => s && typeof s === 'object' && s.en !== undefined;
+    const hasEn = def => def.say.some(isEn);
+    const wordsOnly = () => { try { return typeof setting === 'function' && setting('english') === 'words'; } catch (e) { return false; } };
+    const wordText = id => (SUBS && SUBS.words && SUBS.words[id] && SUBS.words[id].en) || String(id);
+    /* Anna is the stable learning companion, including legacy companion line definitions. */
+    const speakerOf = def => def.who !== 'companion' ? def.who : 'nuan';
+    function segmentsOf(key, def, wMode) {
+      const e = SUBS && SUBS.lines && SUBS.lines[key];
+      if (e) return (wMode && e.w !== undefined ? e.w || [] : e.s).map(([text, en]) => ({ text, en: !!en }));
+      const out = [];
+      for (const s of def.say) {
+        if (typeof s === 'string') out.push({ text: s, en: false });
+        else if (s.w !== undefined) out.push({ text: wordText(s.w), en: true });
+        else if (!wMode) out.push({ text: s.en, en: true });
+        else if (s.zh) out.push({ text: s.zh, en: false });
+      }
+      return out.filter(x => x.text);
+    }
+    function loadSubs() {   // subtitle table written by narration.py; small, fetched once, never awaited
+      if (subsAsked || typeof fetch !== 'function') return;
+      subsAsked = true;
+      fetch(assetURL('subs.json')).then(r => r.ok ? r.json() : null).then(j => { if (j && j.lines) SUBS = j; }).catch(() => {});
+    }
+    function load(file) {
+      if (!audio) return Promise.resolve(null);
+      let p = bufs.get(file);
+      if (p) bufs.delete(file);
+      else {
+        p = fetch(assetURL(file)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && new Promise((ok, no) => audio.decodeAudioData(b, ok, no))).catch(() => null);
+        p = p.then(b => {
+          if (b) { failures.delete(file); return b; }
+          // a failed load is not remembered as silence: the next request tries once more, the second failure sticks
+          const n = (failures.get(file) || 0) + 1;
+          failures.set(file, n);
+          if (!warnedFiles.has(file)) { warnedFiles.add(file); try { console.warn('voice: could not load', file); } catch (e) {} }
+          if (n < 2 && bufs.get(file) === p) bufs.delete(file);
+          return null;
+        });
+      }
+      bufs.set(file, p);
+      while (bufs.size > CACHE_MAX) bufs.delete(bufs.keys().next().value);
+      return p;
+    }
+    function emitSub(payload) { for (const fn of listeners) { try { fn(payload); } catch (e) {} } }
+    const inPlay = () => typeof game === 'object' && game.state === 'play' && !(typeof story !== 'undefined' && story);
+    function duck() {
+      voiceOn = cur !== null;
+      if (audio && bus) bus.music.gain.setTargetAtTime(musicLevel(), audio.currentTime, voiceOn ? .3 : .5);
+    }
+    function start(job) {
+      cur = job;
+      clearTimeout(subTimer);
+      emitSub(job.sub && job.segments.length ? { key: job.key, who: job.who, segments: job.segments, bubble: (job.who === 'frost' || job.who === 'nuan') && inPlay() } : null);
+      duck();
+      const go = buf => {
+        if (cur !== job) return;
+        if (!buf || !audio || !bus) { job.silent = true; job.timer = setTimeout(() => finish(job, false, 'missing'), SILENT_MS); return; }
+        const src = audio.createBufferSource();
+        src.buffer = buf; src.connect(bus.voice);
+        job.audible = soundWanted();
+        src.onended = () => finish(job, true);
+        job.src = src;
+        src.start(audio.currentTime + .08);
+      };
+      if (job.file && audio) {
+        let t = 0;
+        Promise.race([load(job.file), new Promise(ok => { t = setTimeout(() => ok(null), FILE_WAIT); })]).then(b => { clearTimeout(t); go(b); });
+      } else Promise.resolve().then(() => go(null));
+    }
+    function finish(job, completed = false, why) {
+      if (cur !== job) return;
+      cur = null;
+      const heard = completed && job.audible && soundWanted();
+      if (heard) for (const id of job.words) countWordHeard(id);
+      clearTimeout(job.timer);
+      if (job.src) { job.src.onended = null; try { job.src.stop(); } catch (e) {} job.src = null; }
+      pump();
+      duck();
+      if (!cur && job.sub && job.segments.length) {
+        // a clip without sound keeps its subtitle up for a reading time; a real clip clears it at once
+        if (job.silent) { const keep = Math.max(0, Math.min(8000, job.segments.reduce((n, s) => n + s.text.length, 0) * 220) - SILENT_MS); subTimer = setTimeout(() => emitSub(null), Math.max(900, keep)); }
+        else emitSub(null);
+      }
+      settle(job, !!heard, why || (completed ? 'muted' : 'interrupted'));
+    }
+    function drop(job, why) { clearTimeout(job.expire); settle(job, false, why || 'interrupted'); }
+    function pump() { while (!cur && queue.length) { const j = queue.shift(); clearTimeout(j.expire); start(j); } }
+    function submit(job) {
+      // hover names never cut or wait behind other speech: with anything but 'ui' speech around they are simply not said
+      if (job.tag === 'ui' && ((cur && cur.tag !== 'ui') || queue.some(j => j.tag !== 'ui'))) { settle(job, false, 'interrupted'); return; }
+      if (job.tag) for (let i = queue.length - 1; i >= 0; i--) if (queue[i].tag === job.tag) drop(queue.splice(i, 1)[0]);
+      if (job.interrupt && (!cur || cur.prio <= job.prio)) {
+        for (let i = queue.length - 1; i >= 0; i--) if (queue[i].prio <= job.prio) drop(queue.splice(i, 1)[0]);
+        if (cur) finish(cur);
+      }
+      if (!cur && !queue.length) { start(job); return; }
+      queue.push(job);
+      queue.sort((a, b) => b.prio - a.prio || a.seq - b.seq);
+      while (queue.length > QUEUE_MAX) drop(queue.pop());
+      if (isFinite(job.maxWait)) job.expire = setTimeout(() => { const i = queue.indexOf(job); if (i >= 0) { queue.splice(i, 1); drop(job, 'expired'); } }, job.maxWait);
+    }
+    function make(fields, opts) {
+      const prio = opts.priority != null ? opts.priority : 1;
+      return Object.assign({ prio, interrupt: !!opts.interrupt, tag: opts.tag || '', seq: ++seq, maxWait: opts.maxWait != null ? opts.maxWait : prio >= 2 ? Infinity : 4000,
+        sub: opts.subtitle !== false, words: [], segments: [], file: null, silent: false }, fields);
+    }
+    function line(key, opts) {
+      opts = opts || {};
+      loadSubs();
+      return new Promise(/** @param {(played?: boolean) => void} resolve */ resolve => {
+        const def = lineDef(key);
+        if (!def || !Array.isArray(def.say)) {
+          if (!warned.has(key)) { warned.add(key); try { console.warn('voice.line: no line', key); } catch (e) {} }
+          reasons.set(key, 'missing');
+          resolve(); return;
+        }
+        const who = speakerOf(def), wMode = wordsOnly() && hasEn(def), segments = segmentsOf(key, def, wMode);
+        // words-only variant with nothing left to say (every {"en"} lacks a zh gloss): no file, just the subtitle
+        const voiced = !wMode || def.say.some(s => typeof s === 'string' ? speakable(s) : s.w !== undefined || (s.zh && speakable(s.zh)));
+        const file = voiced ? `vo_${key}${def.who === 'companion' ? '__' + who : ''}${wMode ? '__w' : ''}.mp3` : null;
+        const words = def.say.filter(s => s && s.w !== undefined).map(s => s.w);
+        submit(make({ kind: 'line', key, who, file, segments, words, resolve }, opts));
+      });
+    }
+    function word(id, opts) {
+      opts = Object.assign({ interrupt: true, tag: 'word', maxWait: 1500, subtitle: false }, opts);
+      return new Promise(resolve => submit(make({ kind: 'word', key: 'word_' + id, who: 'nuan', file: `word_${id}.mp3`, words: [id], resolve }, opts)));
+    }
+    /* Hover names: debounced 400 ms, at most one waiting; hovering back to the name that already played cancels the pending one.
+       Priority 0 and tag 'ui' (see submit): never cuts narration, learn_*, quiz_* or word clips, and silent while a scene is open. */
+    function ui(name) {
+      if (storyOpen()) { clearTimeout(uiTimer); return; }
+      const now = performance.now();
+      if (name === uiLast.name && now - uiLast.t < 400) { clearTimeout(uiTimer); return; }
+      const run = () => { if (storyOpen()) return; uiLast = { name, t: performance.now() }; line('ui_' + name, { interrupt: true, priority: 0, tag: 'ui', maxWait: 600, subtitle: false }); };
+      clearTimeout(uiTimer);
+      const wait = uiLast.t + 400 - now;
+      if (wait > 0) uiTimer = setTimeout(run, wait); else run();
+    }
+    function stop() {
+      clearTimeout(uiTimer);
+      while (queue.length) drop(queue.pop());
+      if (cur) finish(cur);
+      clearTimeout(subTimer);
+      emitSub(null);
+    }
+    /* Warm the cache for lines that are likely to play soon (needs the audio context, i.e. after the first click). */
+    function preload(keys) {
+      if (!audio) return Promise.resolve();
+      loadSubs();
+      const files = [];
+      for (const key of keys) {
+        const def = lineDef(key);
+        if (!def && /^word_/.test(key)) { files.push(key + '.mp3'); continue; }
+        if (!def || !Array.isArray(def.say)) continue;
+        const wMode = wordsOnly() && hasEn(def);
+        files.push(`vo_${key}${def.who === 'companion' ? '__' + speakerOf(def) : ''}${wMode ? '__w' : ''}.mp3`);
+      }
+      return files.reduce((p, f) => p.then(() => load(f)), Promise.resolve()).then(() => {});
+    }
+    return {
+      line, word, ui, stop, preload,
+      lastReason: key => reasons.has(key) ? reasons.get(key) : null,
+      wordInfo: id => (SUBS && SUBS.words && SUBS.words[id]) || null,   // { en, zh, room } once game/subs.json has loaded
+      get busy() { return cur !== null; },
+      onSubtitle(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; },
+    };
+  })();
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = id => document.getElementById(id);
+  const DEV = /[?&]dev=1\b/.test(location.search);
+
+  /* ---------------------------------------------------------------------------------------------------------------
+     Save (PLAN §5, CONTRACT §2). Every storage access is wrapped: in a private window, a preview or a sandboxed frame
+     localStorage throws, and the game must stay playable with the defaults (the save then lives in memory only).
+     --------------------------------------------------------------------------------------------------------------- */
+  /* Storage side of the save. The pure part (shape, sanitize, version check, merge: SETTING_CHECK, SAVE_VERSION, defaultSave,
+     sanitizeSave, saveVersionTooNew, storedSaveIsNewer, mergeSaveInto, mergeSaves) lives in src/lib/save.js. */
+  const SAVE_KEY = 'icecastle.save';
+  const OLD_STARS_KEY = 'icecastle.stars';
+  const LEGACY_IDS = ['hall', 'lake', 'tower', 'ballroom'];   // the order of the old icecastle.stars array
+  function lsRead(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
+  function lsWrite(key, text) { try { window.localStorage.setItem(key, text); return true; } catch (e) { return false; } }
+  function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (e) {} }
 
   function loadSave() {
     let raw = null;
@@ -1972,7 +2172,7 @@ function createGame() {
      tabs settle after at most one round of writes. */
   addEventListener('storage', e => {
     if (!e || e.key !== SAVE_KEY || !e.newValue) return;
-    let raw = null;
+    let raw;
     try { raw = JSON.parse(e.newValue); } catch (err) { return; }
     if (!isObj(raw) || saveVersionTooNew(raw)) return;
     const before = JSON.stringify(save);
@@ -1988,22 +2188,8 @@ function createGame() {
     if (!SETTING_CHECK[key] || !SETTING_CHECK[key](value)) return false;
     save.settings[key] = value;
     saveWrite();
-    try { onSettingChanged(key, value); } catch (e) { console.error(e); }   // 90-main applies mode / player to the game
+    try { onSettingChanged(key, value); } catch (e) { console.error(e); }   // 90-main applies mode to the game
     return true;
-  }
-  /* <<< save-block */
-
-  /* Dev counter: how often each word was heard, per room (?dev=1, CONTRACT §4 wordStats). */
-  const heardLog = {};
-  function noteWordHeard(wordId) {
-    if (typeof wordId !== 'string' || !wordId) return;
-    const w = save.words[wordId] || (save.words[wordId] = { heard: 0, quiz: 0 });
-    w.heard++;
-    const word = WORDS.find(w => w.id === wordId);
-    const lv = LEVELS[game.index], room = (word && word.room) || (lv && lv.id) || '?';
-    const byRoom = heardLog[wordId] || (heardLog[wordId] = {});
-    byRoom[room] = (byRoom[room] || 0) + 1;
-    saveSoon();
   }
 
   const roomIndex = id => LEVELS.findIndex(lv => lv.id === id);
@@ -2036,10 +2222,9 @@ function createGame() {
   /* ---------------------------------------------------------------------------------------------------------------- */
   const game = createGame();
   game.mode = setting('mode');
-  game.player = setting('player');
   /* SIZES and LINES are JSON inlined by art/build_page.py; the placeholders keep this file valid JS on its own. */
   const SIZES = {"frost_idle":[96,170,75.0],"frost_blink":[91,170,70.0],"frost_jump":[122,177,79.0],"frost_fall":[123,166,83.0],"frost_cast":[175,161,84.0],"frost_cheer":[120,179,75.0],"frost_run1":[142,158,110.0],"frost_run2":[148,140,125.0],"frost_run3":[133,156,104.0],"frost_run4":[166,148,117.0],"frost_run5":[142,144,115.0],"frost_run6":[129,151,102.0],"nuan_idle":[84,153,50.0],"nuan_blink":[84,153,49.0],"nuan_jump":[102,155,66.0],"nuan_fall":[88,146,63.0],"nuan_cast":[149,139,85.0],"nuan_cheer":[137,150,76.0],"nuan_run1":[118,126,91.0],"nuan_run2":[105,133,79.0],"nuan_run3":[121,142,90.0],"nuan_run4":[106,128,86.0],"nuan_run5":[118,134,81.0],"nuan_run6":[127,149,72.0],"shelf0":[169,58],"shelf1":[164,59],"shelf2":[164,62],"pinkice":[96,96],"iceblock":[96,96],"frozen":[96,96],"plate_up":[132,55],"plate_down":[132,28],"gate":[204,211],"drift0":[227,48],"drift1":[134,34],"water":[232,58],"door_closed":[234,344],"door_open":[233,356],"flake":[122,142],"heart":[114,106],"ball":[128,128],"two":[177,254],"snowman":[238,326],"pile":[123,107],"bg0":[1672,906],"bg1":[1672,906],"bg2":[1672,906],"bg3":[1672,906],"fx_burst":[200,184],"fx_glow":[200,177],"fx_ring":[200,190],"fx_flake":[51,56],"fx_heart":[56,50],"fx_star":[56,56],"fx_steam":[139,160],"fx_dust":[160,90],"fx_splash":[140,107],"word_heart":[256,256],"word_star":[256,256],"word_door":[256,256],"word_water":[256,256],"word_ice":[256,256],"word_fish":[256,256],"word_slide":[256,256],"word_fast":[256,256],"word_down":[256,256],"word_push":[256,256],"word_open":[256,256],"word_gate":[256,256],"word_jump":[256,256],"alt_word_fast":[256,256],"alt_word_push":[256,256],"alt_word_open":[256,256],"word_up":[256,256],"word_high":[256,256],"word_bunny":[256,256],"word_home":[256,256],"word_carrot":[256,256],"word_left":[256,256],"word_right":[256,256],"word_wait":[256,256],"word_red":[256,256],"word_yellow":[256,256],"word_blue":[256,256],"word_snowman":[256,256],"word_ball":[256,256],"alt_word_wait":[256,256],"alt_word_up":[256,256],"alt_word_high":[256,256],"word_hat":[256,256],"word_flower":[256,256],"word_warm":[256,256],"word_spring":[256,256],"word_one":[256,256],"word_two":[256,256],"word_three":[256,256],"word_snowflake":[256,256],"word_hello":[256,256],"word_yay":[256,256],"word_music":[256,256],"word_sun":[256,256],"alt_word_warm":[256,256],"alt_word_spring":[256,256],"alt_word_hello":[256,256],"alt_word_yay":[256,256],"ui_book":[187,192],"ui_bulb":[174,192],"ui_gear":[192,187],"ui_fullscreen":[192,190],"ui_play":[256,256],"ui_next":[191,192],"ui_replay":[191,192],"ui_back":[192,192],"ui_ear":[192,174],"ui_mouth":[192,113],"ui_sticker":[192,177],"ui_wardrobe":[183,192],"ui_solo":[188,192],"ui_duo":[189,192],"ui_meet":[256,256],"hat_snowman":[120,102],"ui_keys":[320,281],"ui_key_left":[115,107],"ui_key_right":[115,108],"ui_key_up":[113,105],"ui_key_space":[325,114],"ui_keys_rects":{"up":[105,-1,110,96],"left":[42,98,111,96],"right":[165,99,111,95],"space":[-1,200,320,80]},"ui_keys_centers":{"left":[97,146],"right":[220,146],"up":[160,47],"space":[159,240]},"fish_1":[97,66],"fish_2":[97,66],"tile_slope_r":[96,96],"tile_slope_l":[96,96],"spring_0":[96,96],"spring_1":[96,96],"flower_0":[96,96],"flower_1":[96,96],"flower_2":[96,96],"bunny_nest":[96,67],"note_1":[96,96],"note_1_lit":[96,96],"note_2":[96,96],"note_2_lit":[96,96],"note_3":[96,96],"note_3_lit":[96,96],"note_4":[96,96],"note_4_lit":[96,96],"note_5":[96,96],"note_5_lit":[96,96],"bunny_idle":[66,78],"bunny_hop1":[66,78],"bunny_hop2":[66,78],"bunny_hop3":[66,78],"bunny_hop4":[66,78],"bunny_home":[66,78],"floe_m":[96,96],"floe_l":[96,96],"floe_r":[96,96],"floe":[96,96],"sticker_hall":[189,192],"sticker_lake":[188,192],"sticker_slope":[188,192],"sticker_tower":[189,192],"sticker_spring":[187,192],"sticker_bunny":[187,192],"sticker_floe":[188,192],"sticker_music":[188,192],"sticker_ballroom":[188,192],"sticker_garden":[187,192],"sticker_words5":[187,192],"sticker_hall_gold":[189,192],"sticker_lake_gold":[189,192],"sticker_slope_gold":[189,192],"sticker_tower_gold":[189,192],"sticker_spring_gold":[188,192],"sticker_bunny_gold":[188,192],"sticker_floe_gold":[188,192],"sticker_music_gold":[188,192],"sticker_ballroom_gold":[189,192],"sticker_garden_gold":[189,192],"sticker_board":[1280,720],"bg_slope":[1672,906],"bg_spring":[1672,906],"bg_bunny":[1672,906],"bg_floe":[1672,906],"bg_music":[1672,906],"bg_garden":[1672,906],"portrait_frost":[312,416],"portrait_nuan":[312,416],"frost_idle_d1":[96,170,75.0],"frost_idle_d2":[96,170,75.0],"frost_blink_d1":[91,170,70.0],"frost_blink_d2":[91,170,70.0],"frost_jump_d1":[122,177,79.0],"frost_jump_d2":[122,177,79.0],"frost_fall_d1":[123,166,83.0],"frost_fall_d2":[123,166,83.0],"frost_cast_d1":[175,161,84.0],"frost_cast_d2":[175,161,84.0],"frost_cheer_d1":[120,179,75.0],"frost_cheer_d2":[120,179,75.0],"frost_run1_d1":[142,158,110.0],"frost_run1_d2":[142,158,110.0],"frost_run2_d1":[148,140,125.0],"frost_run2_d2":[148,140,125.0],"frost_run3_d1":[133,156,104.0],"frost_run3_d2":[133,156,104.0],"frost_run4_d1":[166,148,117.0],"frost_run4_d2":[166,148,117.0],"frost_run5_d1":[142,144,115.0],"frost_run5_d2":[142,144,115.0],"frost_run6_d1":[129,151,102.0],"frost_run6_d2":[129,151,102.0],"nuan_idle_d1":[84,153,50.0],"nuan_idle_d2":[84,153,50.0],"nuan_blink_d1":[84,153,49.0],"nuan_blink_d2":[84,153,49.0],"nuan_jump_d1":[102,155,66.0],"nuan_jump_d2":[102,155,66.0],"nuan_fall_d1":[88,146,63.0],"nuan_fall_d2":[88,146,63.0],"nuan_cast_d1":[149,139,85.0],"nuan_cast_d2":[149,139,85.0],"nuan_cheer_d1":[137,150,76.0],"nuan_cheer_d2":[137,150,76.0],"nuan_run1_d1":[118,126,91.0],"nuan_run1_d2":[118,126,91.0],"nuan_run2_d1":[105,133,79.0],"nuan_run2_d2":[105,133,79.0],"nuan_run3_d1":[121,142,90.0],"nuan_run3_d2":[121,142,90.0],"nuan_run4_d1":[106,128,86.0],"nuan_run4_d2":[106,128,86.0],"nuan_run5_d1":[118,134,81.0],"nuan_run5_d2":[118,134,81.0],"nuan_run6_d1":[127,149,72.0],"nuan_run6_d2":[127,149,72.0],"hat_crown":[128,104],"hat_bow":[128,91],"hat_wreath":[128,86],"hat_clip":[128,106],"hat_offsets":{"frost":{"idle":[0.99,-3.01,0.46,0],"blink":[0.99,-3.51,0.46,0],"jump":[0.49,1.44,0.46,0],"fall":[0.99,0.94,0.46,0],"cast":[-0.49,-3.51,0.46,0],"cheer":[0.99,1.44,0.46,0],"run1":[1.48,-3.01,0.46,0],"run2":[2.47,-3.51,0.46,0],"run3":[1.48,-3.51,0.46,0],"run4":[1.48,-3.01,0.46,0],"run5":[2.47,-3.51,0.46,0],"run6":[1.98,-3.51,0.46,0]},"nuan":{"idle":[0.99,-3.51,0.46,0],"blink":[0.49,-3.51,0.46,0],"jump":[0.0,2.92,0.46,0],"fall":[0.74,4.89,0.46,0],"cast":[0.99,-3.51,0.46,0],"cheer":[0.49,1.44,0.46,0],"run1":[1.98,-3.51,0.46,0],"run2":[1.48,-3.51,0.46,0],"run3":[1.98,-3.51,0.46,0],"run4":[1.98,-3.51,0.46,0],"run5":[0.99,-3.51,0.46,0],"run6":[0.49,1.93,0.46,0]}}};
-  const ASSET_VERSION = "21becb6eb65c";
+  const ASSET_VERSION = "42285340d575";
   const assetURL = file => `game/${file}?v=${ASSET_VERSION}`;
   const SRC = n => assetURL(`${n}.webp`);
 
@@ -2062,7 +2247,8 @@ function createGame() {
     return g;
   }
 
-  const LINES = {"voices":{"narrator":{"zh":["en-US-EmmaMultilingualNeural","-5%","+8Hz"],"en":["en-US-EmmaMultilingualNeural","-5%","+8Hz"]},"frost":{"zh":["zh-CN-XiaoxiaoNeural","-6%","-4Hz"],"en":["en-US-JennyNeural","-15%","-4Hz"]},"nuan":{"zh":["en-US-EmmaMultilingualNeural","-5%","+8Hz"],"en":["en-US-EmmaMultilingualNeural","-5%","+8Hz"]}},"lines":{"p1":{"who":"nuan","say":["姐姐，你手里的雪花好漂亮！我是安娜，我会陪着你，一起在冰堡里探险。"],"art":"story_prologue"},"p2":{"who":"nuan","say":["姐姐，外面下雪啦。别担心，我带着小灯笼来找你了，我们一起想办法吧。"],"art":"story_winter"},"p3":{"who":"nuan","say":["艾莎，我们一起出发吧！你来变冰和雪，我在旁边帮你，我们再堆一个小时候的雪人。"],"art":"key"},"ch_hall":{"who":"nuan","say":["姐姐，我找到你啦！我们先看看大厅里藏着什么宝贝吧。"],"art":"bg0"},"ch_lake":{"who":"nuan","say":["冰堡后面有一片大湖，小鱼在水里游来游去。"],"art":"bg1"},"ch_slope":{"who":"nuan","say":["冰堡里有一条长长的雪坡，像一个大滑梯。呼——滑下去！"],"art":"bg_slope"},"ch_tower":{"who":"nuan","say":["塔楼里有一扇很重的铁门，要两个人一起想办法。"],"art":"bg2"},"ch_spring":{"who":"nuan","say":["雪地里长满了软软的蘑菇，踩上去，弹——弹到半空里去！"],"art":"bg_spring"},"ch_bunny":{"who":"nuan","say":["雪地里有三只小雪兔迷路了，我们带它们回家吧。"],"art":"bg_bunny"},"ch_floe":{"who":"nuan","say":["河面上漂着一块块浮冰，一会儿往左，一会儿往右。"],"art":"bg_floe"},"ch_music":{"who":"nuan","say":["台阶一级一级，闪着彩色的光。踩一踩，它们会唱歌！"],"art":"bg_music"},"ch_ballroom":{"who":"nuan","say":["舞厅里滚着好多大雪球，我们来堆雪人吧！"],"art":"bg3"},"ch_garden":{"who":"nuan","say":["冰堡的后花园里，冰花还在睡觉。我们用温暖的光，叫醒它们。"],"art":"bg_garden"},"learn_heart":{"who":"nuan","say":["姐姐，我们来找",{"w":"heart"},"。看，",{"w":"heart"},"就是爱心。和我一起念：",{"w":"heart"}]},"learn_star":{"who":"nuan","say":["还有",{"w":"star"},"。看，",{"w":"star"},"就是星星。和我一起念：",{"w":"star"}]},"learn_door":{"who":"nuan","say":["最后是",{"w":"door"},"。看，",{"w":"door"},"就是门。和我一起念：",{"w":"door"}]},"learn_water":{"who":"nuan","say":["姐姐，快看这片大湖，湖里是",{"w":"water"},"。看，",{"w":"water"},"就是水。和我一起念：",{"w":"water"}]},"learn_ice":{"who":"nuan","say":["姐姐，你的魔法能把水变成",{"w":"ice"},"。看，",{"w":"ice"},"就是冰。和我一起念：",{"w":"ice"}]},"learn_fish":{"who":"nuan","say":["水里还住着",{"w":"fish"},"。看，",{"w":"fish"},"就是小鱼。和我一起念：",{"w":"fish"}]},"learn_slide":{"who":"nuan","say":["看，好长的雪坡，我们来玩",{"w":"slide"},"。看，",{"w":"slide"},"就是滑滑梯。和我一起念：",{"w":"slide"}]},"learn_fast":{"who":"nuan","say":["从坡上滑下来的时候，会变得很",{"w":"fast"},"。看，",{"w":"fast"},"就是快。和我一起念：",{"w":"fast"}]},"learn_down":{"who":"nuan","say":["最后是",{"w":"down"},"。看，",{"w":"down"},"就是向下。和我一起念：",{"w":"down"}]},"learn_push":{"who":"nuan","say":["姐姐，我们一起来",{"w":"push"},"。看，",{"w":"push"},"就是推。和我一起念：",{"w":"push"}]},"learn_open":{"who":"nuan","say":["推了以后，门会",{"w":"open"},"。看，",{"w":"open"},"就是打开。和我一起念：",{"w":"open"}]},"learn_gate":{"who":"nuan","say":["这里有一扇铁门，叫",{"w":"gate"},"。看，",{"w":"gate"},"就是铁闸门。和我一起念：",{"w":"gate"}]},"learn_jump":{"who":"nuan","say":["蘑菇软软的，我们来试试",{"w":"jump"},"。看，",{"w":"jump"},"就是跳。和我一起念：",{"w":"jump"}]},"learn_up":{"who":"nuan","say":["踩上蘑菇，就会往",{"w":"up"},"飞。看，",{"w":"up"},"就是向上。和我一起念：",{"w":"up"}]},"learn_high":{"who":"nuan","say":["还会飞得很",{"w":"high"},"。看，",{"w":"high"},"就是高。和我一起念：",{"w":"high"}]},"learn_bunny":{"who":"nuan","say":["姐姐，这里有三只迷路的",{"w":"bunny"},"。看，",{"w":"bunny"},"就是小雪兔。和我一起念：",{"w":"bunny"}]},"learn_home":{"who":"nuan","say":["我们要送它们回",{"w":"home"},"。看，",{"w":"home"},"就是家。和我一起念：",{"w":"home"}]},"learn_carrot":{"who":"nuan","say":["兔窝门口，有它们最爱吃的",{"w":"carrot"},"。看，",{"w":"carrot"},"就是胡萝卜。和我一起念：",{"w":"carrot"}]},"learn_left":{"who":"nuan","say":["河上的浮冰，一会儿往",{"w":"left"},"走。看，",{"w":"left"},"就是左。和我一起念：",{"w":"left"}]},"learn_right":{"who":"nuan","say":["一会儿又往",{"w":"right"},"走。看，",{"w":"right"},"就是右。和我一起念：",{"w":"right"}]},"learn_wait":{"who":"nuan","say":["想上浮冰，要先",{"w":"wait"},"。看，",{"w":"wait"},"就是等一等。和我一起念：",{"w":"wait"}]},"learn_red":{"who":"nuan","say":["姐姐，台阶是彩色的，先看",{"w":"red"},"。看，",{"w":"red"},"就是红色。和我一起念：",{"w":"red"}]},"learn_yellow":{"who":"nuan","say":["还有",{"w":"yellow"},"。看，",{"w":"yellow"},"就是黄色。和我一起念：",{"w":"yellow"}]},"learn_blue":{"who":"nuan","say":["最后是",{"w":"blue"},"。看，",{"w":"blue"},"就是蓝色。和我一起念：",{"w":"blue"}]},"learn_snowman":{"who":"nuan","say":["我们要堆起",{"w":"snowman"},"。看，",{"w":"snowman"},"就是雪人。和我一起念：",{"w":"snowman"}]},"learn_ball":{"who":"nuan","say":["要用大大的",{"w":"ball"},"。看，",{"w":"ball"},"就是球，雪球的球。和我一起念：",{"w":"ball"}]},"learn_hat":{"who":"nuan","say":["雪人还要戴",{"w":"hat"},"。看，",{"w":"hat"},"就是帽子。和我一起念：",{"w":"hat"}]},"learn_flower":{"who":"nuan","say":["姐姐，花园里还睡着许多",{"w":"flower"},"。看，",{"w":"flower"},"就是花。和我一起念：",{"w":"flower"}]},"learn_warm":{"who":"nuan","say":["灯笼的光暖烘烘的，是",{"w":"warm"},"。看，",{"w":"warm"},"就是温暖。和我一起念：",{"w":"warm"}]},"learn_spring":{"who":"nuan","say":["温暖的风一吹，",{"w":"spring"},"就来啦。看，",{"w":"spring"},"就是春天。和我一起念：",{"w":"spring"}]},"recall_heart":{"who":"nuan","say":["还记得",{"w":"heart"},"吗？",{"w":"heart"},"，是爱心！"]},"recall_star":{"who":"nuan","say":["还记得",{"w":"star"},"吗？",{"w":"star"},"，是星星！"]},"recall_door":{"who":"nuan","say":["还记得",{"w":"door"},"吗？",{"w":"door"},"，是门！"]},"recall_water":{"who":"nuan","say":["还记得",{"w":"water"},"吗？",{"w":"water"},"，是水！"]},"recall_ice":{"who":"nuan","say":["还记得",{"w":"ice"},"吗？",{"w":"ice"},"，是冰！"]},"recall_fish":{"who":"nuan","say":["还记得",{"w":"fish"},"吗？",{"w":"fish"},"，是小鱼！"]},"recall_slide":{"who":"nuan","say":["还记得",{"w":"slide"},"吗？",{"w":"slide"},"，是滑滑梯！"]},"recall_fast":{"who":"nuan","say":["还记得",{"w":"fast"},"吗？",{"w":"fast"},"，是快！"]},"recall_down":{"who":"nuan","say":["还记得",{"w":"down"},"吗？",{"w":"down"},"，是向下！"]},"recall_push":{"who":"nuan","say":["还记得",{"w":"push"},"吗？",{"w":"push"},"，是推！"]},"recall_open":{"who":"nuan","say":["还记得",{"w":"open"},"吗？",{"w":"open"},"，是打开！"]},"recall_gate":{"who":"nuan","say":["还记得",{"w":"gate"},"吗？",{"w":"gate"},"，是铁闸门！"]},"recall_jump":{"who":"nuan","say":["还记得",{"w":"jump"},"吗？",{"w":"jump"},"，是跳！"]},"recall_up":{"who":"nuan","say":["还记得",{"w":"up"},"吗？",{"w":"up"},"，是向上！"]},"recall_high":{"who":"nuan","say":["还记得",{"w":"high"},"吗？",{"w":"high"},"，是高！"]},"recall_bunny":{"who":"nuan","say":["还记得",{"w":"bunny"},"吗？",{"w":"bunny"},"，是小雪兔！"]},"recall_home":{"who":"nuan","say":["还记得",{"w":"home"},"吗？",{"w":"home"},"，是家！"]},"recall_carrot":{"who":"nuan","say":["还记得",{"w":"carrot"},"吗？",{"w":"carrot"},"，是胡萝卜！"]},"recall_left":{"who":"nuan","say":["还记得",{"w":"left"},"吗？",{"w":"left"},"，是左边！"]},"recall_right":{"who":"nuan","say":["还记得",{"w":"right"},"吗？",{"w":"right"},"，是右边！"]},"recall_wait":{"who":"nuan","say":["还记得",{"w":"wait"},"吗？",{"w":"wait"},"，是等一等！"]},"recall_red":{"who":"nuan","say":["还记得",{"w":"red"},"吗？",{"w":"red"},"，是红色！"]},"recall_yellow":{"who":"nuan","say":["还记得",{"w":"yellow"},"吗？",{"w":"yellow"},"，是黄色！"]},"recall_blue":{"who":"nuan","say":["还记得",{"w":"blue"},"吗？",{"w":"blue"},"，是蓝色！"]},"recall_snowman":{"who":"nuan","say":["还记得",{"w":"snowman"},"吗？",{"w":"snowman"},"，是雪人！"]},"recall_ball":{"who":"nuan","say":["还记得",{"w":"ball"},"吗？",{"w":"ball"},"，是球！"]},"recall_hat":{"who":"nuan","say":["还记得",{"w":"hat"},"吗？",{"w":"hat"},"，是帽子！"]},"recall_flower":{"who":"nuan","say":["还记得",{"w":"flower"},"吗？",{"w":"flower"},"，是花！"]},"recall_warm":{"who":"nuan","say":["还记得",{"w":"warm"},"吗？",{"w":"warm"},"，是温暖！"]},"recall_spring":{"who":"nuan","say":["还记得",{"w":"spring"},"吗？",{"w":"spring"},"，是春天！"]},"start_hall_1":{"who":"nuan","say":[{"en":"Hello!","zh":"你好！"},"姐姐，我跟着",{"w":"star"},"的光，找到你啦！"]},"start_hall_2":{"who":"frost","say":["嗯，你好呀，安娜。我有一点点害羞。"]},"start_hall_3":{"who":"nuan","say":["不怕不怕！看，到处都是",{"w":"heart"},"和",{"w":"star"},"。最后要走到那边的",{"w":"door"}]},"start_hall_4":{"who":"frost","say":["好呀。我喜欢星星。找齐了宝贝，大门就会开。"]},"start_lake_1":{"who":"nuan","say":["哇，好大的湖！看，是",{"w":"water"},"，水好凉呀。"]},"start_lake_2":{"who":"frost","say":["你看，水里有小鱼，游来游去的。"]},"start_lake_3":{"who":"nuan","say":["姐姐，你能把",{"w":"water"},"变成",{"w":"ice"},"吗？这样我就能过去啦。"]},"start_lake_4":{"who":"frost","say":["我来试试。轻轻地变出冰路，小心不碰到小鱼。"]},"start_slope_1":{"who":"nuan","say":["哇，好长的雪坡！这是",{"w":"slide"},"，大滑梯！"]},"start_slope_2":{"who":"frost","say":["站在坡上，就会自己往下滑。越滑越快哦。"]},"start_slope_3":{"who":"nuan","say":["好呀，我们一起",{"w":"slide"},{"w":"fast"},{"w":"fast"},"，抓紧我的手！"]},"start_slope_4":{"who":"frost","say":["一路往下滑，坡底有一扇门。我先走，安娜，你跟着我。"]},"start_tower_1":{"who":"nuan","say":["哇，好重的",{"w":"gate"},"！我们怎么过去呢？"]},"start_tower_2":{"who":"frost","say":["你看，那里有个踏板。我来按住它，铁门就会打开。"]},"start_tower_3":{"who":"nuan","say":["好主意！一个人",{"w":"push"},"，一个人过",{"w":"gate"},"。我们分工吧！"]},"start_tower_4":{"who":"frost","say":["好呀。我们先按住踏板，等铁门打开，再一起过去。"]},"start_spring_1":{"who":"nuan","say":["哇，软软的蘑菇！我踩上去试试，",{"w":"jump"}]},"start_spring_2":{"who":"frost","say":["踩上去，就能弹得好高，一下子飞到云边啦。"]},"start_spring_3":{"who":"nuan","say":["我想飞得更",{"w":"high"},"，去拿那颗星星！"]},"start_spring_4":{"who":"frost","say":["我先去试试。够不到的地方，我还可以变冰块，给我们当小台阶。"]},"start_bunny_1":{"who":"nuan","say":["呀，是",{"w":"bunny"},"！小雪兔迷路了，它想回",{"w":"home"}]},"start_bunny_2":{"who":"frost","say":["我轻轻走过去，兔子就会跟着我们。我们带它回家吧。"]},"start_bunny_3":{"who":"nuan","say":["兔窝门口有",{"w":"carrot"},"，它们最爱吃",{"w":"carrot"},"啦！"]},"start_bunny_4":{"who":"frost","say":["三只小雪兔都回到家，我们再出发。"]},"start_floe_1":{"who":"nuan","say":["哇，浮冰在动！它往",{"w":"right"},"走了，又往",{"w":"left"},"走回来。"]},"start_floe_2":{"who":"frost","say":["别着急，先等一等。浮冰漂到身边，我们再跳上去。"]},"start_floe_3":{"who":"nuan","say":["它往",{"w":"left"},"走远了，我们",{"w":"wait"},"，等它回来。"]},"start_floe_4":{"who":"frost","say":["我的魔法能让浮冰停一停。安娜，你跟着我，我们一起过河。"]},"start_music_1":{"who":"nuan","say":["哇，台阶会发光！",{"w":"red"},"，橙色，",{"w":"yellow"},"，绿色，",{"w":"blue"},"，像彩虹一样。"]},"start_music_2":{"who":"frost","say":["这是会唱歌的楼梯。踩一级，就唱一个音。"]},"start_music_3":{"who":"nuan","say":[{"w":"red"},"像我的小灯笼，",{"w":"yellow"},"像星星，",{"w":"blue"},"像你的冰。"]},"start_music_4":{"who":"frost","say":["我先弹一遍，亮起来的台阶，你跟着踩。踩错了也没关系。"]},"start_ballroom_1":{"who":"nuan","say":["姐姐，快看！这里有好多",{"w":"ball"},"，大雪球！"]},"start_ballroom_2":{"who":"frost","say":["我来把雪球堆起来，变成一个大雪人吧。"]},"start_ballroom_3":{"who":"nuan","say":["好呀！",{"w":"snowman"},"还要戴",{"w":"hat"},"，帽子，才神气！"]},"start_ballroom_4":{"who":"frost","say":["我喜欢这个主意。安娜，我们再给雪人找一顶帽子吧。"]},"start_garden_1":{"who":"nuan","say":["哇，好大的花园！可是",{"w":"flower"},"都睡着了，冰冰的。"]},"start_garden_2":{"who":"frost","say":["安娜，带上你暖暖的小灯笼。我们一起叫醒花儿。"]},"start_garden_3":{"who":"nuan","say":["醒来的",{"w":"flower"},"是彩色的！这样，",{"w":"spring"},"就回来啦。"]},"start_garden_4":{"who":"frost","say":["我来带路，我们一朵一朵叫醒花儿，让花园暖和起来。"]},"guide_hall_1":{"who":"nuan","say":["我们去拿那个",{"w":"heart"},"，爱心！"]},"guide_hall_2":{"who":"nuan","say":["那边有一片",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_hall_3":{"who":"nuan","say":["上面还有一个",{"w":"heart"},"，跳高一点！"]},"guide_hall_4":{"who":"nuan","say":["这里有",{"w":"snowflake"},"，雪花，在地上闪闪发光。"]},"guide_hall_5":{"who":"nuan","say":[{"w":"door"},"，门在这边！我们一起走过去。"]},"guide_lake_1":{"who":"nuan","say":["先去拿那片",{"w":"snowflake"},"，雪花！"]},"guide_lake_2":{"who":"nuan","say":["湖对面有个",{"w":"heart"},"，爱心！用",{"w":"ice"},"搭一条路吧。"]},"guide_lake_3":{"who":"nuan","say":["那边还有一片",{"w":"snowflake"},"，雪花，上去拿吧！"]},"guide_lake_4":{"who":"nuan","say":["把",{"w":"water"},"冻成",{"w":"ice"},"，走过去，",{"w":"door"},"就在那边！"]},"guide_slope_1":{"who":"nuan","say":["站到坡上，往",{"w":"down"},"，向下滑，玩",{"w":"slide"},"，滑滑梯！"]},"guide_slope_2":{"who":"nuan","say":["再往",{"w":"down"},"滑，",{"w":"fast"},"，快，滑到坡底！"]},"guide_slope_3":{"who":"nuan","say":["边滑边跳，那边有一片",{"w":"snowflake"},"，雪花！"]},"guide_slope_4":{"who":"nuan","say":["上面的桥上有个",{"w":"heart"},"，爱心，跳上去拿！"]},"guide_slope_5":{"who":"nuan","say":[{"w":"door"},"，门在坡底，我们一起过去！"]},"guide_tower_1":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花！"]},"guide_tower_2":{"who":"nuan","say":["上面有颗",{"w":"heart"},"，爱心，跳上去！"]},"guide_tower_3":{"who":"nuan","say":["去",{"w":"push"},"踏板，把它压住，",{"w":"gate"},"才会",{"w":"open"}]},"guide_tower_4":{"who":"nuan","say":["过了",{"w":"gate"},"，还有一片",{"w":"snowflake"},"，雪花。"]},"guide_tower_5":{"who":"nuan","say":["再往上，拿那个",{"w":"heart"},"，爱心！"]},"guide_tower_6":{"who":"nuan","say":[{"w":"door"},"，门在那里，我们一起走！"]},"guide_spring_1":{"who":"nuan","say":["踩上蘑菇，",{"w":"jump"},"，往",{"w":"up"},"弹！"]},"guide_spring_2":{"who":"nuan","say":["弹到左边的小台阶上，那儿有",{"w":"snowflake"},"，雪花！"]},"guide_spring_3":{"who":"nuan","say":["墙上还有一个蘑菇，",{"w":"jump"},"上去！"]},"guide_spring_4":{"who":"nuan","say":["弹得再",{"w":"high"},"一点，拿那个",{"w":"heart"},"，爱心！"]},"guide_spring_5":{"who":"nuan","say":["右边还有一个蘑菇，踩上去，",{"w":"up"},"，向上飞！"]},"guide_spring_6":{"who":"nuan","say":["从蘑菇弹到右边，那儿有一片",{"w":"snowflake"},"，雪花！"]},"guide_spring_7":{"who":"nuan","say":[{"w":"door"},"，门在右下角，我们一起走过去！"]},"guide_bunny_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心，在左边的台阶上！"]},"guide_bunny_2":{"who":"nuan","say":["地上有只迷路的",{"w":"bunny"},"，小雪兔，走过去！"]},"guide_bunny_3":{"who":"nuan","say":["小土坡上还有一只",{"w":"bunny"},"，小雪兔！"]},"guide_bunny_4":{"who":"nuan","say":["坑那边也有一只",{"w":"bunny"},"，用",{"w":"ice"},"搭座桥吧！"]},"guide_bunny_5":{"who":"nuan","say":["右边的台阶上有",{"w":"snowflake"},"，雪花！"]},"guide_bunny_6":{"who":"nuan","say":["带它们回",{"w":"home"},"，兔窝在那边，还有",{"w":"carrot"}]},"guide_bunny_7":{"who":"nuan","say":[{"w":"door"},"，门在那边，我们走！"]},"guide_floe_1":{"who":"nuan","say":["我们在",{"w":"left"},"边的河岸，",{"w":"wait"},"，等一等，浮冰就来啦。"]},"guide_floe_2":{"who":"nuan","say":["坐上浮冰，去拿河上的",{"w":"heart"},"，爱心！"]},"guide_floe_3":{"who":"nuan","say":["小岛上歇一歇，再",{"w":"wait"},"下一块浮冰。"]},"guide_floe_4":{"who":"nuan","say":["坐上浮冰，河上有一片",{"w":"snowflake"},"，雪花！"]},"guide_floe_5":{"who":"nuan","say":["过河啦，往",{"w":"right"},"走，上岸！"]},"guide_floe_6":{"who":"nuan","say":[{"w":"door"},"，门就在",{"w":"right"},"边，走吧！"]},"guide_music_1":{"who":"nuan","say":["先踩",{"w":"red"},"，红色的台阶！"]},"guide_music_2":{"who":"nuan","say":["接着踩",{"w":"yellow"},"，黄色的台阶，在左边。"]},"guide_music_3":{"who":"nuan","say":["再踩",{"w":"blue"},"，蓝色的台阶！"]},"guide_music_4":{"who":"nuan","say":["叮叮咚咚，",{"w":"door"},"，门开啦，走过去！"]},"guide_ballroom_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心！"]},"guide_ballroom_2":{"who":"nuan","say":["左上角有个大",{"w":"ball"},"，雪球！"]},"guide_ballroom_3":{"who":"nuan","say":["中间也有一个",{"w":"ball"},"，跳上去拿！"]},"guide_ballroom_4":{"who":"nuan","say":["右上角还有一个",{"w":"ball"},"，雪球，跳高一点！"]},"guide_ballroom_5":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_ballroom_6":{"who":"nuan","say":["快去堆",{"w":"snowman"},{"w":"hat"},"也要戴上哦。"]},"guide_garden_1":{"who":"nuan","say":["左边的小塔上有一朵",{"w":"flower"},"，冰花，跳上去！"]},"guide_garden_2":{"who":"nuan","say":["地上有一朵",{"w":"flower"},"，花，走过去碰一碰！"]},"guide_garden_3":{"who":"nuan","say":["把水塘冻上，走过去，那边有一朵",{"w":"flower"},"，花！"]},"guide_garden_4":{"who":"nuan","say":["台阶上也有一朵",{"w":"flower"},"，跳上去叫醒它！"]},"guide_garden_5":{"who":"nuan","say":["那边又有一朵",{"w":"flower"},"，用",{"w":"warm"},"的光照一照它！"]},"guide_garden_6":{"who":"nuan","say":["右边的高台上，还有一朵",{"w":"flower"}]},"guide_garden_7":{"who":"nuan","say":["最高的台阶上也有一朵",{"w":"flower"},"，加油！"]},"guide_garden_8":{"who":"nuan","say":["右下角还有一朵",{"w":"flower"},"，叫醒它，",{"w":"spring"},"就来啦！"]},"pick_heart_1":{"who":"nuan","say":["看，是",{"w":"heart"},"，爱心！"]},"pick_heart_2":{"who":"nuan","say":["又一个",{"w":"heart"},"！真好看。"]},"pick_heart_3":{"who":"nuan","say":["哇，红红的",{"w":"heart"},"，热乎乎的。"]},"pick_snowflake_1":{"who":"nuan","say":["是",{"w":"snowflake"},"，雪花！亮晶晶的。"]},"pick_snowflake_2":{"who":"nuan","say":["又捡到一片",{"w":"snowflake"}]},"pick_snowflake_3":{"who":"nuan","say":["好漂亮的",{"w":"snowflake"},"，凉凉的。"]},"pick_ball_1":{"who":"nuan","say":["好大的",{"w":"ball"},"，雪球！"]},"pick_ball_2":{"who":"nuan","say":["又一个",{"w":"ball"},"，滚过来啦！"]},"pick_ball_3":{"who":"nuan","say":["第三个",{"w":"ball"},"，雪人有救啦！"]},"toy_slide_1":{"who":"nuan","say":["呼——",{"w":"slide"}]},"toy_slide_2":{"who":"nuan","say":[{"w":"fast"},{"w":"fast"},"！好快呀！"]},"toy_slide_3":{"who":"nuan","say":["往",{"w":"down"},"滑，往",{"w":"down"},"滑！"]},"toy_slide_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"滑得真",{"w":"fast"}]},"toy_bounce_1":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"up"}]},"toy_bounce_2":{"who":"nuan","say":["飞得好",{"w":"high"},"呀！"]},"toy_bounce_3":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"好",{"w":"high"}]},"toy_bounce_4":{"who":"nuan","say":[{"w":"jump"},"一下，再",{"w":"up"},"一点点！"]},"toy_bunny_1":{"who":"nuan","say":[{"w":"bunny"},{"w":"one"},"！第一只小雪兔，跟上来啦。"]},"toy_bunny_2":{"who":"nuan","say":[{"w":"bunny"},{"w":"two"},"！又找到一只！"]},"toy_bunny_3":{"who":"nuan","say":[{"w":"bunny"},{"w":"three"},"！三只都找到啦！"]},"toy_bunny_home_1":{"who":"nuan","say":[{"w":"bunny"},"回",{"w":"home"},"啦！"]},"toy_bunny_home_2":{"who":"nuan","say":["又一只回",{"w":"home"},"啦，它吃着",{"w":"carrot"},"呢。"]},"toy_bunny_home_3":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"最后一只也到",{"w":"home"},"啦！"]},"toy_floe_1":{"who":"nuan","say":[{"w":"wait"},"，浮冰停下来啦！"]},"toy_floe_2":{"who":"nuan","say":["浮冰在",{"w":"wait"},"我们呢，快上去！"]},"toy_floe_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"它停住啦，快过去。"]},"toy_note_ok_1":{"who":"nuan","say":[{"w":"red"},"，红色！"]},"toy_note_ok_2":{"who":"nuan","say":["橙色，叮！"]},"toy_note_ok_3":{"who":"nuan","say":[{"w":"yellow"},"，黄色！"]},"toy_note_ok_4":{"who":"nuan","say":["绿色，叮！"]},"toy_note_ok_5":{"who":"nuan","say":[{"w":"blue"},"，蓝色！"]},"toy_note_wrong_1":{"who":"nuan","say":["没关系，再来一次。"]},"toy_note_wrong_2":{"who":"nuan","say":["咦，这个不是，换一个试试。"]},"toy_note_wrong_3":{"who":"nuan","say":["嘿嘿，走错啦，再听一遍。"]},"toy_melody_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们弹完啦！"]},"toy_melody_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"真好听！"]},"toy_bloom_1":{"who":"nuan","say":["叮——一朵",{"w":"flower"},"醒啦！"]},"toy_bloom_2":{"who":"nuan","say":[{"w":"warm"},"的光，",{"w":"flower"},"开花啦！"]},"toy_bloom_3":{"who":"nuan","say":["又一朵！是",{"w":"flower"},"，彩色的。"]},"toy_bloom_4":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里的",{"w":"flower"},"都开啦，",{"w":"spring"},"来啦！"]},"star_1":{"who":"nuan","say":[{"w":"star"},{"w":"one"}]},"star_2":{"who":"nuan","say":[{"w":"star"},{"w":"two"}]},"star_3":{"who":"nuan","say":[{"w":"star"},{"w":"three"}]},"star_4":{"who":"nuan","say":[{"w":"star"},"，第四颗！"]},"star_5":{"who":"nuan","say":[{"w":"star"},"，第五颗，全找到啦！"]},"open_hall":{"who":"nuan","say":["看，",{"w":"door"},"开啦！走吧，姐姐！",{"en":"Let's go!","zh":"出发！"}]},"open_lake":{"who":"nuan","say":["有了",{"w":"ice"},"，我们走过",{"w":"water"},"啦！",{"w":"fish"},"也在拍手。"]},"open_slope":{"who":"nuan","say":["门开啦！这个",{"w":"slide"},"又",{"w":"fast"},"又好玩，我们再往",{"w":"down"},"走吧！"]},"open_tower":{"who":"frost","say":["看，铁门打开了！安娜，我们一起走吧。"]},"open_spring":{"who":"nuan","say":["门开啦！我们",{"w":"jump"},"一下，",{"w":"up"},"，到最",{"w":"high"},"的地方去！"]},"open_bunny":{"who":"nuan","say":["谢谢你们，",{"w":"bunny"},"！吃",{"w":"carrot"},"吧，门开啦。"]},"open_floe":{"who":"frost","say":["我们过河啦！等一等，安娜，门也已经开啦。"]},"open_music":{"who":"nuan","say":["叮叮咚咚，唱完啦！",{"w":"red"},{"w":"yellow"},{"w":"blue"},"，门也开啦！"]},"open_ballroom":{"who":"nuan","say":[{"w":"ball"},"都找到啦！快来堆",{"w":"snowman"},{"w":"hat"},"也准备好啦！"]},"open_garden":{"who":"nuan","say":["所有的",{"w":"flower"},"都开啦！好",{"w":"warm"},"呀，",{"w":"spring"},"来啦！"]},"clear_hall":{"who":"nuan","say":[{"w":"heart"},{"w":"star"},"都找到啦，",{"w":"door"},"也开了。真棒！"]},"clear_lake":{"who":"nuan","say":["冰路搭好了。",{"w":"fish"},"在",{"w":"water"},"里游，",{"w":"ice"},"亮晶晶。"]},"clear_slope":{"who":"nuan","say":["我们玩了",{"w":"slide"},"，滑得好",{"w":"fast"},"，一路",{"w":"down"},"到了坡底。真开心！"]},"clear_tower":{"who":"nuan","say":["一个",{"w":"push"},"，一个往前走，",{"w":"gate"},"就",{"w":"open"},"了。两个人一起，真棒！"]},"clear_spring":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"high"},"！蘑菇把我们弹到了云边。真棒！"]},"clear_bunny":{"who":"nuan","say":[{"w":"bunny"},"们回到",{"w":"home"},"，吃着",{"w":"carrot"},"，开心地晃耳朵。灯笼的光，让大家都不怕了。"]},"clear_floe":{"who":"nuan","say":["浮冰往",{"w":"left"},"，往",{"w":"right"},{"w":"wait"},"一等，我们就过了河。真棒！"]},"clear_music":{"who":"nuan","say":[{"w":"red"},{"w":"yellow"},{"w":"blue"},"，彩色的台阶唱起了歌。姐姐，我们去下一个房间看看吧！"]},"clear_ballroom":{"who":"nuan","say":["圆圆的",{"w":"ball"},"变成了",{"w":"snowman"},{"w":"hat"},"轻轻落下来啦！门外吹来一阵暖和的风，我们去看看吧。"]},"clear_garden":{"who":"nuan","say":[{"w":"flower"},"开满了花园，",{"w":"warm"},"的风吹过来，",{"w":"spring"},"回来了。"]},"quiz_heart":{"who":"nuan","say":["哪个是",{"w":"heart"},"？点一点！"]},"quiz_star":{"who":"nuan","say":["哪个是",{"w":"star"},"？点一点！"]},"quiz_door":{"who":"nuan","say":["哪个是",{"w":"door"},"？点一点！"]},"quiz_water":{"who":"nuan","say":["哪个是",{"w":"water"},"？点一点！"]},"quiz_ice":{"who":"nuan","say":["哪个是",{"w":"ice"},"？点一点！"]},"quiz_fish":{"who":"nuan","say":["哪个是",{"w":"fish"},"？点一点！"]},"quiz_slide":{"who":"nuan","say":["哪个是",{"w":"slide"},"？点一点！"]},"quiz_fast":{"who":"nuan","say":["哪个是",{"w":"fast"},"？点一点！"]},"quiz_down":{"who":"nuan","say":["哪个是",{"w":"down"},"？点一点！"]},"quiz_push":{"who":"nuan","say":["哪个是",{"w":"push"},"？点一点！"]},"quiz_open":{"who":"nuan","say":["哪个是",{"w":"open"},"？点一点！"]},"quiz_gate":{"who":"nuan","say":["哪个是",{"w":"gate"},"？点一点！"]},"quiz_jump":{"who":"nuan","say":["哪个是",{"w":"jump"},"？点一点！"]},"quiz_up":{"who":"nuan","say":["哪个是",{"w":"up"},"？点一点！"]},"quiz_high":{"who":"nuan","say":["哪个是",{"w":"high"},"？点一点！"]},"quiz_bunny":{"who":"nuan","say":["哪个是",{"w":"bunny"},"？点一点！"]},"quiz_home":{"who":"nuan","say":["哪个是",{"w":"home"},"？点一点！"]},"quiz_carrot":{"who":"nuan","say":["哪个是",{"w":"carrot"},"？点一点！"]},"quiz_left":{"who":"nuan","say":["哪个是",{"w":"left"},"？点一点！"]},"quiz_right":{"who":"nuan","say":["哪个是",{"w":"right"},"？点一点！"]},"quiz_wait":{"who":"nuan","say":["哪个是",{"w":"wait"},"？点一点！"]},"quiz_red":{"who":"nuan","say":["哪个是",{"w":"red"},"？点一点！"]},"quiz_yellow":{"who":"nuan","say":["哪个是",{"w":"yellow"},"？点一点！"]},"quiz_blue":{"who":"nuan","say":["哪个是",{"w":"blue"},"？点一点！"]},"quiz_snowman":{"who":"nuan","say":["哪个是",{"w":"snowman"},"？点一点！"]},"quiz_ball":{"who":"nuan","say":["哪个是",{"w":"ball"},"？点一点！"]},"quiz_hat":{"who":"nuan","say":["哪个是",{"w":"hat"},"？点一点！"]},"quiz_flower":{"who":"nuan","say":["哪个是",{"w":"flower"},"？点一点！"]},"quiz_warm":{"who":"nuan","say":["哪个是",{"w":"warm"},"？点一点！"]},"quiz_spring":{"who":"nuan","say":["哪个是",{"w":"spring"},"？点一点！"]},"quiz_right_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},{"en":"Good job!","zh":"做得好！"}]},"quiz_right_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"对啦，就是它！"]},"quiz_right_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"你真聪明！"]},"quiz_wrong_1":{"who":"nuan","say":["再找找看～"]},"quiz_wrong_2":{"who":"nuan","say":["嗯，再看一看。它在发光哦。"]},"quiz_wrong_3":{"who":"nuan","say":["没关系，我们再试一次。"]},"tutor_move":{"who":"nuan","say":["按左右方向键，就能走路啦。"]},"tutor_jump":{"who":"nuan","say":["按上面的方向键，跳一跳！"]},"tutor_magic":{"who":"nuan","say":["按一下长长的空格键，魔法就出来啦！",{"en":"One, two, three!","zh":"一、二、三！"}]},"tutor_swap":{"who":"nuan","say":["我会一直跟着艾莎姐姐，在需要的时候帮她。"]},"tutor_fullscreen":{"who":"nuan","say":["给大人的小提示：点右上角的全屏按钮，画面会更大哦。"]},"splash_1":{"who":"nuan","say":["哎呀，扑通！没关系，再来一次！"]},"splash_2":{"who":"nuan","say":["哇，",{"w":"water"},"好凉呀！我们回到岸边吧。"]},"splash_3":{"who":"nuan","say":["扑通！没事没事，你已经很棒啦！"]},"splash_4":{"who":"nuan","say":["掉进",{"w":"water"},"也没关系，再试一次吧。"]},"idle_1":{"who":"nuan","say":["你在看什么呀？"]},"idle_2":{"who":"nuan","say":["要不要去那边看看？"]},"idle_3":{"who":"nuan","say":["点一点右上角的小灯泡，我就告诉你。"]},"idle_4":{"who":"nuan","say":["慢慢来，不着急。"]},"miss_frost":{"who":"nuan","say":["姐姐，你在哪儿呀？"]},"miss_nuan":{"who":"frost","say":["安娜，你在哪儿呀？"]},"together_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们在一起啦！"]},"together_2":{"who":"frost","say":["和你在一起，真暖和。"]},"mem_m1":{"who":"nuan","say":["姐姐，还记得吗？我每天画一幅画，从门缝里塞给你。画里是我们俩，还有红围巾雪人。原来你都悄悄收好了呀。"],"art":"mem_door"},"mem_m3":{"who":"nuan","say":["姐姐，还记得那面冰镜子吗？你把湖面冻得亮亮的，我们手拉手，一直滑到星星出来。"],"art":"mem_lake"},"mem_m5":{"who":"nuan","say":["那条冰滑梯是你给我变出来的！我坐着小木盆，一路滑到山脚，开心得停不下来。"],"art":"mem_m5"},"mem_m2":{"who":"nuan","say":["姐姐，原来那条红围巾是你偷偷织给我的呀。软软的，暖暖的，我一直很喜欢。"],"art":"mem_gloves"},"mem_m6":{"who":"nuan","say":["我小时候总想摸到星星。你给我堆了一张软软的雪床，我一跳，好像真的碰到了星星！"],"art":"mem_m6"},"mem_m7":{"who":"nuan","say":["姐姐，我们捡到过一只小雪兔。我的灯笼给它暖身子，你给它做了个小冰窝，它很快就睡着啦。"],"art":"mem_m7"},"mem_m8":{"who":"nuan","say":["还记得那次坐浮冰吗？你让它停在岸边，我们一起坐上去，慢慢漂，一边数水里的小鱼。"],"art":"mem_m8"},"mem_m9":{"who":"nuan","say":["你做的冰风铃真好听！我轻轻一碰，叮叮咚咚，就忍不住跟着哼起歌来。"],"art":"mem_m9"},"mem_m4":{"who":"nuan","say":["哈哈，姐姐！那次打雪仗，雪球越滚越大，我们两个都摔进了软软的雪堆里，笑了好久。"],"art":"mem_fall"},"mem_m10":{"who":"nuan","say":["姐姐，我们小时候一起堆过一个雪人，还给它戴了一朵小花。我记得，我们说好下一年还要一起堆。"],"art":"mem_m10"},"me_frost":{"who":"frost","say":["你好，我是艾莎。我会变出冰和雪，铺成小路。跟我一起出发吧，安娜会在旁边帮我们。"]},"me_nuan":{"who":"nuan","say":["你好，我是安娜！艾莎姐姐带我们探险，我会跟着她，照亮小路，还会陪你一起念英文单词。"]},"win":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里开满了花！姐姐，拉着我的手，我们一起转个圈吧！"]},"end":{"who":"nuan","say":[{"w":"sun"},"出来啦！冰花都开成了真正的小花，",{"w":"spring"},"回来了。小时候的雪人戴着帽子，笑眯眯地站在花丛里。姐姐，牵着我的手，我们一起和大家说",{"en":"Hello!","zh":"你好！"}],"art":"story_thaw"},"ui_start":{"who":"nuan","say":["开始玩"]},"ui_continue":{"who":"nuan","say":["继续玩"]},"ui_next":{"who":"nuan","say":["下一个"]},"ui_replay":{"who":"nuan","say":["再玩一次"]},"ui_back":{"who":"nuan","say":["回去"]},"ui_words":{"who":"nuan","say":["单词本"]},"ui_stickers":{"who":"nuan","say":["贴纸本"]},"ui_wardrobe":{"who":"nuan","say":["换衣服"]},"ui_settings":{"who":"nuan","say":["家长设置"]},"ui_hint":{"who":"nuan","say":["小提示"]},"ui_fullscreen":{"who":"nuan","say":["全屏"]},"ui_swap":{"who":"nuan","say":["艾莎是主角，我是陪着她的安娜。"]},"ui_solo":{"who":"nuan","say":["一个人玩"]},"ui_duo":{"who":"nuan","say":["两个人玩"]},"ui_sound":{"who":"nuan","say":["声音"]},"ui_quiz_skip":{"who":"nuan","say":["跳过"]},"ui_meet":{"who":"nuan","say":["认识她们"]},"ui_rooms":{"who":"nuan","say":["房间"]},"ui_room_hall":{"who":"nuan","say":["冰堡大厅"]},"ui_room_lake":{"who":"nuan","say":["冰湖长廊"]},"ui_room_slope":{"who":"nuan","say":["雪坡滑梯"]},"ui_room_tower":{"who":"nuan","say":["机关塔楼"]},"ui_room_spring":{"who":"nuan","say":["弹弹雪床"]},"ui_room_bunny":{"who":"nuan","say":["雪兔窝"]},"ui_room_floe":{"who":"nuan","say":["浮冰河"]},"ui_room_music":{"who":"nuan","say":["音乐楼梯"]},"ui_room_ballroom":{"who":"nuan","say":["星光舞厅"]},"ui_room_garden":{"who":"nuan","say":["春天花园"]},"cheer_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"}]},"cheer_2":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"}]},"cheer_3":{"who":"nuan","say":[{"en":"Let's go!","zh":"出发！"}]},"cheer_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"}]}}};
+  /** @type {{ lines?: Record<string, any>, pages?: Record<string, any>, voices?: any, words?: any[] }} */
+  const LINES = {"voices":{"frost":{"zh":["zh-CN-XiaoxiaoNeural","-6%","-4Hz"]},"nuan":{"zh":["en-US-EmmaMultilingualNeural","-5%","+8Hz"],"en":["en-US-EmmaMultilingualNeural","-5%","+8Hz"]}},"lines":{"p1":{"who":"nuan","say":["姐姐，你手里的雪花好漂亮！我是安娜，我会陪着你，一起在冰堡里探险。"],"art":"story_prologue"},"p2":{"who":"nuan","say":["姐姐，外面下雪啦。别担心，我带着小灯笼来找你了，我们一起想办法吧。"],"art":"story_winter"},"p3":{"who":"nuan","say":["艾莎，我们一起出发吧！你来变冰和雪，我在旁边帮你，我们再堆一个小时候的雪人。"],"art":"key"},"ch_hall":{"who":"nuan","say":["姐姐，我找到你啦！我们先看看大厅里藏着什么宝贝吧。"],"art":"bg0"},"ch_lake":{"who":"nuan","say":["冰堡后面有一片大湖，小鱼在水里游来游去。"],"art":"bg1"},"ch_slope":{"who":"nuan","say":["冰堡里有一条长长的雪坡，像一个大滑梯。呼——滑下去！"],"art":"bg_slope"},"ch_tower":{"who":"nuan","say":["塔楼里有一扇很重的铁门，要两个人一起想办法。"],"art":"bg2"},"ch_spring":{"who":"nuan","say":["雪地里长满了软软的蘑菇，踩上去，弹——弹到半空里去！"],"art":"bg_spring"},"ch_bunny":{"who":"nuan","say":["雪地里有三只小雪兔迷路了，我们带它们回家吧。"],"art":"bg_bunny"},"ch_floe":{"who":"nuan","say":["河面上漂着一块块浮冰，一会儿往左，一会儿往右。"],"art":"bg_floe"},"ch_music":{"who":"nuan","say":["台阶一级一级，闪着彩色的光。踩一踩，它们会唱歌！"],"art":"bg_music"},"ch_ballroom":{"who":"nuan","say":["舞厅里滚着好多大雪球，我们来堆雪人吧！"],"art":"bg3"},"ch_garden":{"who":"nuan","say":["冰堡的后花园里，冰花还在睡觉。我们用温暖的光，叫醒它们。"],"art":"bg_garden"},"learn_heart":{"who":"nuan","say":["姐姐，我们来找",{"w":"heart"},"。看，",{"w":"heart"},"就是爱心。和我一起念：",{"w":"heart"}]},"learn_star":{"who":"nuan","say":["还有",{"w":"star"},"。看，",{"w":"star"},"就是星星。和我一起念：",{"w":"star"}]},"learn_door":{"who":"nuan","say":["最后是",{"w":"door"},"。看，",{"w":"door"},"就是门。和我一起念：",{"w":"door"}]},"learn_water":{"who":"nuan","say":["姐姐，快看这片大湖，湖里是",{"w":"water"},"。看，",{"w":"water"},"就是水。和我一起念：",{"w":"water"}]},"learn_ice":{"who":"nuan","say":["姐姐，你的魔法能把水变成",{"w":"ice"},"。看，",{"w":"ice"},"就是冰。和我一起念：",{"w":"ice"}]},"learn_fish":{"who":"nuan","say":["水里还住着",{"w":"fish"},"。看，",{"w":"fish"},"就是小鱼。和我一起念：",{"w":"fish"}]},"learn_slide":{"who":"nuan","say":["看，好长的雪坡，我们来玩",{"w":"slide"},"。看，",{"w":"slide"},"就是滑滑梯。和我一起念：",{"w":"slide"}]},"learn_fast":{"who":"nuan","say":["从坡上滑下来的时候，会变得很",{"w":"fast"},"。看，",{"w":"fast"},"就是快。和我一起念：",{"w":"fast"}]},"learn_down":{"who":"nuan","say":["最后是",{"w":"down"},"。看，",{"w":"down"},"就是向下。和我一起念：",{"w":"down"}]},"learn_push":{"who":"nuan","say":["姐姐，我们一起来",{"w":"push"},"。看，",{"w":"push"},"就是推。和我一起念：",{"w":"push"}]},"learn_open":{"who":"nuan","say":["推了以后，门会",{"w":"open"},"。看，",{"w":"open"},"就是打开。和我一起念：",{"w":"open"}]},"learn_gate":{"who":"nuan","say":["这里有一扇铁门，叫",{"w":"gate"},"。看，",{"w":"gate"},"就是铁闸门。和我一起念：",{"w":"gate"}]},"learn_jump":{"who":"nuan","say":["蘑菇软软的，我们来试试",{"w":"jump"},"。看，",{"w":"jump"},"就是跳。和我一起念：",{"w":"jump"}]},"learn_up":{"who":"nuan","say":["踩上蘑菇，就会往",{"w":"up"},"飞。看，",{"w":"up"},"就是向上。和我一起念：",{"w":"up"}]},"learn_high":{"who":"nuan","say":["还会飞得很",{"w":"high"},"。看，",{"w":"high"},"就是高。和我一起念：",{"w":"high"}]},"learn_bunny":{"who":"nuan","say":["姐姐，这里有三只迷路的",{"w":"bunny"},"。看，",{"w":"bunny"},"就是小雪兔。和我一起念：",{"w":"bunny"}]},"learn_home":{"who":"nuan","say":["我们要送它们回",{"w":"home"},"。看，",{"w":"home"},"就是家。和我一起念：",{"w":"home"}]},"learn_carrot":{"who":"nuan","say":["兔窝门口，有它们最爱吃的",{"w":"carrot"},"。看，",{"w":"carrot"},"就是胡萝卜。和我一起念：",{"w":"carrot"}]},"learn_left":{"who":"nuan","say":["河上的浮冰，一会儿往",{"w":"left"},"走。看，",{"w":"left"},"就是左。和我一起念：",{"w":"left"}]},"learn_right":{"who":"nuan","say":["一会儿又往",{"w":"right"},"走。看，",{"w":"right"},"就是右。和我一起念：",{"w":"right"}]},"learn_wait":{"who":"nuan","say":["想上浮冰，要先",{"w":"wait"},"。看，",{"w":"wait"},"就是等一等。和我一起念：",{"w":"wait"}]},"learn_red":{"who":"nuan","say":["姐姐，台阶是彩色的，先看",{"w":"red"},"。看，",{"w":"red"},"就是红色。和我一起念：",{"w":"red"}]},"learn_yellow":{"who":"nuan","say":["还有",{"w":"yellow"},"。看，",{"w":"yellow"},"就是黄色。和我一起念：",{"w":"yellow"}]},"learn_blue":{"who":"nuan","say":["最后是",{"w":"blue"},"。看，",{"w":"blue"},"就是蓝色。和我一起念：",{"w":"blue"}]},"learn_snowman":{"who":"nuan","say":["我们要堆起",{"w":"snowman"},"。看，",{"w":"snowman"},"就是雪人。和我一起念：",{"w":"snowman"}]},"learn_ball":{"who":"nuan","say":["要用大大的",{"w":"ball"},"。看，",{"w":"ball"},"就是球，雪球的球。和我一起念：",{"w":"ball"}]},"learn_hat":{"who":"nuan","say":["雪人还要戴",{"w":"hat"},"。看，",{"w":"hat"},"就是帽子。和我一起念：",{"w":"hat"}]},"learn_flower":{"who":"nuan","say":["姐姐，花园里还睡着许多",{"w":"flower"},"。看，",{"w":"flower"},"就是花。和我一起念：",{"w":"flower"}]},"learn_warm":{"who":"nuan","say":["灯笼的光暖烘烘的，是",{"w":"warm"},"。看，",{"w":"warm"},"就是温暖。和我一起念：",{"w":"warm"}]},"learn_spring":{"who":"nuan","say":["温暖的风一吹，",{"w":"spring"},"就来啦。看，",{"w":"spring"},"就是春天。和我一起念：",{"w":"spring"}]},"recall_heart":{"who":"nuan","say":["还记得",{"w":"heart"},"吗？",{"w":"heart"},"，是爱心！"]},"recall_star":{"who":"nuan","say":["还记得",{"w":"star"},"吗？",{"w":"star"},"，是星星！"]},"recall_door":{"who":"nuan","say":["还记得",{"w":"door"},"吗？",{"w":"door"},"，是门！"]},"recall_water":{"who":"nuan","say":["还记得",{"w":"water"},"吗？",{"w":"water"},"，是水！"]},"recall_ice":{"who":"nuan","say":["还记得",{"w":"ice"},"吗？",{"w":"ice"},"，是冰！"]},"recall_fish":{"who":"nuan","say":["还记得",{"w":"fish"},"吗？",{"w":"fish"},"，是小鱼！"]},"recall_slide":{"who":"nuan","say":["还记得",{"w":"slide"},"吗？",{"w":"slide"},"，是滑滑梯！"]},"recall_fast":{"who":"nuan","say":["还记得",{"w":"fast"},"吗？",{"w":"fast"},"，是快！"]},"recall_down":{"who":"nuan","say":["还记得",{"w":"down"},"吗？",{"w":"down"},"，是向下！"]},"recall_push":{"who":"nuan","say":["还记得",{"w":"push"},"吗？",{"w":"push"},"，是推！"]},"recall_open":{"who":"nuan","say":["还记得",{"w":"open"},"吗？",{"w":"open"},"，是打开！"]},"recall_gate":{"who":"nuan","say":["还记得",{"w":"gate"},"吗？",{"w":"gate"},"，是铁闸门！"]},"recall_jump":{"who":"nuan","say":["还记得",{"w":"jump"},"吗？",{"w":"jump"},"，是跳！"]},"recall_up":{"who":"nuan","say":["还记得",{"w":"up"},"吗？",{"w":"up"},"，是向上！"]},"recall_high":{"who":"nuan","say":["还记得",{"w":"high"},"吗？",{"w":"high"},"，是高！"]},"recall_bunny":{"who":"nuan","say":["还记得",{"w":"bunny"},"吗？",{"w":"bunny"},"，是小雪兔！"]},"recall_home":{"who":"nuan","say":["还记得",{"w":"home"},"吗？",{"w":"home"},"，是家！"]},"recall_carrot":{"who":"nuan","say":["还记得",{"w":"carrot"},"吗？",{"w":"carrot"},"，是胡萝卜！"]},"recall_left":{"who":"nuan","say":["还记得",{"w":"left"},"吗？",{"w":"left"},"，是左边！"]},"recall_right":{"who":"nuan","say":["还记得",{"w":"right"},"吗？",{"w":"right"},"，是右边！"]},"recall_wait":{"who":"nuan","say":["还记得",{"w":"wait"},"吗？",{"w":"wait"},"，是等一等！"]},"recall_red":{"who":"nuan","say":["还记得",{"w":"red"},"吗？",{"w":"red"},"，是红色！"]},"recall_yellow":{"who":"nuan","say":["还记得",{"w":"yellow"},"吗？",{"w":"yellow"},"，是黄色！"]},"recall_blue":{"who":"nuan","say":["还记得",{"w":"blue"},"吗？",{"w":"blue"},"，是蓝色！"]},"recall_snowman":{"who":"nuan","say":["还记得",{"w":"snowman"},"吗？",{"w":"snowman"},"，是雪人！"]},"recall_ball":{"who":"nuan","say":["还记得",{"w":"ball"},"吗？",{"w":"ball"},"，是球！"]},"recall_hat":{"who":"nuan","say":["还记得",{"w":"hat"},"吗？",{"w":"hat"},"，是帽子！"]},"recall_flower":{"who":"nuan","say":["还记得",{"w":"flower"},"吗？",{"w":"flower"},"，是花！"]},"recall_warm":{"who":"nuan","say":["还记得",{"w":"warm"},"吗？",{"w":"warm"},"，是温暖！"]},"recall_spring":{"who":"nuan","say":["还记得",{"w":"spring"},"吗？",{"w":"spring"},"，是春天！"]},"start_hall_1":{"who":"nuan","say":[{"en":"Hello!","zh":"你好！"},"姐姐，我跟着",{"w":"star"},"的光，找到你啦！"]},"start_hall_2":{"who":"frost","say":["嗯，你好呀，安娜。我有一点点害羞。"]},"start_hall_3":{"who":"nuan","say":["不怕不怕！看，到处都是",{"w":"heart"},"和",{"w":"star"},"。最后要走到那边的",{"w":"door"}]},"start_hall_4":{"who":"frost","say":["好呀。我喜欢星星。找齐了宝贝，大门就会开。"]},"start_lake_1":{"who":"nuan","say":["哇，好大的湖！看，是",{"w":"water"},"，水好凉呀。"]},"start_lake_2":{"who":"frost","say":["你看，水里有小鱼，游来游去的。"]},"start_lake_3":{"who":"nuan","say":["姐姐，你能把",{"w":"water"},"变成",{"w":"ice"},"吗？这样我就能过去啦。"]},"start_lake_4":{"who":"frost","say":["我来试试。轻轻地变出冰路，小心不碰到小鱼。"]},"start_slope_1":{"who":"nuan","say":["哇，好长的雪坡！这是",{"w":"slide"},"，大滑梯！"]},"start_slope_2":{"who":"frost","say":["站在坡上，就会自己往下滑。越滑越快哦。"]},"start_slope_3":{"who":"nuan","say":["好呀，我们一起",{"w":"slide"},{"w":"fast"},{"w":"fast"},"，抓紧我的手！"]},"start_slope_4":{"who":"frost","say":["一路往下滑，坡底有一扇门。我先走，安娜，你跟着我。"]},"start_tower_1":{"who":"nuan","say":["哇，好重的",{"w":"gate"},"！我们怎么过去呢？"]},"start_tower_2":{"who":"frost","say":["你看，那里有个踏板。我来按住它，铁门就会打开。"]},"start_tower_3":{"who":"nuan","say":["好主意！一个人",{"w":"push"},"，一个人过",{"w":"gate"},"。我们分工吧！"]},"start_tower_4":{"who":"frost","say":["好呀。我们先按住踏板，等铁门打开，再一起过去。"]},"start_spring_1":{"who":"nuan","say":["哇，软软的蘑菇！我踩上去试试，",{"w":"jump"}]},"start_spring_2":{"who":"frost","say":["踩上去，就能弹得好高，一下子飞到云边啦。"]},"start_spring_3":{"who":"nuan","say":["我想飞得更",{"w":"high"},"，去拿那颗星星！"]},"start_spring_4":{"who":"frost","say":["我先去试试。够不到的地方，我还可以变冰块，给我们当小台阶。"]},"start_bunny_1":{"who":"nuan","say":["呀，是",{"w":"bunny"},"！小雪兔迷路了，它想回",{"w":"home"}]},"start_bunny_2":{"who":"frost","say":["我轻轻走过去，兔子就会跟着我们。我们带它回家吧。"]},"start_bunny_3":{"who":"nuan","say":["兔窝门口有",{"w":"carrot"},"，它们最爱吃",{"w":"carrot"},"啦！"]},"start_bunny_4":{"who":"frost","say":["三只小雪兔都回到家，我们再出发。"]},"start_floe_1":{"who":"nuan","say":["哇，浮冰在动！它往",{"w":"right"},"走了，又往",{"w":"left"},"走回来。"]},"start_floe_2":{"who":"frost","say":["别着急，先等一等。浮冰漂到身边，我们再跳上去。"]},"start_floe_3":{"who":"nuan","say":["它往",{"w":"left"},"走远了，我们",{"w":"wait"},"，等它回来。"]},"start_floe_4":{"who":"frost","say":["我的魔法能让浮冰停一停。安娜，你跟着我，我们一起过河。"]},"start_music_1":{"who":"nuan","say":["哇，台阶会发光！",{"w":"red"},"，橙色，",{"w":"yellow"},"，绿色，",{"w":"blue"},"，像彩虹一样。"]},"start_music_2":{"who":"frost","say":["这是会唱歌的楼梯。踩一级，就唱一个音。"]},"start_music_3":{"who":"nuan","say":[{"w":"red"},"像我的小灯笼，",{"w":"yellow"},"像星星，",{"w":"blue"},"像你的冰。"]},"start_music_4":{"who":"frost","say":["我先弹一遍，亮起来的台阶，你跟着踩。踩错了也没关系。"]},"start_ballroom_1":{"who":"nuan","say":["姐姐，快看！这里有好多",{"w":"ball"},"，大雪球！"]},"start_ballroom_2":{"who":"frost","say":["我来把雪球堆起来，变成一个大雪人吧。"]},"start_ballroom_3":{"who":"nuan","say":["好呀！",{"w":"snowman"},"还要戴",{"w":"hat"},"，帽子，才神气！"]},"start_ballroom_4":{"who":"frost","say":["我喜欢这个主意。安娜，我们再给雪人找一顶帽子吧。"]},"start_garden_1":{"who":"nuan","say":["哇，好大的花园！可是",{"w":"flower"},"都睡着了，冰冰的。"]},"start_garden_2":{"who":"frost","say":["安娜，带上你暖暖的小灯笼。我们一起叫醒花儿。"]},"start_garden_3":{"who":"nuan","say":["醒来的",{"w":"flower"},"是彩色的！这样，",{"w":"spring"},"就回来啦。"]},"start_garden_4":{"who":"frost","say":["我来带路，我们一朵一朵叫醒花儿，让花园暖和起来。"]},"guide_hall_1":{"who":"nuan","say":["我们去拿那个",{"w":"heart"},"，爱心！"]},"guide_hall_2":{"who":"nuan","say":["那边有一片",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_hall_3":{"who":"nuan","say":["上面还有一个",{"w":"heart"},"，跳高一点！"]},"guide_hall_4":{"who":"nuan","say":["这里有",{"w":"snowflake"},"，雪花，在地上闪闪发光。"]},"guide_hall_5":{"who":"nuan","say":[{"w":"door"},"，门在这边！我们一起走过去。"]},"guide_lake_1":{"who":"nuan","say":["先去拿那片",{"w":"snowflake"},"，雪花！"]},"guide_lake_2":{"who":"nuan","say":["湖对面有个",{"w":"heart"},"，爱心！用",{"w":"ice"},"搭一条路吧。"]},"guide_lake_3":{"who":"nuan","say":["那边还有一片",{"w":"snowflake"},"，雪花，上去拿吧！"]},"guide_lake_4":{"who":"nuan","say":["把",{"w":"water"},"冻成",{"w":"ice"},"，走过去，",{"w":"door"},"就在那边！"]},"guide_slope_1":{"who":"nuan","say":["站到坡上，往",{"w":"down"},"，向下滑，玩",{"w":"slide"},"，滑滑梯！"]},"guide_slope_2":{"who":"nuan","say":["再往",{"w":"down"},"滑，",{"w":"fast"},"，快，滑到坡底！"]},"guide_slope_3":{"who":"nuan","say":["边滑边跳，那边有一片",{"w":"snowflake"},"，雪花！"]},"guide_slope_4":{"who":"nuan","say":["上面的桥上有个",{"w":"heart"},"，爱心，跳上去拿！"]},"guide_slope_5":{"who":"nuan","say":[{"w":"door"},"，门在坡底，我们一起过去！"]},"guide_tower_1":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花！"]},"guide_tower_2":{"who":"nuan","say":["上面有颗",{"w":"heart"},"，爱心，跳上去！"]},"guide_tower_3":{"who":"nuan","say":["去",{"w":"push"},"踏板，把它压住，",{"w":"gate"},"才会",{"w":"open"}]},"guide_tower_4":{"who":"nuan","say":["过了",{"w":"gate"},"，还有一片",{"w":"snowflake"},"，雪花。"]},"guide_tower_5":{"who":"nuan","say":["再往上，拿那个",{"w":"heart"},"，爱心！"]},"guide_tower_6":{"who":"nuan","say":[{"w":"door"},"，门在那里，我们一起走！"]},"guide_spring_1":{"who":"nuan","say":["踩上蘑菇，",{"w":"jump"},"，往",{"w":"up"},"弹！"]},"guide_spring_2":{"who":"nuan","say":["弹到左边的小台阶上，那儿有",{"w":"snowflake"},"，雪花！"]},"guide_spring_3":{"who":"nuan","say":["墙上还有一个蘑菇，",{"w":"jump"},"上去！"]},"guide_spring_4":{"who":"nuan","say":["弹得再",{"w":"high"},"一点，拿那个",{"w":"heart"},"，爱心！"]},"guide_spring_5":{"who":"nuan","say":["右边还有一个蘑菇，踩上去，",{"w":"up"},"，向上飞！"]},"guide_spring_6":{"who":"nuan","say":["从蘑菇弹到右边，那儿有一片",{"w":"snowflake"},"，雪花！"]},"guide_spring_7":{"who":"nuan","say":[{"w":"door"},"，门在右下角，我们一起走过去！"]},"guide_bunny_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心，在左边的台阶上！"]},"guide_bunny_2":{"who":"nuan","say":["地上有只迷路的",{"w":"bunny"},"，小雪兔，走过去！"]},"guide_bunny_3":{"who":"nuan","say":["小土坡上还有一只",{"w":"bunny"},"，小雪兔！"]},"guide_bunny_4":{"who":"nuan","say":["坑那边也有一只",{"w":"bunny"},"，用",{"w":"ice"},"搭座桥吧！"]},"guide_bunny_5":{"who":"nuan","say":["右边的台阶上有",{"w":"snowflake"},"，雪花！"]},"guide_bunny_6":{"who":"nuan","say":["带它们回",{"w":"home"},"，兔窝在那边，还有",{"w":"carrot"}]},"guide_bunny_7":{"who":"nuan","say":[{"w":"door"},"，门在那边，我们走！"]},"guide_floe_1":{"who":"nuan","say":["我们在",{"w":"left"},"边的河岸，",{"w":"wait"},"，等一等，浮冰就来啦。"]},"guide_floe_2":{"who":"nuan","say":["坐上浮冰，去拿河上的",{"w":"heart"},"，爱心！"]},"guide_floe_3":{"who":"nuan","say":["小岛上歇一歇，再",{"w":"wait"},"下一块浮冰。"]},"guide_floe_4":{"who":"nuan","say":["坐上浮冰，河上有一片",{"w":"snowflake"},"，雪花！"]},"guide_floe_5":{"who":"nuan","say":["过河啦，往",{"w":"right"},"走，上岸！"]},"guide_floe_6":{"who":"nuan","say":[{"w":"door"},"，门就在",{"w":"right"},"边，走吧！"]},"guide_music_1":{"who":"nuan","say":["先踩",{"w":"red"},"，红色的台阶！"]},"guide_music_2":{"who":"nuan","say":["接着踩",{"w":"yellow"},"，黄色的台阶，在左边。"]},"guide_music_3":{"who":"nuan","say":["再踩",{"w":"blue"},"，蓝色的台阶！"]},"guide_music_4":{"who":"nuan","say":["叮叮咚咚，",{"w":"door"},"，门开啦，走过去！"]},"guide_ballroom_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心！"]},"guide_ballroom_2":{"who":"nuan","say":["左上角有个大",{"w":"ball"},"，雪球！"]},"guide_ballroom_3":{"who":"nuan","say":["中间也有一个",{"w":"ball"},"，跳上去拿！"]},"guide_ballroom_4":{"who":"nuan","say":["右上角还有一个",{"w":"ball"},"，雪球，跳高一点！"]},"guide_ballroom_5":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_ballroom_6":{"who":"nuan","say":["快去堆",{"w":"snowman"},{"w":"hat"},"也要戴上哦。"]},"guide_garden_1":{"who":"nuan","say":["左边的小塔上有一朵",{"w":"flower"},"，冰花，跳上去！"]},"guide_garden_2":{"who":"nuan","say":["地上有一朵",{"w":"flower"},"，花，走过去碰一碰！"]},"guide_garden_3":{"who":"nuan","say":["把水塘冻上，走过去，那边有一朵",{"w":"flower"},"，花！"]},"guide_garden_4":{"who":"nuan","say":["台阶上也有一朵",{"w":"flower"},"，跳上去叫醒它！"]},"guide_garden_5":{"who":"nuan","say":["那边又有一朵",{"w":"flower"},"，用",{"w":"warm"},"的光照一照它！"]},"guide_garden_6":{"who":"nuan","say":["右边的高台上，还有一朵",{"w":"flower"}]},"guide_garden_7":{"who":"nuan","say":["最高的台阶上也有一朵",{"w":"flower"},"，加油！"]},"guide_garden_8":{"who":"nuan","say":["右下角还有一朵",{"w":"flower"},"，叫醒它，",{"w":"spring"},"就来啦！"]},"pick_heart_1":{"who":"nuan","say":["看，是",{"w":"heart"},"，爱心！"]},"pick_heart_2":{"who":"nuan","say":["又一个",{"w":"heart"},"！真好看。"]},"pick_heart_3":{"who":"nuan","say":["哇，红红的",{"w":"heart"},"，热乎乎的。"]},"pick_snowflake_1":{"who":"nuan","say":["是",{"w":"snowflake"},"，雪花！亮晶晶的。"]},"pick_snowflake_2":{"who":"nuan","say":["又捡到一片",{"w":"snowflake"}]},"pick_snowflake_3":{"who":"nuan","say":["好漂亮的",{"w":"snowflake"},"，凉凉的。"]},"pick_ball_1":{"who":"nuan","say":["好大的",{"w":"ball"},"，雪球！"]},"pick_ball_2":{"who":"nuan","say":["又一个",{"w":"ball"},"，滚过来啦！"]},"pick_ball_3":{"who":"nuan","say":["第三个",{"w":"ball"},"，雪人有救啦！"]},"toy_slide_1":{"who":"nuan","say":["呼——",{"w":"slide"}]},"toy_slide_2":{"who":"nuan","say":[{"w":"fast"},{"w":"fast"},"！好快呀！"]},"toy_slide_3":{"who":"nuan","say":["往",{"w":"down"},"滑，往",{"w":"down"},"滑！"]},"toy_slide_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"滑得真",{"w":"fast"}]},"toy_bounce_1":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"up"}]},"toy_bounce_2":{"who":"nuan","say":["飞得好",{"w":"high"},"呀！"]},"toy_bounce_3":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"好",{"w":"high"}]},"toy_bounce_4":{"who":"nuan","say":[{"w":"jump"},"一下，再",{"w":"up"},"一点点！"]},"toy_bunny_1":{"who":"nuan","say":[{"w":"bunny"},{"w":"one"},"！第一只小雪兔，跟上来啦。"]},"toy_bunny_2":{"who":"nuan","say":[{"w":"bunny"},{"w":"two"},"！又找到一只！"]},"toy_bunny_3":{"who":"nuan","say":[{"w":"bunny"},{"w":"three"},"！三只都找到啦！"]},"toy_bunny_home_1":{"who":"nuan","say":[{"w":"bunny"},"回",{"w":"home"},"啦！"]},"toy_bunny_home_2":{"who":"nuan","say":["又一只回",{"w":"home"},"啦，它吃着",{"w":"carrot"},"呢。"]},"toy_bunny_home_3":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"最后一只也到",{"w":"home"},"啦！"]},"toy_floe_1":{"who":"nuan","say":[{"w":"wait"},"，浮冰停下来啦！"]},"toy_floe_2":{"who":"nuan","say":["浮冰在",{"w":"wait"},"我们呢，快上去！"]},"toy_floe_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"它停住啦，快过去。"]},"toy_note_ok_1":{"who":"nuan","say":[{"w":"red"},"，红色！"]},"toy_note_ok_2":{"who":"nuan","say":["橙色，叮！"]},"toy_note_ok_3":{"who":"nuan","say":[{"w":"yellow"},"，黄色！"]},"toy_note_ok_4":{"who":"nuan","say":["绿色，叮！"]},"toy_note_ok_5":{"who":"nuan","say":[{"w":"blue"},"，蓝色！"]},"toy_note_wrong_1":{"who":"nuan","say":["没关系，再来一次。"]},"toy_note_wrong_2":{"who":"nuan","say":["咦，这个不是，换一个试试。"]},"toy_note_wrong_3":{"who":"nuan","say":["嘿嘿，走错啦，再听一遍。"]},"toy_melody_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们弹完啦！"]},"toy_melody_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"真好听！"]},"toy_bloom_1":{"who":"nuan","say":["叮——一朵",{"w":"flower"},"醒啦！"]},"toy_bloom_2":{"who":"nuan","say":[{"w":"warm"},"的光，",{"w":"flower"},"开花啦！"]},"toy_bloom_3":{"who":"nuan","say":["又一朵！是",{"w":"flower"},"，彩色的。"]},"toy_bloom_4":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里的",{"w":"flower"},"都开啦，",{"w":"spring"},"来啦！"]},"star_1":{"who":"nuan","say":[{"w":"star"},{"w":"one"}]},"star_2":{"who":"nuan","say":[{"w":"star"},{"w":"two"}]},"star_3":{"who":"nuan","say":[{"w":"star"},{"w":"three"}]},"star_4":{"who":"nuan","say":[{"w":"star"},"，第四颗！"]},"star_5":{"who":"nuan","say":[{"w":"star"},"，第五颗，全找到啦！"]},"open_hall":{"who":"nuan","say":["看，",{"w":"door"},"开啦！走吧，姐姐！",{"en":"Let's go!","zh":"出发！"}]},"open_lake":{"who":"nuan","say":["有了",{"w":"ice"},"，我们走过",{"w":"water"},"啦！",{"w":"fish"},"也在拍手。"]},"open_slope":{"who":"nuan","say":["门开啦！这个",{"w":"slide"},"又",{"w":"fast"},"又好玩，我们再往",{"w":"down"},"走吧！"]},"open_tower":{"who":"frost","say":["看，铁门打开了！安娜，我们一起走吧。"]},"open_spring":{"who":"nuan","say":["门开啦！我们",{"w":"jump"},"一下，",{"w":"up"},"，到最",{"w":"high"},"的地方去！"]},"open_bunny":{"who":"nuan","say":["谢谢你们，",{"w":"bunny"},"！吃",{"w":"carrot"},"吧，门开啦。"]},"open_floe":{"who":"frost","say":["我们过河啦！等一等，安娜，门也已经开啦。"]},"open_music":{"who":"nuan","say":["叮叮咚咚，唱完啦！",{"w":"red"},{"w":"yellow"},{"w":"blue"},"，门也开啦！"]},"open_ballroom":{"who":"nuan","say":[{"w":"ball"},"都找到啦！快来堆",{"w":"snowman"},{"w":"hat"},"也准备好啦！"]},"open_garden":{"who":"nuan","say":["所有的",{"w":"flower"},"都开啦！好",{"w":"warm"},"呀，",{"w":"spring"},"来啦！"]},"clear_hall":{"who":"nuan","say":[{"w":"heart"},{"w":"star"},"都找到啦，",{"w":"door"},"也开了。真棒！"]},"clear_lake":{"who":"nuan","say":["冰路搭好了。",{"w":"fish"},"在",{"w":"water"},"里游，",{"w":"ice"},"亮晶晶。"]},"clear_slope":{"who":"nuan","say":["我们玩了",{"w":"slide"},"，滑得好",{"w":"fast"},"，一路",{"w":"down"},"到了坡底。真开心！"]},"clear_tower":{"who":"nuan","say":["一个",{"w":"push"},"，一个往前走，",{"w":"gate"},"就",{"w":"open"},"了。两个人一起，真棒！"]},"clear_spring":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"high"},"！蘑菇把我们弹到了云边。真棒！"]},"clear_bunny":{"who":"nuan","say":[{"w":"bunny"},"们回到",{"w":"home"},"，吃着",{"w":"carrot"},"，开心地晃耳朵。灯笼的光，让大家都不怕了。"]},"clear_floe":{"who":"nuan","say":["浮冰往",{"w":"left"},"，往",{"w":"right"},{"w":"wait"},"一等，我们就过了河。真棒！"]},"clear_music":{"who":"nuan","say":[{"w":"red"},{"w":"yellow"},{"w":"blue"},"，彩色的台阶唱起了歌。姐姐，我们去下一个房间看看吧！"]},"clear_ballroom":{"who":"nuan","say":["圆圆的",{"w":"ball"},"变成了",{"w":"snowman"},{"w":"hat"},"轻轻落下来啦！门外吹来一阵暖和的风，我们去看看吧。"]},"clear_garden":{"who":"nuan","say":[{"w":"flower"},"开满了花园，",{"w":"warm"},"的风吹过来，",{"w":"spring"},"回来了。"]},"quiz_heart":{"who":"nuan","say":["哪个是",{"w":"heart"},"？点一点！"]},"quiz_star":{"who":"nuan","say":["哪个是",{"w":"star"},"？点一点！"]},"quiz_door":{"who":"nuan","say":["哪个是",{"w":"door"},"？点一点！"]},"quiz_water":{"who":"nuan","say":["哪个是",{"w":"water"},"？点一点！"]},"quiz_ice":{"who":"nuan","say":["哪个是",{"w":"ice"},"？点一点！"]},"quiz_fish":{"who":"nuan","say":["哪个是",{"w":"fish"},"？点一点！"]},"quiz_slide":{"who":"nuan","say":["哪个是",{"w":"slide"},"？点一点！"]},"quiz_fast":{"who":"nuan","say":["哪个是",{"w":"fast"},"？点一点！"]},"quiz_down":{"who":"nuan","say":["哪个是",{"w":"down"},"？点一点！"]},"quiz_push":{"who":"nuan","say":["哪个是",{"w":"push"},"？点一点！"]},"quiz_open":{"who":"nuan","say":["哪个是",{"w":"open"},"？点一点！"]},"quiz_gate":{"who":"nuan","say":["哪个是",{"w":"gate"},"？点一点！"]},"quiz_jump":{"who":"nuan","say":["哪个是",{"w":"jump"},"？点一点！"]},"quiz_up":{"who":"nuan","say":["哪个是",{"w":"up"},"？点一点！"]},"quiz_high":{"who":"nuan","say":["哪个是",{"w":"high"},"？点一点！"]},"quiz_bunny":{"who":"nuan","say":["哪个是",{"w":"bunny"},"？点一点！"]},"quiz_home":{"who":"nuan","say":["哪个是",{"w":"home"},"？点一点！"]},"quiz_carrot":{"who":"nuan","say":["哪个是",{"w":"carrot"},"？点一点！"]},"quiz_left":{"who":"nuan","say":["哪个是",{"w":"left"},"？点一点！"]},"quiz_right":{"who":"nuan","say":["哪个是",{"w":"right"},"？点一点！"]},"quiz_wait":{"who":"nuan","say":["哪个是",{"w":"wait"},"？点一点！"]},"quiz_red":{"who":"nuan","say":["哪个是",{"w":"red"},"？点一点！"]},"quiz_yellow":{"who":"nuan","say":["哪个是",{"w":"yellow"},"？点一点！"]},"quiz_blue":{"who":"nuan","say":["哪个是",{"w":"blue"},"？点一点！"]},"quiz_snowman":{"who":"nuan","say":["哪个是",{"w":"snowman"},"？点一点！"]},"quiz_ball":{"who":"nuan","say":["哪个是",{"w":"ball"},"？点一点！"]},"quiz_hat":{"who":"nuan","say":["哪个是",{"w":"hat"},"？点一点！"]},"quiz_flower":{"who":"nuan","say":["哪个是",{"w":"flower"},"？点一点！"]},"quiz_warm":{"who":"nuan","say":["哪个是",{"w":"warm"},"？点一点！"]},"quiz_spring":{"who":"nuan","say":["哪个是",{"w":"spring"},"？点一点！"]},"quiz_right_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},{"en":"Good job!","zh":"做得好！"}]},"quiz_right_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"对啦，就是它！"]},"quiz_right_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"你真聪明！"]},"quiz_wrong_1":{"who":"nuan","say":["再找找看～"]},"quiz_wrong_2":{"who":"nuan","say":["嗯，再看一看。它在发光哦。"]},"quiz_wrong_3":{"who":"nuan","say":["没关系，我们再试一次。"]},"tutor_move":{"who":"nuan","say":["按左右方向键，就能走路啦。"]},"tutor_jump":{"who":"nuan","say":["按上面的方向键，跳一跳！"]},"tutor_magic":{"who":"nuan","say":["按一下长长的空格键，魔法就出来啦！",{"en":"One, two, three!","zh":"一、二、三！"}]},"tutor_fullscreen":{"who":"nuan","say":["给大人的小提示：点右上角的全屏按钮，画面会更大哦。"]},"splash_1":{"who":"nuan","say":["哎呀，扑通！没关系，再来一次！"]},"splash_2":{"who":"nuan","say":["哇，",{"w":"water"},"好凉呀！我们回到岸边吧。"]},"splash_3":{"who":"nuan","say":["扑通！没事没事，你已经很棒啦！"]},"splash_4":{"who":"nuan","say":["掉进",{"w":"water"},"也没关系，再试一次吧。"]},"idle_1":{"who":"nuan","say":["你在看什么呀？"]},"idle_2":{"who":"nuan","say":["要不要去那边看看？"]},"idle_3":{"who":"nuan","say":["点一点右上角的小灯泡，我就告诉你。"]},"idle_4":{"who":"nuan","say":["慢慢来，不着急。"]},"miss_frost":{"who":"nuan","say":["姐姐，你在哪儿呀？"]},"together_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们在一起啦！"]},"together_2":{"who":"frost","say":["和你在一起，真暖和。"]},"mem_m1":{"who":"nuan","say":["姐姐，还记得吗？我每天画一幅画，从门缝里塞给你。画里是我们俩，还有红围巾雪人。原来你都悄悄收好了呀。"],"art":"mem_door"},"mem_m3":{"who":"nuan","say":["姐姐，还记得那面冰镜子吗？你把湖面冻得亮亮的，我们手拉手，一直滑到星星出来。"],"art":"mem_lake"},"mem_m5":{"who":"nuan","say":["那条冰滑梯是你给我变出来的！我坐着小木盆，一路滑到山脚，开心得停不下来。"],"art":"mem_m5"},"mem_m2":{"who":"nuan","say":["姐姐，原来那条红围巾是你偷偷织给我的呀。软软的，暖暖的，我一直很喜欢。"],"art":"mem_gloves"},"mem_m6":{"who":"nuan","say":["我小时候总想摸到星星。你给我堆了一张软软的雪床，我一跳，好像真的碰到了星星！"],"art":"mem_m6"},"mem_m7":{"who":"nuan","say":["姐姐，我们捡到过一只小雪兔。我的灯笼给它暖身子，你给它做了个小冰窝，它很快就睡着啦。"],"art":"mem_m7"},"mem_m8":{"who":"nuan","say":["还记得那次坐浮冰吗？你让它停在岸边，我们一起坐上去，慢慢漂，一边数水里的小鱼。"],"art":"mem_m8"},"mem_m9":{"who":"nuan","say":["你做的冰风铃真好听！我轻轻一碰，叮叮咚咚，就忍不住跟着哼起歌来。"],"art":"mem_m9"},"mem_m4":{"who":"nuan","say":["哈哈，姐姐！那次打雪仗，雪球越滚越大，我们两个都摔进了软软的雪堆里，笑了好久。"],"art":"mem_fall"},"mem_m10":{"who":"nuan","say":["姐姐，我们小时候一起堆过一个雪人，还给它戴了一朵小花。我记得，我们说好下一年还要一起堆。"],"art":"mem_m10"},"me_frost":{"who":"frost","say":["你好，我是艾莎。我会变出冰和雪，铺成小路。跟我一起出发吧，安娜会在旁边帮我们。"]},"me_nuan":{"who":"nuan","say":["你好，我是安娜！艾莎姐姐带我们探险，我会跟着她，照亮小路，还会陪你一起念英文单词。"]},"win":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里开满了花！姐姐，拉着我的手，我们一起转个圈吧！"]},"end":{"who":"nuan","say":[{"w":"sun"},"出来啦！冰花都开成了真正的小花，",{"w":"spring"},"回来了。小时候的雪人戴着帽子，笑眯眯地站在花丛里。姐姐，牵着我的手，我们一起和大家说",{"en":"Hello!","zh":"你好！"}],"art":"story_thaw"},"ui_start":{"who":"nuan","say":["开始玩"]},"ui_continue":{"who":"nuan","say":["继续玩"]},"ui_next":{"who":"nuan","say":["下一个"]},"ui_replay":{"who":"nuan","say":["再玩一次"]},"ui_back":{"who":"nuan","say":["回去"]},"ui_words":{"who":"nuan","say":["单词本"]},"ui_stickers":{"who":"nuan","say":["贴纸本"]},"ui_wardrobe":{"who":"nuan","say":["换衣服"]},"ui_settings":{"who":"nuan","say":["家长设置"]},"ui_hint":{"who":"nuan","say":["小提示"]},"ui_fullscreen":{"who":"nuan","say":["全屏"]},"ui_solo":{"who":"nuan","say":["一个人玩"]},"ui_duo":{"who":"nuan","say":["两个人玩"]},"ui_sound":{"who":"nuan","say":["声音"]},"ui_quiz_skip":{"who":"nuan","say":["跳过"]},"ui_meet":{"who":"nuan","say":["认识她们"]},"ui_rooms":{"who":"nuan","say":["房间"]},"ui_room_hall":{"who":"nuan","say":["冰堡大厅"]},"ui_room_lake":{"who":"nuan","say":["冰湖长廊"]},"ui_room_slope":{"who":"nuan","say":["雪坡滑梯"]},"ui_room_tower":{"who":"nuan","say":["机关塔楼"]},"ui_room_spring":{"who":"nuan","say":["弹弹雪床"]},"ui_room_bunny":{"who":"nuan","say":["雪兔窝"]},"ui_room_floe":{"who":"nuan","say":["浮冰河"]},"ui_room_music":{"who":"nuan","say":["音乐楼梯"]},"ui_room_ballroom":{"who":"nuan","say":["星光舞厅"]},"ui_room_garden":{"who":"nuan","say":["春天花园"]},"cheer_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"}]},"cheer_2":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"}]},"cheer_3":{"who":"nuan","say":[{"en":"Let's go!","zh":"出发！"}]},"cheer_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"}]}}};
   const WORDS = [{"id":"heart","en":"heart","zh":"爱心","icon":"word_heart","room":"hall"},{"id":"star","en":"star","zh":"星星","icon":"word_star","room":"hall"},{"id":"door","en":"door","zh":"门","icon":"word_door","room":"hall"},{"id":"water","en":"water","zh":"水","icon":"word_water","room":"lake"},{"id":"ice","en":"ice","zh":"冰","icon":"word_ice","room":"lake"},{"id":"fish","en":"fish","zh":"小鱼","icon":"word_fish","room":"lake"},{"id":"slide","en":"slide","zh":"滑滑梯","icon":"word_slide","room":"slope"},{"id":"fast","en":"fast","zh":"快","icon":"word_fast","room":"slope"},{"id":"down","en":"down","zh":"向下","icon":"word_down","room":"slope"},{"id":"push","en":"push","zh":"推","icon":"word_push","room":"tower"},{"id":"open","en":"open","zh":"打开","icon":"word_open","room":"tower"},{"id":"gate","en":"gate","zh":"铁闸门","icon":"word_gate","room":"tower"},{"id":"jump","en":"jump","zh":"跳","icon":"word_jump","room":"spring"},{"id":"up","en":"up","zh":"向上","icon":"word_up","room":"spring"},{"id":"high","en":"high","zh":"高","icon":"word_high","room":"spring"},{"id":"bunny","en":"bunny","zh":"小雪兔","icon":"word_bunny","room":"bunny"},{"id":"home","en":"home","zh":"家","icon":"word_home","room":"bunny"},{"id":"carrot","en":"carrot","zh":"胡萝卜","icon":"word_carrot","room":"bunny"},{"id":"left","en":"left","zh":"左","icon":"word_left","room":"floe"},{"id":"right","en":"right","zh":"右","icon":"word_right","room":"floe"},{"id":"wait","en":"wait","zh":"等一等","icon":"word_wait","room":"floe"},{"id":"red","en":"red","zh":"红色","icon":"word_red","room":"music"},{"id":"yellow","en":"yellow","zh":"黄色","icon":"word_yellow","room":"music"},{"id":"blue","en":"blue","zh":"蓝色","icon":"word_blue","room":"music"},{"id":"snowman","en":"snowman","zh":"雪人","icon":"word_snowman","room":"ballroom"},{"id":"ball","en":"ball","zh":"球","icon":"word_ball","room":"ballroom"},{"id":"hat","en":"hat","zh":"帽子","icon":"word_hat","room":"ballroom"},{"id":"flower","en":"flower","zh":"花","icon":"word_flower","room":"garden"},{"id":"warm","en":"warm","zh":"温暖","icon":"word_warm","room":"garden"},{"id":"spring","en":"spring","zh":"春天","icon":"word_spring","room":"garden"},{"id":"one","en":"one","zh":"一","icon":"word_one","room":null},{"id":"two","en":"two","zh":"二","icon":"word_two","room":null},{"id":"three","en":"three","zh":"三","icon":"word_three","room":null},{"id":"snowflake","en":"snowflake","zh":"雪花","icon":"word_snowflake","room":null},{"id":"hello","en":"hello","zh":"你好","icon":"word_hello","room":null},{"id":"yay","en":"yay","zh":"耶","icon":"word_yay","room":null},{"id":"music","en":"music","zh":"音乐","icon":"word_music","room":null},{"id":"sun","en":"sun","zh":"太阳","icon":"word_sun","room":null}];
   const lineOf = key => (LINES.lines && LINES.lines[key]) || null;
   const hasLineKey = key => !!lineOf(key);
@@ -2496,6 +2682,7 @@ function createGame() {
     return out;
   }
   function tyTee() {
+    /** @type {any} */
     const ev = game.events;
     if (!ev || ev.__toyTee) return;
     ev.__toyTee = true;
@@ -2788,7 +2975,7 @@ function createGame() {
     tyUpdateFloes(dt, now);
     tyUpdateBunnies(dt, now);
     tyUpdateStrip(now);
-    if (typeof rewardsTick === 'function') rewardsTick(dt, now);
+    if (typeof rewardsTick === 'function') rewardsTick(dt);
   }
   /* Sisters: every frame is an already-loaded image, shown one at a time. */
   const SPRITE = 84 / 170;   // game units per stored pixel; the elder sister stands 84 tall
@@ -2857,7 +3044,7 @@ function createGame() {
     v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${dir} ${breath.toFixed(3)})`);
     v.shadow.setAttribute('cx', cx.toFixed(1));
     v.shadow.setAttribute('cy', (feet + 2).toFixed(1));
-    /* a small golden marker above the sister the player steers: always on touch, and for a moment after a room starts or a swap */
+    /* a small golden marker above the sister the player steers: always on touch, and for a moment after a room starts */
     const mine = playerId() === id;
     v.mark.setAttribute('visibility', game.state === 'play' && mine && (isTouch || v.markT > 0) ? 'visible' : 'hidden');
     if (mine) v.mark.setAttribute('transform', `translate(0 ${(Math.sin(now * 6) * 3).toFixed(1)})`);
@@ -3085,7 +3272,6 @@ function createGame() {
         case 'gate': drawGates(); break;
         case 'blink': blinkFx(e); break;
         case 'memory': foundFragment(); break;
-        case 'swap': flashPlayerMark(2.4); onPlayerSwapped(e); break;
         case 'clear': cheerBurst(); break;
       }
     }
@@ -3103,6 +3289,7 @@ function createGame() {
   /* Sound: an original procedural score (music box, pad, reverb), wind, effects, and the voice (lazy mp3 clips, see `voice` below) */
   let audio = null, muted = false, bus = null, voiceOn = false, wantSong;   // wantSong: undefined = title theme once audio wakes, null = silence
   // key: tonic as a MIDI note; prog: [semitones from the tonic, 'M' | 'm'] per bar; beats per bar
+  /** @type {Record<string, { prog: [number, string][], [field: string]: any }>} */
   const THEMES = {
     title: { bpm: 70, beats: 4, key: 62, minor: true, prog: [[0, 'm'], [-4, 'M'], [3, 'M'], [-2, 'M']], seed: 3 },
     0: { bpm: 82, beats: 4, key: 62, minor: true, prog: [[0, 'm'], [-2, 'M'], [-4, 'M'], [-5, 'm']], seed: 11 },
@@ -3238,7 +3425,6 @@ function createGame() {
     bus.music.gain.setTargetAtTime(0, audio.currentTime, .25);
     bus.wind.gain.setTargetAtTime(0, audio.currentTime, .6);
   }
-  const setMusic = startMusic;   // old name, kept so callers that were not rewritten still work
   /* The wind swells when the sisters drift apart (50-talk); m is 0..1. */
   function windMood(m) { if (audio) bus.wind.gain.setTargetAtTime(windBase() + m * .24, audio.currentTime, .5); }
   const musicLevel = () => voiceOn ? .3 : 1;
@@ -3258,207 +3444,8 @@ function createGame() {
       nextT += e8; step++;
     }
   }
-  /* Voice: lazy mp3 clips, one at a time, a small priority queue, the music ducks underneath.
-       voice.line(key, opts)  opts { interrupt, priority 0..2 (default 1), maxWait ms, tag, subtitle:false }
-       voice.word(id) / voice.ui(name) / voice.stop() / voice.busy / voice.preload(keys) / voice.lastReason(key)
-     Every call returns quickly and never rejects: a missing or slow file just plays as silence for ~0.35 s so a story that
-     waits on the promise keeps moving (subtitles, if wanted, stay up for a reading time).
-     The promise resolves true when the clip was heard to the end (audible, not muted, not cut), false otherwise.
-     WHY it was false: voice.lastReason(key) -> the reason of the most recent call for that key (the line key, 'word_<id>'
-     for voice.word, 'ui_<name>' for hover names), set before the promise resolves; null when it completed or was never called.
-       'missing'     no such line, or its mp3 failed to load / decode / arrive in time (played as silence)
-       'interrupted' cut by louder speech or voice.stop(), dropped from the queue, or a hover name that found speech playing
-       'muted'       the clip ran to the end but sound was off, so nothing was heard
-       'expired'     waited in the queue longer than maxWait without getting its turn
-     A failed mp3 load is not cached: the next request fetches it once more (a second failure is cached), one console warning per file.
-     voice.ui (hover names) is priority 0, tag 'ui': it may cut another 'ui' clip but never anything else, it is dropped instead of
-     queued behind speech, and it says nothing at all while a story / learning scene (`story`) is open. */
-  const voice = (() => {
-    const FILE_WAIT = 2500, SILENT_MS = 350, CACHE_MAX = 48, QUEUE_MAX = 4;
-    const bufs = new Map();              // file -> Promise<AudioBuffer | null>, least recently used first
-    const queue = [], listeners = [];
-    let cur = null, seq = 0, SUBS = null, subsAsked = false, subTimer = 0, uiTimer = 0, uiLast = { name: '', t: -1e9 };
-    const warned = new Set(), warnedFiles = new Set(), failures = new Map();   // failures: file -> failed loads so far
-    const reasons = new Map();           // key -> why the latest call for it did not complete (null = it did)
-    const storyOpen = () => typeof story !== 'undefined' && !!story;
-    function settle(job, ok, reason) { reasons.set(job.key, ok ? null : reason); job.resolve(ok); }
-    const speakable = t => /[\p{L}\p{N}]/u.test(t);
-    const lineDef = key => {
-      const L = typeof LINES === 'object' && LINES;
-      return (L && ((L.lines && L.lines[key]) || (L.pages && L.pages[key]))) || null;
-    };
-    const isEn = s => s && typeof s === 'object' && s.en !== undefined;
-    const hasEn = def => def.say.some(isEn);
-    const wordsOnly = () => { try { return typeof setting === 'function' && setting('english') === 'words'; } catch (e) { return false; } };
-    const wordText = id => (SUBS && SUBS.words && SUBS.words[id] && SUBS.words[id].en) || String(id);
-    /* Anna is the stable learning companion, including legacy companion line definitions. */
-    const speakerOf = def => def.who !== 'companion' ? def.who : 'nuan';
-    function segmentsOf(key, def, wMode) {
-      const e = SUBS && SUBS.lines && SUBS.lines[key];
-      if (e) return (wMode && e.w !== undefined ? e.w || [] : e.s).map(([text, en]) => ({ text, en: !!en }));
-      const out = [];
-      for (const s of def.say) {
-        if (typeof s === 'string') out.push({ text: s, en: false });
-        else if (s.w !== undefined) out.push({ text: wordText(s.w), en: true });
-        else if (!wMode) out.push({ text: s.en, en: true });
-        else if (s.zh) out.push({ text: s.zh, en: false });
-      }
-      return out.filter(x => x.text);
-    }
-    function loadSubs() {   // subtitle table written by narration.py; small, fetched once, never awaited
-      if (subsAsked || typeof fetch !== 'function') return;
-      subsAsked = true;
-      fetch(assetURL('subs.json')).then(r => r.ok ? r.json() : null).then(j => { if (j && j.lines) SUBS = j; }).catch(() => {});
-    }
-    function load(file) {
-      if (!audio) return Promise.resolve(null);
-      let p = bufs.get(file);
-      if (p) bufs.delete(file);
-      else {
-        p = fetch(assetURL(file)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && new Promise((ok, no) => audio.decodeAudioData(b, ok, no))).catch(() => null);
-        p = p.then(b => {
-          if (b) { failures.delete(file); return b; }
-          // a failed load is not remembered as silence: the next request tries once more, the second failure sticks
-          const n = (failures.get(file) || 0) + 1;
-          failures.set(file, n);
-          if (!warnedFiles.has(file)) { warnedFiles.add(file); try { console.warn('voice: could not load', file); } catch (e) {} }
-          if (n < 2 && bufs.get(file) === p) bufs.delete(file);
-          return null;
-        });
-      }
-      bufs.set(file, p);
-      while (bufs.size > CACHE_MAX) bufs.delete(bufs.keys().next().value);
-      return p;
-    }
-    function emitSub(payload) { for (const fn of listeners) { try { fn(payload); } catch (e) {} } }
-    const inPlay = () => typeof game === 'object' && game.state === 'play' && !(typeof story !== 'undefined' && story);
-    function duck() {
-      voiceOn = cur !== null;
-      if (audio && bus) bus.music.gain.setTargetAtTime(musicLevel(), audio.currentTime, voiceOn ? .3 : .5);
-    }
-    function start(job) {
-      cur = job;
-      clearTimeout(subTimer);
-      emitSub(job.sub && job.segments.length ? { key: job.key, who: job.who, segments: job.segments, bubble: (job.who === 'frost' || job.who === 'nuan') && inPlay() } : null);
-      duck();
-      const go = buf => {
-        if (cur !== job) return;
-        if (!buf || !audio || !bus) { job.silent = true; job.timer = setTimeout(() => finish(job, false, 'missing'), SILENT_MS); return; }
-        const src = audio.createBufferSource();
-        src.buffer = buf; src.connect(bus.voice);
-        job.audible = soundWanted();
-        src.onended = () => finish(job, true);
-        job.src = src;
-        src.start(audio.currentTime + .08);
-      };
-      if (job.file && audio) {
-        let t = 0;
-        Promise.race([load(job.file), new Promise(ok => { t = setTimeout(() => ok(null), FILE_WAIT); })]).then(b => { clearTimeout(t); go(b); });
-      } else Promise.resolve().then(() => go(null));
-    }
-    function finish(job, completed = false, why) {
-      if (cur !== job) return;
-      cur = null;
-      const heard = completed && job.audible && soundWanted();
-      if (heard) for (const id of job.words) countWordHeard(id);
-      clearTimeout(job.timer);
-      if (job.src) { job.src.onended = null; try { job.src.stop(); } catch (e) {} job.src = null; }
-      pump();
-      duck();
-      if (!cur && job.sub && job.segments.length) {
-        // a clip without sound keeps its subtitle up for a reading time; a real clip clears it at once
-        if (job.silent) { const keep = Math.max(0, Math.min(8000, job.segments.reduce((n, s) => n + s.text.length, 0) * 220) - SILENT_MS); subTimer = setTimeout(() => emitSub(null), Math.max(900, keep)); }
-        else emitSub(null);
-      }
-      settle(job, !!heard, why || (completed ? 'muted' : 'interrupted'));
-    }
-    function drop(job, why) { clearTimeout(job.expire); settle(job, false, why || 'interrupted'); }
-    function pump() { while (!cur && queue.length) { const j = queue.shift(); clearTimeout(j.expire); start(j); } }
-    function submit(job) {
-      // hover names never cut or wait behind other speech: with anything but 'ui' speech around they are simply not said
-      if (job.tag === 'ui' && ((cur && cur.tag !== 'ui') || queue.some(j => j.tag !== 'ui'))) { settle(job, false, 'interrupted'); return; }
-      if (job.tag) for (let i = queue.length - 1; i >= 0; i--) if (queue[i].tag === job.tag) drop(queue.splice(i, 1)[0]);
-      if (job.interrupt && (!cur || cur.prio <= job.prio)) {
-        for (let i = queue.length - 1; i >= 0; i--) if (queue[i].prio <= job.prio) drop(queue.splice(i, 1)[0]);
-        if (cur) finish(cur);
-      }
-      if (!cur && !queue.length) { start(job); return; }
-      queue.push(job);
-      queue.sort((a, b) => b.prio - a.prio || a.seq - b.seq);
-      while (queue.length > QUEUE_MAX) drop(queue.pop());
-      if (isFinite(job.maxWait)) job.expire = setTimeout(() => { const i = queue.indexOf(job); if (i >= 0) { queue.splice(i, 1); drop(job, 'expired'); } }, job.maxWait);
-    }
-    function make(fields, opts) {
-      const prio = opts.priority != null ? opts.priority : 1;
-      return Object.assign({ prio, interrupt: !!opts.interrupt, tag: opts.tag || '', seq: ++seq, maxWait: opts.maxWait != null ? opts.maxWait : prio >= 2 ? Infinity : 4000,
-        sub: opts.subtitle !== false, words: [], segments: [], file: null, silent: false }, fields);
-    }
-    function line(key, opts) {
-      opts = opts || {};
-      loadSubs();
-      return new Promise(resolve => {
-        const def = lineDef(key);
-        if (!def || !Array.isArray(def.say)) {
-          if (!warned.has(key)) { warned.add(key); try { console.warn('voice.line: no line', key); } catch (e) {} }
-          reasons.set(key, 'missing');
-          resolve(); return;
-        }
-        const who = speakerOf(def), wMode = wordsOnly() && hasEn(def), segments = segmentsOf(key, def, wMode);
-        // words-only variant with nothing left to say (every {"en"} lacks a zh gloss): no file, just the subtitle
-        const voiced = !wMode || def.say.some(s => typeof s === 'string' ? speakable(s) : s.w !== undefined || (s.zh && speakable(s.zh)));
-        const file = voiced ? `vo_${key}${def.who === 'companion' ? '__' + who : ''}${wMode ? '__w' : ''}.mp3` : null;
-        const words = def.say.filter(s => s && s.w !== undefined).map(s => s.w);
-        submit(make({ kind: 'line', key, who, file, segments, words, resolve }, opts));
-      });
-    }
-    function word(id, opts) {
-      opts = Object.assign({ interrupt: true, tag: 'word', maxWait: 1500, subtitle: false }, opts);
-      return new Promise(resolve => submit(make({ kind: 'word', key: 'word_' + id, who: 'nuan', file: `word_${id}.mp3`, words: [id], resolve }, opts)));
-    }
-    /* Hover names: debounced 400 ms, at most one waiting; hovering back to the name that already played cancels the pending one.
-       Priority 0 and tag 'ui' (see submit): never cuts narration, learn_*, quiz_* or word clips, and silent while a scene is open. */
-    function ui(name) {
-      if (storyOpen()) { clearTimeout(uiTimer); return; }
-      const now = performance.now();
-      if (name === uiLast.name && now - uiLast.t < 400) { clearTimeout(uiTimer); return; }
-      const run = () => { if (storyOpen()) return; uiLast = { name, t: performance.now() }; line('ui_' + name, { interrupt: true, priority: 0, tag: 'ui', maxWait: 600, subtitle: false }); };
-      clearTimeout(uiTimer);
-      const wait = uiLast.t + 400 - now;
-      if (wait > 0) uiTimer = setTimeout(run, wait); else run();
-    }
-    function stop() {
-      clearTimeout(uiTimer);
-      while (queue.length) drop(queue.pop());
-      if (cur) finish(cur);
-      clearTimeout(subTimer);
-      emitSub(null);
-    }
-    /* Warm the cache for lines that are likely to play soon (needs the audio context, i.e. after the first click). */
-    function preload(keys) {
-      if (!audio) return Promise.resolve();
-      loadSubs();
-      const files = [];
-      for (const key of keys) {
-        const def = lineDef(key);
-        if (!def && /^word_/.test(key)) { files.push(key + '.mp3'); continue; }
-        if (!def || !Array.isArray(def.say)) continue;
-        const wMode = wordsOnly() && hasEn(def);
-        files.push(`vo_${key}${def.who === 'companion' ? '__' + speakerOf(def) : ''}${wMode ? '__w' : ''}.mp3`);
-      }
-      return files.reduce((p, f) => p.then(() => load(f)), Promise.resolve()).then(() => {});
-    }
-    return {
-      line, word, ui, stop, preload,
-      lastReason: key => reasons.has(key) ? reasons.get(key) : null,
-      wordInfo: id => (SUBS && SUBS.words && SUBS.words[id]) || null,   // { en, zh, room } once game/subs.json has loaded
-      get busy() { return cur !== null; },
-      onSubtitle(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; },
-    };
-  })();
+  /* The voice queue (voice.line / word / ui / stop / preload, priorities, word counting) is in src/lib/voice.js. */
   const onSubtitle = fn => voice.onSubtitle(fn);
-  // old names, for callers that were not rewritten: a story page's `vo` is a line key
-  const playVoice = id => { if (id) voice.line(id, { interrupt: true, priority: 2 }); };
-  const stopVoice = () => voice.stop();
   /* Effects */
   function tones(notes, type, len, vol) {
     if (!audio) return;
@@ -3525,7 +3512,6 @@ function createGame() {
         case 'gate': tones(e.open ? [330, 440] : [440, 330], 'square', .08, .02); break;
         case 'memory': tones([784, 988, 1175, 1568], 'sine', .2, .05); break;
         case 'blink': sfx('blink'); break;
-        case 'swap': sfx('click'); break;
         case 'clear': tones([523, 659, 784, 659, 784, 1047], 'triangle', .17); break;
         case 'win': startMusic('end'); tones([523, 659, 784, 1047, 1319], 'sine', .24); break;
       }
@@ -3542,33 +3528,25 @@ function createGame() {
   let memNode = null;
   // Everything else lives in this closure so its generic names (say, room, tick, ...) cannot clash with other view files.
   const TK = (() => {
-    const wordLog = {};
     const KIND_WORD = { h: 'heart', '*': 'snowflake', o: 'ball' };   // collect kind -> core word (exposure.md, request 1)
     const isDev = () => { try { return /[?&]dev=1(&|$)/.test(location.search); } catch (e) { return false; } };
     const storyOpen = () => typeof story !== 'undefined' && !!story;
     const subtitlesOn = () => { try { const v = typeof setting === 'function' ? setting('subtitles') : false; return !!v && v !== 'off' && v !== 'false'; } catch (e) { return false; } };
     const curLevel = () => LEVELS[game.index] || null;
 
-    /* A word counts for the room where it is learned, whichever room it is heard in (recall lines play in the next room). */
-    function wordRoom(id) {
-      const lv = LEVELS.find(l => l.words && l.words.includes(id));
-      if (lv) return lv.id;
-      const info = voice.wordInfo(id);
-      return (info && info.room) || (curLevel() && curLevel().id) || '_';
-    }
+    /* The per-room dev counter (heardLog) lives in src/lib/heard.js next to the saved counter: noteWordHeard feeds both. */
     function countWordHeard(id) {
-      const row = wordLog[id] || (wordLog[id] = {}), room = wordRoom(id);
-      row[room] = (row[room] || 0) + 1;
       try { if (typeof noteWordHeard === 'function') noteWordHeard(id); } catch (e) {}
     }
     function wordStats() {
       const out = {};
-      for (const id of Object.keys(wordLog)) out[id] = Object.assign({}, wordLog[id]);
+      for (const id of Object.keys(heardLog)) out[id] = Object.assign({}, heardLog[id]);
       return out;
     }
     function logRoomWords(lv) {
       if (!isDev() || !lv || !lv.words) return;
-      const rows = lv.words.map(w => ({ word: w, heard: (wordLog[w] || {})[lv.id] || 0, target: 8, ok: ((wordLog[w] || {})[lv.id] || 0) >= 8 }));
+      const stats = wordStats();
+      const rows = lv.words.map(w => ({ word: w, heard: (stats[w] || {})[lv.id] || 0, target: 8, ok: ((stats[w] || {})[lv.id] || 0) >= 8 }));
       try { console.log('word exposure, room ' + lv.id); console.table(rows); } catch (e) {}
     }
 
@@ -3594,11 +3572,10 @@ function createGame() {
       for (const e of events || []) {
         switch (e.type) {
           case 'load': onLoad(g); break;
-          case 'collect': onCollect(e, g); break;
+          case 'collect': onCollect(e); break;
           case 'respawn': onRespawn(e, g); break;
           case 'open': say('open_' + (curLevel() || {}).id, { tag: 'open', maxWait: 8000 }); break;
           case 'memory': onMemory(e, g); break;
-          case 'swap': room.idleT = 0; break;
           case 'clear':
             logRoomWords(curLevel());
             // a room with no door (the garden) never emits 'open': its "everything is open" line plays as the room clears
@@ -3720,10 +3697,10 @@ function createGame() {
       }
       if ((heart.windT -= dt) < 0) { heart.windT = .3; windMood(heart.mood); }
       if (heart.mood > .4) heart.apart = true;
-      // far apart for a few seconds: the companion calls out once (key = the sister being called, i.e. the player)
+      // far apart for a few seconds: Anna calls out to Elsa once
       if (g.mode === 'solo' && heart.mood > .55) {
         room.farT += dt;
-        if (room.farT > 3.5 && !room.farSpoken) { room.farSpoken = true; say('miss_' + (g.player || 'frost'), { tag: 'miss', maxWait: 1500 }); }
+        if (room.farT > 3.5 && !room.farSpoken) { room.farSpoken = true; say('miss_frost', { tag: 'miss', maxWait: 1500 }); }
         if (room.farT > 25) { room.farT = 0; room.farSpoken = false; }
       } else if (heart.mood < .2) { room.farT = 0; room.farSpoken = false; }
       const still = s => s.ground && Math.abs(s.vx) < 1 && !s.splash;
@@ -3811,33 +3788,19 @@ function createGame() {
       memNode.setAttribute('transform', `translate(${mx} ${(my + Math.sin(t * 2) * 4).toFixed(1)}) scale(${(1 + Math.sin(t * 3.1) * .08).toFixed(3)})`);
     }
 
-    const spoken = { game: new Set(), room: new Set() };
-    function speak(key, delay, perRoom) {   // old API: a line once per game / per room
-      const set = perRoom ? spoken.room : spoken.game;
-      if (set.has(key) || !hasLine(key)) return;
-      set.add(key);
-      setTimeout(() => voice.line(key), (delay || 0) * 1000);
-    }
-    function resetTalk() { spoken.room.clear(); hideBubble(); }
-    return { talkOnEvents, countWordHeard, wordStats, tick, drawMemory, speak, resetTalk };
+    return { talkOnEvents, countWordHeard, wordStats, tick, drawMemory };
   })();
   function talkOnEvents(events, g) { return TK.talkOnEvents(events, g); }
   function countWordHeard(id) { return TK.countWordHeard(id); }
   function wordStats() { return TK.wordStats(); }
   function drawMemory() { return TK.drawMemory(); }
 
-  /* ---- old entry points, kept so callers that were not rewritten still run ---- */
-  function speak(key, delay, perRoom) { TK.speak(key, delay, perRoom); }
-  function resetTalk() { TK.resetTalk(); }
-  function drawTalk() { TK.tick(game); }
-  function updateMood() { TK.tick(game); }
-  function updateMemory() { TK.tick(game); }
   /* ===== d1 / view-ui: story pages and the blocking scenes (chapter card, recall, clear page + quiz, ending) =====
      Every scene is picture + voice. `story` stays truthy while a blocking scene is open, so the main loop can keep the game
      paused exactly like before. Helpers (uxButton, uxWordCard, ...) live in 70-ui.js and are only called at run time. */
   let story = null;
 
-  /* The prologue: 3 pages, picture + one narrator line each (lines p1..p3 name their art in lines.json). */
+  /* The prologue: 3 pages, picture + one line from Anna each (lines p1..p3 name their art in lines.json). */
   const PROLOGUE = [
     { vo: 'p1', get art() { return uxLineArt('p1', 'story_prologue'); } },
     { vo: 'p2', get art() { return uxLineArt('p2', 'story_winter'); } },
@@ -3869,7 +3832,7 @@ function createGame() {
     const modal = uxState.modal;
     if (!modal && !story) return;
     uxWake();
-    const t = e.target, onBtn = t && t.classList && t.classList.contains && (t.classList.contains('ux-btn') || t.classList.contains('ux-card') || t.classList.contains('ux-tile'));
+    const t = /** @type {HTMLElement | null} */ (e.target), onBtn = t && t.classList && t.classList.contains && (t.classList.contains('ux-btn') || t.classList.contains('ux-card') || t.classList.contains('ux-tile'));
     if (modal) {
       if (e.code === 'Escape') { e.preventDefault(); $('modal').textContent = ''; uxState.modal = null; }
       else if (!onBtn && e.code !== 'F11' && !e.metaKey && !e.ctrlKey) e.stopImmediatePropagation();
@@ -3935,7 +3898,7 @@ function createGame() {
   }
   const uxPopSlot = (root, k) => { const n = root.querySelector(`[data-pop="${k}"]`); if (n) n.classList.add('show'); return n; };
 
-  /* Room picture, one narrator sentence, then the 3 words pop up one by one: "this level we look for heart", "say it", 1.5 s ear/mouth pause. */
+  /* Room picture, one sentence from Anna, then the 3 words pop up one by one: "this level we look for heart", "say it", 1.5 s ear/mouth pause. */
   function showChapter(level, done) {
     const lv = uxLevel(level), words = uxRoomWords(lv), s = storyStrict(uxScreen('chapter', true));
     uxInputReset();
@@ -3953,7 +3916,7 @@ function createGame() {
     const cue = root.querySelector('#uxCue'), ear = root.querySelector('#uxEar'), mouth = root.querySelector('#uxMouth');
     const setCue = (k, kind) => {
       cue.setAttribute('transform', `translate(${x0 + k * (cw + gap) + cw / 2} 262)`);
-      cue.setAttribute('opacity', kind ? 1 : 0);
+      cue.setAttribute('opacity', kind ? '1' : '0');
       ear.setAttribute('visibility', kind === 'ear' ? 'visible' : 'hidden');
       mouth.setAttribute('visibility', kind === 'mouth' ? 'visible' : 'hidden');
     };
@@ -4028,13 +3991,13 @@ function createGame() {
       <rect width="960" height="520" fill="#0d1438" opacity=".55"/>
       <g id="uxStars" class="ux-star" style="transform:translate(480px,170px) scale(1)">${uxStarsHtml(got)}</g>
       <g id="uxBody"></g><g id="uxCtl"></g></g>`);
-    const root = $('overlay'), body = root.querySelector('#uxBody'), ctl = root.querySelector('#uxCtl'), stars = root.querySelector('#uxStars');
+    const root = $('overlay'), body = root.querySelector('#uxBody'), ctl = root.querySelector('#uxCtl'), stars = /** @type {HTMLElement} */ (root.querySelector('#uxStars'));
     const word = el => { uxNudge(el); uxWordVoice(el.dataset.word); };
     const mark = () => { const me = ++s.seq; return () => uxAlive(s) && s.seq === me; };
     const setCtl = html => { ctl.innerHTML = html; uxBind(ctl, { next: () => s.onKey && s.onKey(), skip: () => finishPage(), replay: () => { if (uxAlive(s)) { uxEnd(s, null); uxHooks.replay(idx); } }, done: () => uxEnd(s, done) }); };
     const nextBtn = (act, ui) => uxButton({ act, ui, icon: 'next', x: 886, y: 452, r: 38, plate: 'gold' });
 
-    /* A: stars pop, narrator sentence */
+    /* A: stars pop, Anna's sentence */
     const phaseStars = () => {
       s.phase = 1; const ok = mark();
       s.onKey = () => { if (ok()) phaseWords(); };
@@ -4125,7 +4088,7 @@ function createGame() {
                 solved = true;
                 uxSfx('quiz_right'); uxConfetti(body, 480, 250, 36);
                 uxWordRec(target.id).quiz = (uxWordRec(target.id).quiz || 0) + (wrong ? 0 : 1);
-                body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', 0); });
+                body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', '0'); });
                 uxLine('quiz_right_' + (1 + q % 3), { interrupt: true }).then(() => resolve());
               } else {
                 wrong++; uxSfx('quiz_wrong');
@@ -4185,7 +4148,7 @@ function createGame() {
      degrades to silence instead of throwing. Nothing in this file calls into another file while the script is loading. */
 
   const uxState = { inited: false, tok: null, modal: null, hudBuilt: false, lit: {}, sig: '', player: '', tick: 0, seen: {} };
-  const uxLocal = { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true };
+  const uxLocal = { subtitles: false, english: 'words+phrases', mode: 'solo', sound: true };
   const uxWait = ms => new Promise(r => setTimeout(r, ms));
   const uxInk = '#4a3a8c';
   const UX_HUE = ['#ff9cc0', '#ffd27a', '#9fd6ff', '#b9e3a5', '#d4b4ff', '#ffb98a'];
@@ -4291,7 +4254,6 @@ function createGame() {
       case 'duo': return `<circle cx="-.4" cy="-.38" r=".24" ${fl}/><path d="M-.8 .65Q-.8 .1 -.4 .1Q0 .1 0 .65Z" ${fl}/><circle cx=".42" cy="-.3" r=".28" ${fl}/><path d="M-.02 .7Q-.02 .15 .42 .15Q.86 .15 .86 .7Z" ${fl}/>`;
       case 'meet': return `<circle cx="-.38" cy="-.1" r=".36" fill="#cfe6ff" stroke="${c}" stroke-width=".12"/><circle cx=".38" cy="-.1" r=".36" fill="#ffd9a8" stroke="${c}" stroke-width=".12"/><path d="M-.6 .7Q-.38 .35 -.16 .7M.16 .7Q.38 .35 .6 .7" ${st} stroke-width=".12"/>`;
       case 'rooms': return `<rect x="-.7" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x="-.7" y=".1" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y=".1" width=".6" height=".6" rx=".1" ${fl}/>`;
-      case 'swap': return `<path d="M-.6 -.25H.5M.15 -.6L.55 -.25L.15 .1M.6 .35H-.5M-.15 0L-.55 .35L-.15 .7" ${st} stroke-width=".15"/>`;
       case 'home': return `<path d="M-.7 0L0 -.7L.7 0M-.5 -.1V.65H.5V-.1" ${st}/>`;
       case 'close': return `<path d="M-.5 -.5L.5 .5M.5 -.5L-.5 .5" ${st} stroke-width=".26"/>`;
       case 'lock': return `<path d="M-.3 -.1V-.35A.3 .3 0 0 1 .3 -.35V-.1" ${st} stroke-width=".16"/><rect x="-.5" y="-.1" width="1" height=".8" rx=".14" ${fl}/>`;
@@ -4301,7 +4263,7 @@ function createGame() {
   }
   /* Picture with a placeholder. Browsers draw a broken-image icon for a missing <image>, so a picture is only emitted
      once a probe has loaded it; until then (or if it never exists) the placeholder shapes stand in. A successful probe
-     swaps every placeholder of that name that is already on screen. */
+     replaces every placeholder of that name that is already on screen. */
   const uxImgState = {};
   function uxProbe(name) {
     if (uxImgState[name]) return;
@@ -4313,7 +4275,7 @@ function createGame() {
   }
   const uxImgTag = (name, x, y, w, h, extra) => `<image href="${SRC(name)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" ${extra || ''}/>`;
   function uxUpgrade(name) {
-    document.querySelectorAll('[data-pic="' + name + '"]').forEach(g => {
+    document.querySelectorAll('[data-pic="' + name + '"]').forEach(/** @param {HTMLElement} g */ g => {
       const b = g.dataset.box.split(',');
       g.insertAdjacentHTML('afterend', uxImgTag(name, b[0], b[1], b[2], b[3], g.dataset.extra || ''));
       g.remove();
@@ -4326,7 +4288,7 @@ function createGame() {
   }
   /* A ui_<name> icon centred on 0,0 inside a plate of radius r. Names without a delivered picture stay a drawn glyph. */
   const UX_IMG_ALIAS = { words: 'book', stickers: 'sticker' };
-  const UX_GLYPH_ONLY = ['rooms', 'home', 'close', 'swap', 'lock', 'check'];
+  const UX_GLYPH_ONLY = ['rooms', 'home', 'close', 'lock', 'check'];
   function uxIcon(name, r, ink) {
     const s = r * 0.62, glyph = `<g transform="scale(${s.toFixed(2)})">${uxGlyph(name, ink)}</g>`;
     if (UX_GLYPH_ONLY.includes(name)) return glyph;
@@ -4570,7 +4532,7 @@ function createGame() {
       ${cards}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
     const root = uxPaint(html);
     uxBind(root, { back: () => { uxStopVoice(); showTitle(); } });
-    root.querySelectorAll('.ux-person').forEach(n => {
+    root.querySelectorAll('.ux-person').forEach(/** @param {HTMLElement} n */ n => {
       n.addEventListener('click', ev => {
         ev.stopPropagation(); uxWake();
         const who = n.dataset.who;
@@ -4773,11 +4735,10 @@ function createGame() {
     const st = g.stars ? [g.stars.got, g.stars.total] : cnt('+');
     const nb = g.blocks ? g.blocks.length : 0;
     const vals = { flake: [f0 + '/' + f1, f1 > 0], heart: [h0 + '/' + h1, h1 > 0], ball: [b0 + '/' + b1, b1 > 0], block: [nb + '/' + (typeof MAX_BLOCKS !== 'undefined' ? MAX_BLOCKS : 3), nb > 0], star: [st[0] + '/' + st[1], st[1] > 0] };
-    let x = 0, sig = '';
+    let x = 0;
     for (const p of UX_PILLS) {
       const [txt, vis] = vals[p.id], n = $('uxP_' + p.id);
       if (!vis) { if (n.getAttribute('visibility') !== 'hidden') n.setAttribute('visibility', 'hidden'); continue; }
-      sig += p.id + txt + '|';
       if (n.getAttribute('visibility') !== 'visible') n.setAttribute('visibility', 'visible');
       n.setAttribute('transform', `translate(${x} 0)`);
       const t = n.lastElementChild;
@@ -4799,7 +4760,6 @@ function createGame() {
         n.classList.toggle('teach', kbd.teach === k.kbd);
       }
     }
-    $('uxAv').classList.toggle('ux-pulse', solo && kbd.teach === 'tab');
   }
   /* ===== e / view-rewards: sticker book, wardrobe, hat overlay, sticker-earned celebration (PLAN B2, CONTRACT §11) =====
      Save fields used: save.stickers[] (ids), save.board[{id,x,y}] (x, y are fractions 0..1 of the sticker board, the
@@ -4923,7 +4883,7 @@ function createGame() {
 
   /* ---------- pointer helpers ---------- */
   function rwPoint(ev) {
-    const m = $('overlay').getScreenCTM();
+    const m = /** @type {any} */ ($('overlay')).getScreenCTM();
     if (!m) return { x: 0, y: 0 };
     const p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m.inverse());
     return { x: p.x, y: p.y };
@@ -5090,7 +5050,7 @@ function createGame() {
     }
     n.removeAttribute('visibility');
   }
-  /* Hook of 20-sisters: after a sister is drawn. Applies her chosen dress colour (swapping the frame pictures) and hat. */
+  /* Hook of 20-sisters: after a sister is drawn. Applies her chosen dress colour (replacing the frame pictures) and hat. */
   function drawOutfit(id, frame, node) {
     if (!node) return;
     try {
@@ -5138,7 +5098,7 @@ function createGame() {
     const draw = () => {
       let html = `<g class="${first ? 'page' : ''}"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".62"/>`;
       ['frost', 'nuan'].forEach((who, i) => {
-        const cx = i ? 710 : 250, o = outfit(who);
+        const cx = i ? 710 : 250;
         html += `<rect x="${cx - 170}" y="46" width="340" height="276" rx="26" fill="${who === 'frost' ? '#cfe6ff' : '#ffd9a8'}" opacity=".9" filter="url(#softShadow)"/>
           <g class="rw-prev" data-who="${who}" transform="translate(${cx} 306) scale(2.5)"></g>`;
         const dress = [0, 1, 2].map(k => {
@@ -5159,13 +5119,13 @@ function createGame() {
       first = false;
       const root = uxPaint(html);
       uxBind(root, { back: () => showTitle() });
-      root.querySelectorAll('.rw-prev').forEach(node => {
+      root.querySelectorAll('.rw-prev').forEach(/** @param {HTMLElement} node */ node => {
         const who = node.dataset.who, o = outfit(who), sz = SIZES[who + '_idle'] || [80, 168, 40];
         const k = o.dress && rwDressReady(who, o.dress) ? o.dress : 0;
         img(rwDressName(who, 'idle', k), -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, node);
         rwPlaceHat(node, who, 'idle', o.hat);
       });
-      root.querySelectorAll('.rw-choice').forEach(n => hoverable(n, '', () => {
+      root.querySelectorAll('.rw-choice').forEach(/** @param {HTMLElement} n */ n => hoverable(n, '', () => {
         const who = n.dataset.who, kind = n.dataset.kind, val = n.dataset.val, state = n.dataset.state;
         if (state === 'lock' || state === 'miss') { n.classList.remove('ux-shake'); void n.getBoundingClientRect(); n.classList.add('ux-shake'); return; }
         if (!uxAlive(tok)) return;
@@ -5183,7 +5143,7 @@ function createGame() {
     }, 300);
   }
   /* Input (CONTRACT §5). Solo: ← → ↑ Space controls Elsa; Anna assists. Duo keeps the two-person layout.
-     Everything the keys do goes through g.input / g.press / g.swap; held keys are re-applied every frame by syncInput(). */
+     Everything the keys do goes through g.input / g.press; held keys are re-applied every frame by syncInput(). */
   const SOLO_KEYS = { ArrowLeft: 'l', ArrowRight: 'r', ArrowDown: 'd', ArrowUp: 'jump', Space: 'act', Enter: 'act', NumpadEnter: 'act' };
   const DUO_KEYS = {
     KeyA: ['frost', 'l'], KeyD: ['frost', 'r'], KeyS: ['frost', 'd'], KeyW: ['frost', 'jump'], KeyF: ['frost', 'act'],
@@ -5192,19 +5152,18 @@ function createGame() {
   };
   const heldKeys = new Set();
   /* What the on-screen keyboard diagram (hud) shows: 1 while the key is down, and `teach` = the key the tutorial is
-     currently asking for ('l' | 'r' | 'up' | 'space' | 'tab' | null). */
-  game.kbd = { l: 0, r: 0, up: 0, space: 0, tab: 0, teach: null };
-  const KBD_OF = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'up', Space: 'space', Enter: 'space', NumpadEnter: 'space', Tab: 'tab' };
+     currently asking for ('l' | 'r' | 'up' | 'space' | null). */
+  game.kbd = { l: 0, r: 0, up: 0, space: 0, teach: null };
+  const KBD_OF = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'up', Space: 'space', Enter: 'space', NumpadEnter: 'space' };
   /* What the player has done since the room started, for the tutorial. */
-  const inputSeen = { move: false, jump: false, magic: false, swap: false };
+  const inputSeen = { move: false, jump: false, magic: false };
 
   const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   if (isTouch) document.body.classList.add('touch');
   const touchHeld = { l: 0, r: 0 };
   let touchDuoId = 'frost';
 
-  /* True while the room is live and nothing is covering it. */
-  function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen() && !uxState.modal; }
+  /* canPlay() (the room is live and nothing covers it) is in src/lib/play-gate.js. */
   /* The sister the arrow keys steer right now. */
   const steered = () => (game.mode === 'solo' ? 'frost' : 'nuan');
 
@@ -5212,34 +5171,32 @@ function createGame() {
     heldKeys.clear();
     touchHeld.l = touchHeld.r = 0;
     for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
-    for (const k of ['l', 'r', 'up', 'space', 'tab']) game.kbd[k] = 0;
+    for (const k of ['l', 'r', 'up', 'space']) game.kbd[k] = 0;
     document.querySelectorAll('#touch button.on').forEach(b => b.classList.remove('on'));
   }
   addEventListener('blur', clearInput);
 
   /* Gamepad: d-pad or left stick walks, A / up jumps, X / B magic; Elsa remains the solo lead. */
-  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false };
+  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false };
   function pollGamepad() {
     let p = null;
     try { p = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(x => x && x.connected) || null; } catch (e) { p = null; }
-    const was = { jump: padState.jump, act: padState.act, swap: padState.swap, any: padState.any, start: padState.start };
-    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false }); return; }
+    const was = { jump: padState.jump, act: padState.act, any: padState.any, start: padState.start };
+    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false }); return; }
     const b = i => !!(p.buttons[i] && p.buttons[i].pressed), ax = p.axes[0] || 0, ay = p.axes[1] || 0;
     padState.l = ax < -.45 || b(14) ? 1 : 0;
     padState.r = ax > .45 || b(15) ? 1 : 0;
     padState.d = ay > .75 || b(13) ? 1 : 0;
     padState.jump = b(0) || b(12) || ay < -.75;
     padState.act = b(2) || b(1) || b(7);
-    padState.swap = false;
     padState.start = b(9);
-    padState.any = padState.jump || padState.act || padState.swap || padState.start;
+    padState.any = padState.jump || padState.act || padState.start;
     if (padState.any && !was.any) wakeOnce();
     /* a scene (chapter card, recall, clear page, quiz) is left with the Start button only, like Enter on the keyboard */
     if (storyIsOpen()) { if (padState.start && !was.start) advanceStoryPage(true); return; }
     if (!canPlay()) return;
     if (padState.jump && !was.jump) pressPlay(steered(), 'jump');
     if (padState.act && !was.act) pressPlay(steered(), 'act');
-    if (padState.swap && !was.swap) swapPlayer();
   }
 
   /* A jump / magic press from any device. */
@@ -5293,20 +5250,8 @@ function createGame() {
       ni.d = k('ArrowDown') || padState.d ? 1 : 0;
     }
     /* the tutorial only counts keys the player pressed, not what the companion is doing */
-    const mine = game.mode === 'solo' ? [game.input[game.player || 'frost']] : [game.input.frost, game.input.nuan];
+    const mine = game.mode === 'solo' ? [game.input.frost] : [game.input.frost, game.input.nuan];
     if (mine.some(i => i.l || i.r)) inputSeen.move = true;
-  }
-
-  /* Legacy hook: the solo story keeps Elsa as lead rather than swapping roles. */
-  function swapPlayer() {
-    return false;
-  }
-  /* Called for the 'swap' event, wherever the swap came from (Tab, the avatar in the hud, the gamepad). */
-  function onPlayerSwapped(e) {
-    if (game.mode === 'solo') game.player = 'frost';
-    setSetting('player', game.player);
-    for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
-    inputSeen.swap = true;
   }
 
   /* ---- keyboard ---- */
@@ -5322,7 +5267,7 @@ function createGame() {
       if (!e.repeat && ADVANCE_KEYS.includes(e.code)) { e.preventDefault(); advanceStoryPage(true); }
       return;
     }
-    const active = document.activeElement;
+    const active = /** @type {HTMLElement | null} */ (document.activeElement);
     const onPseudoButton = active && active.getAttribute && active.getAttribute('role') === 'button' && !/^(BUTTON|A|INPUT)$/.test(active.tagName);
     if (playFlow.phase !== 'play') {
       /* menus: Enter / Space press the focused image button */
@@ -5360,7 +5305,7 @@ function createGame() {
     b.addEventListener('pointerdown', on);
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, off);
   }
-  /* The jump / magic / switch buttons are play controls: while a scene (chapter card, recall, clear page, quiz) is open they do nothing. */
+  /* The jump / magic / duo-switch buttons are play controls: while a scene (chapter card, recall, clear page, quiz) is open they do nothing. */
   function bindTap(id, fn) {
     const b = $(id);
     if (!b) return;
@@ -5371,8 +5316,8 @@ function createGame() {
   bindHold('tLeft', 'l'); bindHold('tRight', 'r');
   bindTap('tJump', () => pressPlay(touchId(), 'jump'));
   bindTap('tAct', () => pressPlay(touchId(), 'act'));
-  bindTap('tSwitch', () => {
-    if (game.mode === 'solo') { swapPlayer(); return; }
+  bindTap('tSwitch', () => {   // duo only (the button is hidden in solo): hand the touch buttons to the other sister
+    if (game.mode === 'solo') return;
     clearInput();
     touchDuoId = touchDuoId === 'frost' ? 'nuan' : 'frost';
     const m = view[touchDuoId].mark;
@@ -5403,7 +5348,7 @@ function createGame() {
       const px = k => parseFloat(cs[k]) || 0;
       const gap = px('rowGap');
       let others = 0, count = 0;
-      for (const n of body.children) {
+      for (const n of /** @type {HTMLElement[]} */ (Array.from(body.children))) {
         if (n === st || /^(SCRIPT|STYLE|LINK|META|TITLE)$/.test(n.tagName)) continue;
         const ns = getComputedStyle(n);
         if (ns.display === 'none' || ns.position === 'fixed' || ns.position === 'absolute') continue;
@@ -5423,6 +5368,22 @@ function createGame() {
   addEventListener('orientationchange', fitStage);
   document.addEventListener('fullscreenchange', fitStage);
   document.addEventListener('webkitfullscreenchange', fitStage);
+  /* Size changes the window events do not announce (the hint line or the touch pad appearing, a font arriving, the parent
+     strip toggling) are caught by a ResizeObserver on the page and on the blocks beside the stage. It only queues one refit
+     for the next animation frame, so a burst of changes costs one layout pass, and the refit changing #info's width settles
+     after one more round (same values, nothing changes). A browser without ResizeObserver refits once a second instead. */
+  let fitQueued = false;
+  function queueFit() {
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(() => { fitQueued = false; fitStage(); });
+  }
+  if (typeof ResizeObserver === 'function') {
+    const fitObserver = new ResizeObserver(queueFit);
+    fitObserver.observe(document.documentElement);
+    fitObserver.observe(document.body);
+    for (const n of document.body.children) if (n !== $('stage') && !/^(SCRIPT|STYLE|LINK|META|TITLE)$/.test(n.tagName)) fitObserver.observe(n);
+  } else setInterval(fitStage, 1000);
   /* Main: the flow title -> (prologue) -> recall -> chapter -> play -> clear -> next, and the frame loop.
      Order inside a frame (CONTRACT §5): solo -> companion.update(dt) -> g.step(dt); then the frame's events go to
      audioOnEvents -> talkOnEvents -> fx. Only this file steps the game. */
@@ -5464,12 +5425,10 @@ function createGame() {
   /* ---- settings that change the game itself ---- */
   function onSettingChanged(key, value) {
     if (key === 'mode') { game.mode = value; clearInput(); }
-    else if (key === 'player') game.player = value;
     else if (key === 'sound' && !value) voice.stop();
   }
   function applySettings() {
     game.mode = setting('mode');
-    game.player = setting('player');
   }
 
   /* ---- events ---- */
@@ -5528,7 +5487,7 @@ function createGame() {
     game.load(i);
     handleEvents();
     /* a card that fails to open must not strand the child on a blank screen: treat it as already closed */
-    const card = (fn, level) => new Promise(ok => { try { fn(level, ok); } catch (e) { console.error(e); ok(); } });
+    const card = (fn, level) => new Promise(/** @param {(done?: any) => void} ok */ ok => { try { fn(level, ok); } catch (e) { console.error(e); ok(); } });
     if (i > 0 && typeof showRecall === 'function') await card(showRecall, LEVELS[i - 1]);
     if (stale(tok)) return;
     if (typeof showChapter === 'function') await card(showChapter, lv);
@@ -5542,7 +5501,7 @@ function createGame() {
     if (game.index === i) game.state = 'play'; else game.start(i);
     if (companion) companion.reset();
     handleEvents();
-    Object.assign(inputSeen, { move: false, jump: false, magic: false, swap: false });
+    Object.assign(inputSeen, { move: false, jump: false, magic: false });
     playFlow.phase = 'play';
     flashPlayerMark(3);
     if (typeof startMusic === 'function') guarded('startMusic', () => startMusic(LEVELS[i].music));
@@ -5633,7 +5592,7 @@ function createGame() {
   }
 
   /* ---- frame loop ---- */
-  let last = 0, acc = 0, frameNo = 0;
+  let last = 0, acc = 0;
   function frame(ms) {
     try {
       const dt = Math.min(.05, (ms - last) / 1000 || 0);
@@ -5669,7 +5628,6 @@ function createGame() {
       updateFragment(now);
       fxFrame(dt, now, live);
       if (typeof hud === 'function') guarded('hud', () => hud(game));
-      if (++frameNo % 20 === 0) fitStage();
     } catch (e) {
       if (!reported.has('frame' + e.message)) { reported.add('frame' + e.message); console.error('[frame]', e); }
     }

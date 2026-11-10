@@ -27,10 +27,10 @@ export const duo = async (h) => {
   h.walk('nuan', 21);             // the last flower at (21,11): the garden is open
 };
 
-/* Solo: one sister does it all and takes every small star (Frost freezes the pond herself, otherwise the companion does). The
+/* Solo: one sister does it all and takes every small star (Elsa freezes the pond herself). The
    companion keeps away from the flowers until the child has opened one, so the first flower is the player's. */
 export const solo = async (h, me) => {
-  const other = me === 'nuan' ? 'frost' : 'nuan', g = h.g, step = g.step;
+  const other = 'nuan', g = h.g, step = g.step;
   const touches = (s, f) => s.x < (f.c + 1) * 40 + 4 && s.x + s.w > f.c * 40 - 4 && s.y < (f.r + 1) * 40 && s.y + s.h > f.r * 40;
   g.step = dt => {                // until the child has opened a flower the companion keeps out of reach of every one of them
     const none = g.flowers.every(f => !f.open);
@@ -48,7 +48,7 @@ export const solo = async (h, me) => {
   h.walk(me, 5);                  // and to the floor
   h.walk(me, 4);                  // flower at (4,11)
   h.hop(me, 6);                   // small star at (6,8)
-  if (me === 'frost') { h.face(me, 'right'); h.act(me); }     // otherwise the companion freezes the pond
+  h.face(me, 'right'); h.act(me); // Elsa freezes the pond herself
   h.waitFor(() => [7, 8, 9].every(c => h.g.grid[12][c] === 'I'), 6, 'ice on the pond');
   h.walk(me, 8);
   h.hop(me, 8);                   // small star at (8,9)

@@ -1,12 +1,9 @@
 import fs from 'node:fs';
-import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-export function elsaLeadsAndOldAnnaSavesKeepProgress({ assert }) {
-  const source = fs.readFileSync(new URL('../../src/view/00-core.js', import.meta.url), 'utf8');
-  const code = source.slice(source.indexOf('  const SETTING_CHECK'), source.indexOf('  function loadSave()'));
-  const api = vm.runInNewContext(code + '\n({defaultSave,sanitizeSave});');
+export function elsaLeadsAndOldAnnaSavesKeepProgress({ assert, loadLib }) {
+  const api = loadLib(['save'], {}, '({defaultSave,sanitizeSave})');
   assert.equal(api.defaultSave().settings.player, 'frost');
   const old = { settings: { player: 'nuan', sound: true }, rooms: { lake: { cleared: true, stars: [true, true, true] } },
     words: { ice: { heard: 12, quiz: 1 } }, outfit: { nuan: { dress: 2, hat: 'bow' } }, stickers: ['lake'], unlocked: { rooms: 3 } };

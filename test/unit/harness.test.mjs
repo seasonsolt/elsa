@@ -62,9 +62,14 @@ export function stepsDoNothingOnceTheRoomIsCleared({ logic, makeHarness, assert 
 
 export function soloModeOnlyDrivesThePlayer({ logic, makeHarness, assert }) {
   if (!logic.createCompanion) return;     // logic without companion.js (pre-S0 page): nothing to test
-  const h = makeHarness(logic, 'hall', { mode: 'solo', player: 'nuan' });
-  throwsStep(assert, () => h.walk('frost', 5), /companion/);
-  h.walk('nuan', 5);                      // the player is fine
+  const h = makeHarness(logic, 'hall', { mode: 'solo' });
+  throwsStep(assert, () => h.walk('nuan', 5), /companion/);   // Anna is driven by the companion
+  h.walk('frost', 5);                     // Elsa, the player, is fine
+}
+
+export function theSoloPlayerIsAlwaysElsa({ logic, makeHarness, assert }) {
+  assert.throws(() => makeHarness(logic, 'hall', { mode: 'solo', player: 'nuan' }), /always Elsa/);
+  assert.equal(makeHarness(logic, 'hall', { mode: 'solo' }).player, 'frost');
 }
 
 export function hopChecksTheLandingRowAndDelay({ logic, makeHarness, assert }) {

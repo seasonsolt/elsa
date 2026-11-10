@@ -1,4 +1,4 @@
-/* Unit tests for the solo-mode rules of logic.js (src/CONTRACT.md §1): KID_PHYS, relaxations, swap, blink, progress, guide, small stars,
+/* Unit tests for the solo-mode rules of logic.js (src/CONTRACT.md §1): KID_PHYS, relaxations, blink, progress, guide, small stars,
    memory pickup. The scenes are set up through the public API (g.blink puts a sister somewhere) and read from g. */
 import { DT } from '../harness.mjs';
 import { soloGame } from '../solo-kit.mjs';
@@ -29,10 +29,10 @@ export function kidPhysIsUsedInSoloOnly({ loadLogic, assert }) {
   assert.equal(duo.g.sisters.nuan.jumpBuf, 0.12);
 }
 
-export function defaultsAreSoloWithNuan({ logic, assert }) {
+export function defaultsAreSoloWithElsa({ logic, assert }) {
   const g = logic.createGame();
   assert.equal(g.mode, 'solo');
-  assert.equal(g.player, 'nuan');
+  assert.equal(g.player, 'frost');
   assert.deepEqual(plain(g.stars), { total: 0, got: 0 });
   assert.equal(g.memoryFound, false);
   assert.equal(g.guide !== undefined && typeof g.guide, 'function');
@@ -62,19 +62,13 @@ export function bothSistersDoubleJumpInSolo({ loadLogic, assert }) {
   }
 }
 
-export function swapTogglesThePlayerInSolo({ loadLogic, assert }) {
+export function theSoloPlayerCannotBeSwapped({ loadLogic, assert }) {
   const k = fresh({ loadLogic }, 'hall', { mode: 'solo' });
-  k.g.input.nuan.r = 1;
-  k.g.swap();
+  assert.equal(k.g.player, 'frost', 'Elsa leads from the first frame');
+  assert.equal(k.g.swap, undefined, 'there is no swap any more');
+  k.run(0.5, g => { g.input.frost.r = 1; });
   assert.equal(k.g.player, 'frost');
-  assert.deepEqual(plain(k.g.events.splice(0).filter(e => e.type === 'swap')), [{ type: 'swap', player: 'frost' }]);
-  assert.equal(k.g.input.nuan.r, 0, 'a swap lets go of the keys');
-  k.g.swap();
-  assert.equal(k.g.player, 'nuan');
-  const d = fresh({ loadLogic }, 'hall', { mode: 'duo' });
-  d.g.swap();
-  assert.equal(d.g.player, 'nuan', 'duo: nobody to swap');
-  assert.equal(d.g.events.filter(e => e.type === 'swap').length, 0);
+  assert.equal(k.log.filter(e => e.type === 'swap').length, 0);
 }
 
 export function blinkMovesASisterAndSaysSo({ loadLogic, assert }) {
@@ -269,20 +263,17 @@ export function loadingARoomResetsTheRoomState({ loadLogic, assert }) {
 }
 
 export function inSoloTheCompanionJoinsThePlayerAtTheDoor({ loadLogic, assert }) {
-  for (const player of ['nuan', 'frost']) {
-    const k = fresh({ loadLogic }, 'hall', { player });
-    for (const it of k.g.items.filter(i => i.kind !== '+')) k.place(player, it.c, it.r);
-    assert.equal(k.g.doorOpen, true);
-    const other = player === 'nuan' ? 'frost' : 'nuan';
-    assert.ok(Math.abs(k.col(other) - 20.5) > 3, 'the other sister is far from the door');
-    k.log.length = 0;
-    k.place(player, 20, 11);
-    assert.equal(k.g.state, 'clear', `${player} alone at the door is enough`);
-    const blink = k.log.find(e => e.type === 'blink' && e.who === other);
-    assert.equal(blink.who, other, 'the other sister is carried by magic');
-    assert.ok(Math.abs(blink.to.x - k.g.door.x) < 44);
-    assert.equal(k.count('clear'), 1);
-  }
+  const k = fresh({ loadLogic }, 'hall');
+  for (const it of k.g.items.filter(i => i.kind !== '+')) k.place('frost', it.c, it.r);
+  assert.equal(k.g.doorOpen, true);
+  assert.ok(Math.abs(k.col('nuan') - 20.5) > 3, 'Anna is far from the door');
+  k.log.length = 0;
+  k.place('frost', 20, 11);
+  assert.equal(k.g.state, 'clear', 'Elsa alone at the door is enough');
+  const blink = k.log.find(e => e.type === 'blink' && e.who === 'nuan');
+  assert.equal(blink.who, 'nuan', 'Anna is carried by magic');
+  assert.ok(Math.abs(blink.to.x - k.g.door.x) < 44);
+  assert.equal(k.count('clear'), 1);
   // duo: both have to be there
   const d = fresh({ loadLogic }, 'hall', { mode: 'duo' });
   for (const it of d.g.items.filter(i => i.kind !== '+')) d.place(it.kind === '*' ? 'frost' : 'nuan', it.c, it.r);
@@ -294,10 +285,10 @@ export function inSoloTheCompanionJoinsThePlayerAtTheDoor({ loadLogic, assert })
 
 export function theDoorWaitsForTheCompanionToSurface({ loadLogic, assert }) {
   const k = fresh({ loadLogic }, 'hall');
-  for (const it of k.g.items.filter(i => i.kind !== '+')) k.place('nuan', it.c, it.r);
-  k.g.sisters.frost.splash = 0.3;                    // the companion is in the middle of falling in the water
-  k.place('nuan', 20, 11);
-  k.g.sisters.frost.splash = 0.3;
+  for (const it of k.g.items.filter(i => i.kind !== '+')) k.place('frost', it.c, it.r);
+  k.g.sisters.nuan.splash = 0.3;                     // the companion is in the middle of falling in the water
+  k.place('frost', 20, 11);
+  k.g.sisters.nuan.splash = 0.3;
   assert.equal(k.g.state, 'play');
   k.run(0.1);
   assert.equal(k.g.state, 'play', 'not while she is in the water');

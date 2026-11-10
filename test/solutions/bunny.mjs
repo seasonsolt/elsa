@@ -27,8 +27,8 @@ export const duo = async (h) => {
   h.walk('nuan', 22);
 };
 
-/* Solo: the player does everything and the bunnies follow her (in solo she is always their leader). Frost freezes the pit
-   herself; when Nuan plays, the companion Frost freezes it as she walks up to it. */
+/* Solo: the player does everything and the bunnies follow her (in solo she is always their leader). Elsa freezes the pit
+   herself. */
 export const solo = async (h, me) => {
   h.hop(me, 3);                   // step 1
   h.walk(me, 4);                  // small star at (4,8)
@@ -40,7 +40,7 @@ export const solo = async (h, me) => {
   h.walk(me, 9);                  // the second one, on the mound, wakes up
   h.hop(me, 9);                   // small star at (9,8)
   h.hop(me, 11);                  // over the mound
-  if (me === 'frost') { h.face(me, 'right'); h.act(me); }     // otherwise the companion freezes the pit
+  h.face(me, 'right'); h.act(me); // Elsa freezes the pit herself
   h.waitFor(() => [12, 13, 14].every(c => h.g.grid[12][c] === 'I'), 6, 'ice on the pit');
   h.walk(me, 13);
   h.hop(me, 13);                  // memory fragment at (13,9)

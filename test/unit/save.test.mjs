@@ -1,12 +1,10 @@
 /* PLAN-2 A6: the save keeps "seen", never overwrites a save written by a newer build, and folds in another tab's progress.
-   The save block of src/view/00-core.js (between its `save-block` markers) is run for real in a vm on top of a fake
-   localStorage; nothing else of the view is loaded. */
-import fs from 'node:fs';
-import vm from 'node:vm';
+   The pure part (sanitize, version check, merge) is src/lib/save.js, loaded as a file. The storage side (saveWrite, the storage
+   event) is the real src/view/00-core.js run in the fake page of input-safety.test.mjs on top of a fake localStorage. */
+import { loadLib } from '../harness.mjs';
+import { viewEnv } from './input-safety.test.mjs';
 
-const source = fs.readFileSync(new URL('../../src/view/00-core.js', import.meta.url), 'utf8');
-const BEGIN = '/* >>> save-block', END = '/* <<< save-block */';
-const block = source.slice(source.indexOf(BEGIN), source.indexOf(END));
+const pureSave = () => loadLib(['save'], {}, '({ sanitizeSave, mergeSaveInto, mergeSaves, saveVersionTooNew, storedSaveIsNewer, defaultSave })');
 
 function fakeStorage(initial = {}, { failWrites = false } = {}) {
   const data = new Map(Object.entries(initial));
@@ -18,24 +16,17 @@ function fakeStorage(initial = {}, { failWrites = false } = {}) {
   };
 }
 
-/* Boots the save block like a page load would. `listeners` collects what it registers with addEventListener. */
+/* Boots 00-core like a page load would, on this storage. `fire` calls the window listeners it registered (storage, pagehide). */
 function boot(storage) {
-  const listeners = {};
-  const context = {
-    window: { localStorage: storage }, console, JSON, Math, Number, Object, Array, Set, String, Boolean,
-    setTimeout: () => 1, clearTimeout() {},
-    addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); },
-    onSettingChanged() {},
-  };
-  const api = vm.runInNewContext(block + '\n({ save, saveWrite, setSetting, sanitizeSave, mergeSaveInto, mergeSaves, saveVersionTooNew, storedSaveIsNewer, defaultSave });', context);
-  return { api, listeners, fire: (type, e) => (listeners[type] || []).forEach(fn => fn(e)) };
+  const env = viewEnv.load(['00-core'], { localStorage: storage, globals: { onSettingChanged() {} }, exports: ['save', 'saveWrite', 'setSetting'] });
+  const fire = (type, e) => env.windowListeners.filter(l => l.type === type).forEach(l => l.fn(e));
+  return { api: env.exports, fire };
 }
 const plain = x => JSON.parse(JSON.stringify(x));
 const KEY = 'icecastle.save';
 
 export function seenSurvivesSanitizeAndAReload({ assert }) {
-  const { api } = boot(fakeStorage());
-  const clean = api.sanitizeSave({ words: { heart: { heard: 0, quiz: 0, seen: true }, door: { heard: 3, quiz: 1 } } });
+  const clean = pureSave().sanitizeSave({ words: { heart: { heard: 0, quiz: 0, seen: true }, door: { heard: 3, quiz: 1 } } });
   assert.equal(clean.words.heart.seen, true, 'seen is kept');
   assert.equal('seen' in clean.words.door, false, 'a word never met on a card gains no flag');
   assert.equal(clean.words.door.heard, 3);
@@ -77,7 +68,7 @@ export function aSaveFromANewerBuildIsPlayedButNeverOverwritten({ assert }) {
 }
 
 export function versionHelpersOnlyFlagStrictlyNewerSaves({ assert }) {
-  const { api } = boot(fakeStorage());
+  const api = pureSave();
   assert.equal(api.saveVersionTooNew({ v: 3 }), true);
   assert.equal(api.saveVersionTooNew({ v: 2 }), false);
   assert.equal(api.saveVersionTooNew({ v: 1 }), false);
@@ -102,7 +93,7 @@ const tabB = () => ({
 });
 
 export function mergingTwoSavesTakesTheUnionAndTheLargerCounters({ assert }) {
-  const { api } = boot(fakeStorage());
+  const api = pureSave();
   const m = plain(api.mergeSaves(tabA(), tabB()));
   assert.deepEqual(Object.keys(m.rooms).sort(), ['hall', 'lake', 'slope']);
   assert.deepEqual(m.rooms.hall, { cleared: true, stars: [true, true, true], memory: true });
@@ -122,7 +113,7 @@ export function mergingTwoSavesTakesTheUnionAndTheLargerCounters({ assert }) {
 }
 
 export function mergingIsIdempotentAndNeverLosesAnything({ assert }) {
-  const { api } = boot(fakeStorage());
+  const api = pureSave();
   const once = plain(api.mergeSaves(tabA(), tabB()));
   const twice = plain(api.mergeSaves(once, tabB()));
   assert.deepEqual(twice, once, 'merging the same save a second time changes nothing');

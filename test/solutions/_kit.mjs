@@ -70,4 +70,4 @@ export function ferry(h, id, i, o) { boardFloe(h, id, i, o); leaveFloe(h, id, i,
 
 /** A fresh solo game of `room` for a small scene check (the solutions use it to prove how the companion behaves in the room's own toy):
  *  place the sisters with h.place and let the game run with h.waitFor / h.wait. */
-export function scene(room, me) { return makeHarness(loadLogic(), room, { mode: 'solo', player: me }); }
+export function scene(room) { return makeHarness(loadLogic(), room, { mode: 'solo' }); }

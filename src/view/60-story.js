@@ -3,7 +3,7 @@
      paused exactly like before. Helpers (uxButton, uxWordCard, ...) live in 70-ui.js and are only called at run time. */
   let story = null;
 
-  /* The prologue: 3 pages, picture + one narrator line each (lines p1..p3 name their art in lines.json). */
+  /* The prologue: 3 pages, picture + one line from Anna each (lines p1..p3 name their art in lines.json). */
   const PROLOGUE = [
     { vo: 'p1', get art() { return uxLineArt('p1', 'story_prologue'); } },
     { vo: 'p2', get art() { return uxLineArt('p2', 'story_winter'); } },
@@ -35,7 +35,7 @@
     const modal = uxState.modal;
     if (!modal && !story) return;
     uxWake();
-    const t = e.target, onBtn = t && t.classList && t.classList.contains && (t.classList.contains('ux-btn') || t.classList.contains('ux-card') || t.classList.contains('ux-tile'));
+    const t = /** @type {HTMLElement | null} */ (e.target), onBtn = t && t.classList && t.classList.contains && (t.classList.contains('ux-btn') || t.classList.contains('ux-card') || t.classList.contains('ux-tile'));
     if (modal) {
       if (e.code === 'Escape') { e.preventDefault(); $('modal').textContent = ''; uxState.modal = null; }
       else if (!onBtn && e.code !== 'F11' && !e.metaKey && !e.ctrlKey) e.stopImmediatePropagation();
@@ -101,7 +101,7 @@
   }
   const uxPopSlot = (root, k) => { const n = root.querySelector(`[data-pop="${k}"]`); if (n) n.classList.add('show'); return n; };
 
-  /* Room picture, one narrator sentence, then the 3 words pop up one by one: "this level we look for heart", "say it", 1.5 s ear/mouth pause. */
+  /* Room picture, one sentence from Anna, then the 3 words pop up one by one: "this level we look for heart", "say it", 1.5 s ear/mouth pause. */
   function showChapter(level, done) {
     const lv = uxLevel(level), words = uxRoomWords(lv), s = storyStrict(uxScreen('chapter', true));
     uxInputReset();
@@ -119,7 +119,7 @@
     const cue = root.querySelector('#uxCue'), ear = root.querySelector('#uxEar'), mouth = root.querySelector('#uxMouth');
     const setCue = (k, kind) => {
       cue.setAttribute('transform', `translate(${x0 + k * (cw + gap) + cw / 2} 262)`);
-      cue.setAttribute('opacity', kind ? 1 : 0);
+      cue.setAttribute('opacity', kind ? '1' : '0');
       ear.setAttribute('visibility', kind === 'ear' ? 'visible' : 'hidden');
       mouth.setAttribute('visibility', kind === 'mouth' ? 'visible' : 'hidden');
     };
@@ -194,13 +194,13 @@
       <rect width="960" height="520" fill="#0d1438" opacity=".55"/>
       <g id="uxStars" class="ux-star" style="transform:translate(480px,170px) scale(1)">${uxStarsHtml(got)}</g>
       <g id="uxBody"></g><g id="uxCtl"></g></g>`);
-    const root = $('overlay'), body = root.querySelector('#uxBody'), ctl = root.querySelector('#uxCtl'), stars = root.querySelector('#uxStars');
+    const root = $('overlay'), body = root.querySelector('#uxBody'), ctl = root.querySelector('#uxCtl'), stars = /** @type {HTMLElement} */ (root.querySelector('#uxStars'));
     const word = el => { uxNudge(el); uxWordVoice(el.dataset.word); };
     const mark = () => { const me = ++s.seq; return () => uxAlive(s) && s.seq === me; };
     const setCtl = html => { ctl.innerHTML = html; uxBind(ctl, { next: () => s.onKey && s.onKey(), skip: () => finishPage(), replay: () => { if (uxAlive(s)) { uxEnd(s, null); uxHooks.replay(idx); } }, done: () => uxEnd(s, done) }); };
     const nextBtn = (act, ui) => uxButton({ act, ui, icon: 'next', x: 886, y: 452, r: 38, plate: 'gold' });
 
-    /* A: stars pop, narrator sentence */
+    /* A: stars pop, Anna's sentence */
     const phaseStars = () => {
       s.phase = 1; const ok = mark();
       s.onKey = () => { if (ok()) phaseWords(); };
@@ -291,7 +291,7 @@
                 solved = true;
                 uxSfx('quiz_right'); uxConfetti(body, 480, 250, 36);
                 uxWordRec(target.id).quiz = (uxWordRec(target.id).quiz || 0) + (wrong ? 0 : 1);
-                body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', 0); });
+                body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', '0'); });
                 uxLine('quiz_right_' + (1 + q % 3), { interrupt: true }).then(() => resolve());
               } else {
                 wrong++; uxSfx('quiz_wrong');

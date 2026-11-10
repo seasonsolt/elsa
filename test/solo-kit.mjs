@@ -2,15 +2,15 @@
    Unit tests may set a scene up through the public API (g.blink moves a sister, g.input / g.press drive her) and may read anything. */
 import { DT } from './harness.mjs';
 
-/** A fresh solo game in room `id` with a companion. `edit(levelObject)` may change the room's data (it works on a private copy of the logic).
+/** A fresh solo game in room `id` with a companion (Elsa is the player, Anna the companion). `edit(levelObject)` may change the room's data (it works on a private copy of the logic).
  *  Returns { g, co, logic, log, run(sec, each?), step(each?), at(id), col(id) }. */
-export function soloGame({ loadLogic }, id, { player = 'nuan', mode = 'solo', edit = null, companion = true } = {}) {
+export function soloGame({ loadLogic }, id, { mode = 'solo', edit = null, companion = true } = {}) {
   const logic = loadLogic();
   const index = logic.levels.findIndex(l => l.id === id);
   if (index < 0) throw new Error(`no room '${id}'`);
   if (edit) edit(logic.LEVELS[index]);
   const g = logic.createGame();
-  g.mode = mode; g.player = player;
+  g.mode = mode;
   g.start(index);
   const co = companion ? logic.createCompanion(g) : null;
   if (co) co.reset();

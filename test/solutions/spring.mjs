@@ -31,7 +31,7 @@ export const duo = async (h) => {
   h.walk('nuan', 21);             // the door
 };
 
-/* Solo: one sister does it all and takes every small star. The companion follows by the mushrooms. */
+/* Solo: Elsa does it all and takes every small star. The companion follows by the mushrooms. */
 export const solo = async (h, me) => {
   h.hop(me, 2);                   // small star at (2,8)
   h.walk(me, 3);
@@ -52,7 +52,7 @@ export const solo = async (h, me) => {
   h.walk(me, 18);                 // off the ledge
   h.walk(me, 21);                 // the door
   if (!h.g.memoryFound) throw new Error('spring: the memory fragment was not found');
-  const other = me === 'nuan' ? 'frost' : 'nuan';
+  const other = 'nuan';
   const used = h.log.filter(e => e.type === 'bounce' && e.who === other).length;
   if (used < 2) throw new Error(`spring: the companion bounced ${used} times, she should follow the player up by the mushrooms`);
 };

@@ -2,9 +2,11 @@
 
    Loading:   loadLogic()                    evaluates src/*.js in filename order (companion, levels, logic), like build_page.py
               loadLogic({ html: 'file' })    evaluates the <script id="logic"> of a built page instead
-   Driving:   makeHarness(logic, levelId, { mode, player }) -> h
+   Driving:   makeHarness(logic, levelId, { mode }) -> h
               h.walk / hop / act / face / drop / wait / waitFor / place, see below.
-   Ad-hoc:    loadMap(rows, extra, { mode, player }) -> h     a tiny hand-made room (a private copy of the logic, src/levels.js untouched)
+   View libs: loadLib(names, context, expr)  evaluates src/lib/<name>.js (pure view helpers, no document/window) in a fresh vm
+              context holding the stand-ins you pass, and returns the value of `expr`, e.g. '({ voice })'
+   Ad-hoc:    loadMap(rows, extra, { mode }) -> h     a tiny hand-made room (a private copy of the logic, src/levels.js untouched)
    Every step advances the game with g.step(1/120) and acts ONLY through the input API (g.input[id].l/r/d and g.press),
    it never writes physics state. Reading positions is fine, a player sees the screen.
 
@@ -60,6 +62,20 @@ export function loadLogic({ html = null } = {}) {
   return Object.assign(api, { levels, source });
 }
 
+/** The src/lib file names (without .js) in build order. */
+export function libNames() {
+  return fs.readdirSync(path.join(ROOT, 'src', 'lib')).filter(f => f.endsWith('.js')).sort().map(f => f.slice(0, -3));
+}
+
+/** Evaluate the named src/lib files (all of them when `names` is null) as ONE script in a new vm context, the way the built page
+ *  runs them in the view scope. `context` holds the stand-ins for whatever the libs take from the page (see the header of each
+ *  lib file); `expr` is evaluated last and its value returned, e.g. '({ voice })'. */
+export function loadLib(names, context = {}, expr = 'undefined') {
+  const list = names || libNames();
+  const code = list.map(n => fs.readFileSync(path.join(ROOT, 'src', 'lib', `${n}.js`), 'utf8')).join('');
+  return vm.runInNewContext(code + '\n' + expr, context, { filename: `lib:${list.join('+')}` });
+}
+
 /** A tiny hand-made room for unit tests, on a private copy of the logic (the real LEVELS are not touched).
  *  rows: strings, the BOTTOM rows of a 13 x 24 map. Missing top rows are empty air; a row shorter than 24 is padded by repeating its last
  *  character (so '#####' is a floor to the edge and '#...' ends in air). Row 0 is made of walls. Needs one 'E' and one 'A'.
@@ -94,22 +110,19 @@ export function makeHarness(logic, levelId, opts = {}) {
   const level = logic.levels[index];
   const isLast = index === logic.levels.length - 1;
   const mode = opts.mode || 'duo';
-  const player = opts.player || null;
+  if (opts.player && opts.player !== 'frost') throw new Error(`the solo player is always Elsa ('frost'), got player '${opts.player}'`);
+  const player = mode === 'solo' ? 'frost' : null;   // the solo lead: a solution drives only her, Anna (the companion) does the rest
   const trace = !!opts.trace;
 
   const g = logic.createGame();
-  /* Solo mode (PLAN A1, src/CONTRACT.md §1): g.mode / g.player are set before g.start, the companion is driven once per step
+  /* Solo mode (PLAN A1, src/CONTRACT.md §1): g.mode is set before g.start (g.player is Elsa), the companion is driven once per step
      BEFORE g.step and only touches g.input / g.press / g.blink. Duo sets g.mode = 'duo' explicitly (the default is 'solo'). */
   let companion = null;
   g.mode = mode;
-  if (mode === 'solo') {
-    if (!player) throw new Error('solo mode needs { player: "frost" | "nuan" }');
-    g.player = player;
-  }
   g.start(index);
   if (mode === 'solo') {
     if (!logic.createCompanion) throw new Error('solo mode needs createCompanion() in companion.js');
-    companion = logic.createCompanion(g, { player });
+    companion = logic.createCompanion(g);
     companion.reset();
   }
 

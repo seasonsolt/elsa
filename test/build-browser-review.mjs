@@ -31,7 +31,7 @@ const qa = String.raw`
   qaPanel.querySelector('#qa-rooms').onclick = () => {
     const i = +qaSelect.value;
     voice.stop(); uxState.modal = null; $('modal').textContent = ''; story = null; uxClearOverlay();
-    game.mode = 'solo'; game.player = 'frost'; game.start(i); companion.reset(); handleEvents(); playFlow.phase = 'play';
+    game.mode = 'solo'; game.start(i); companion.reset(); handleEvents(); playFlow.phase = 'play';
     save.flags.tutorial = true; playFlow.tutoring = false;
     qaOutput.textContent = 'Room ' + LEVELS[i].id + ' (normal keyboard input)';
   };

@@ -1,8 +1,6 @@
-import fs from 'node:fs';
-import vm from 'node:vm';
+/* The voice queue is src/lib/voice.js; it is loaded as a file with stand-ins for the page names it uses (audio, bus, game, LINES, ...). */
+import { loadLib } from '../harness.mjs';
 
-const source = fs.readFileSync(new URL('../../src/view/40-audio.js', import.meta.url), 'utf8');
-const voiceSource = source.slice(source.indexOf('  const voice = (() => {'), source.indexOf('  const onSubtitle'));
 const flush = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
 
 function setup({ missing = false, sound = true, fetchImpl = null } = {}) {
@@ -35,7 +33,7 @@ function setup({ missing = false, sound = true, fetchImpl = null } = {}) {
     setTimeout: (fn, ms) => { timers.set(++timer, { fn, ms }); return timer; },
     clearTimeout: id => timers.delete(id), performance: { now: () => 0 }, console: { warn: (...a) => warns.push(a.join(' ')) },
   };
-  const voice = vm.runInNewContext(voiceSource + '\nvoice;', context);
+  const voice = loadLib(['voice'], context, 'voice');
   const fire = ms => [...timers.entries()].filter(([, t]) => t.ms === ms).forEach(([id, t]) => { timers.delete(id); t.fn(); });
   return { voice, heard, sources, timers, context, warns, fetched, fire };
 }

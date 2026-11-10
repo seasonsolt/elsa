@@ -134,7 +134,7 @@ export async function gamepadStartIsEnterLikeButOnlyAfterTheQuietSecond({ assert
 }
 
 export async function recallIgnoresSpaceButSkipButtonAndEnterWork({ assert }) {
-  const { env, api, overlay } = setupWithStory({ wordMode: 'manual' });
+  const { env, api } = setupWithStory({ wordMode: 'manual' });
   env.manualWaits = true;
   let done = 0;
   api.showRecall('hall', () => done++);

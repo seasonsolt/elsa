@@ -23,7 +23,7 @@ export const duo = async (h) => {
 /* Solo: the player plays the melody and takes every small star; the companion must never stand on a note step (checked after every
    step of the game) and never plays one (in solo only the player's steps count). */
 export const solo = async (h, me) => {
-  const other = me === 'nuan' ? 'frost' : 'nuan', g = h.g, step = g.step;
+  const other = 'nuan', g = h.g, step = g.step;
   g.step = dt => {
     step(dt);
     const s = g.sisters[other];

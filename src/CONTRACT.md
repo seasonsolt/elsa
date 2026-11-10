@@ -15,20 +15,19 @@ PLAN.md is still the spec. This file only pins down names and shapes.
 | d2. view-play | `src/view/00-core.js` `src/view/10-stage.js` `src/view/20-sisters.js` `src/view/30-fx.js` `src/view/80-input.js` `src/view/90-main.js` |
 | e. view-audio-talk | `src/view/40-audio.js` `src/view/50-talk.js` `art/narration.py` |
 
-`art/build_page.py` belongs to the main session. It concatenates `src/*.js` (filename order) into the logic script and `src/view/*.js` (filename order) into one shared view scope, wrapped in `(() => { ... })()`.
+`art/build_page.py` belongs to the main session. It concatenates `src/*.js` (filename order) into the logic script, then `src/lib/*.js` and `src/view/*.js` (each in filename order, lib first) into one shared view scope, wrapped in `(() => { ... })()`. Phase two added `src/lib/`; ownership for phase two is in section 12.
 
-**Shared view scope rule:** all `src/view/*.js` files share ONE scope. Any file may call a function from another file, but top-level code must not *execute* calls into a later file while loading. Use `function` declarations (hoisted) for every cross-file API. Top-level `const`/`let` may be read by other files only inside functions.
+**Shared view scope rule:** all `src/lib/*.js` and `src/view/*.js` files share ONE scope. Any file may call a function from another file, but top-level code must not *execute* calls into a later file while loading. Use `function` declarations (hoisted) for every cross-file API. Top-level `const`/`let` may be read by other files only inside functions.
 
 ## 1. Logic API (agent a; node-testable, no DOM)
 
-Current story/view policy: Elsa (`frost`) is always the solo lead, Anna (`nuan`) assists. Save sanitization migrates the old Anna selection to Elsa without losing progress. The generic engine below still supports either controlled character for physics regression tests and legacy callers; the story UI no longer exposes swapping.
+Current story/view policy: Elsa (`frost`) is always the solo lead, Anna (`nuan`) is the companion. The sisters cannot trade places and there is no solo run with Anna as the player (removed in phase two, PLAN-2 B1); duo mode keeps both sisters player-controlled. Save sanitization still migrates an old `settings.player: 'nuan'` to Elsa without losing progress.
 
 ```
 KID_PHYS = { ...PHYS, speed: 180, coyote: 0.14, buffer: 0.18 }   // used when g.mode === 'solo'
 createGame() → g, plus:
   g.mode: 'solo' | 'duo'        default 'solo'; set before g.start/g.load
-  g.player: 'nuan' | 'frost'    player-controlled sister in solo (default 'nuan')
-  g.swap()                      toggles g.player (solo); emits {type:'swap', player}
+  g.player: 'frost'             the player-controlled sister in solo: fixed, nothing assigns it
   g.blink(id, x, y)             teleports sister id (feet-safe position); emits {type:'blink', who:id, from:{x,y}, to:{x,y}}
   g.progress                    integer, increments on any real progress: collect, melt, freeze, block, gate open, door open,
                                 memory found, player reaching a guide target. Not used for the stuck timer (see guide in section 5).
@@ -39,7 +38,7 @@ New tile '+' = small star (decorative, A3). Collected by either sister in any mo
   emits {type:'collect', kind:'+', x, y, n}   n = 1-based count of stars got in this room
 '+' is added to TILE_CHARS.live. Each of the 4 current rooms gets 3–5 '+' (reachable; solutions must still pass).
 Memory fragment: if not already in logic, logic owns pickup at level.memory; emits {type:'memory', id: level.memoryId}.
-Splash event stays {type:'splash', who}; respawn {type:'respawn', who}.
+Splash event is {type:'splash', x, y} (where the water was hit, no `who`: the view only draws a puff); the sister who fell is named by the {type:'respawn', who} that follows when she is put back.
 Companion (companion.js): createCompanion(g) → { reset(), update(dt) }  — called by the view every fixed step BEFORE g.step(dt)
   in solo mode only. Writes only g.input[other] and g.press(other, ...), plus g.blink.
   companion.idle → seconds the player has not moved (view reads it for encouragement lines).
@@ -53,7 +52,7 @@ Level data cleanup (a): remove `start`, `open`, `chapter`, `diary`, `hint`, `par
 save                       the object of PLAN §5 (v:2), loaded at startup, defaults on any failure; migrates icecastle.stars
 saveWrite()                persist (try/catch)
 setting(key) / setSetting(key, value)   subtitles, english ('words' | 'words+phrases'), mode, player, sound
-noteWordHeard(wordId)      increments save.words[id].heard (+ dev counter, see §4)
+noteWordHeard(wordId)      increments save.words[id].heard (+ dev counter, see §4); lives in src/lib/heard.js
 markRoom(levelId, patch)   merges into save.rooms[id]; unlock next room on clear
 ```
 
@@ -78,22 +77,22 @@ All keys live in `lines.json` → `lines`. `<lv>` is the level id (`hall`, `lake
 | `tutor_move` `tutor_jump` `tutor_magic` `tutor_fullscreen` | Anna | first-time keyboard teaching; fullscreen tip for parents |
 | `splash_<n>` | Anna | encouragement after falling in water, n = 1..4 |
 | `idle_<n>` | Anna | player idle > 3 s, n = 1..4 |
-| `miss_frost` `miss_nuan` | the other sister | sisters far apart (「姐姐，你在哪儿？」) |
+| `miss_frost` | Anna | sisters far apart (「姐姐，你在哪儿？」) |
 | `together_<n>` | either | reunion, n = 1..2 (「Yay! 我们在一起啦！」) |
 | `mem_<memoryId>` | Anna | memory fragment narration (≤ 15 s); memoryIds are those in levels.js |
 | `me_frost` `me_nuan` | that sister | 「认识她们」 self-introduction |
 | `win` `end` | Anna | ending pages |
-| `ui_<name>` | Anna | hover name. names: `start` `continue` `next` `replay` `back` `words` `stickers` `wardrobe` `settings` `hint` `fullscreen` `swap` `solo` `duo` `sound` `quiz_skip` `meet` `rooms` `room_<lv>` |
+| `ui_<name>` | Anna | hover name. names: `start` `continue` `next` `replay` `back` `words` `stickers` `wardrobe` `settings` `hint` `fullscreen` `solo` `duo` `sound` `quiz_skip` `meet` `rooms` `room_<lv>` |
 | `cheer_<n>` | either | short fixed phrases: Yay / Good job / Let's go / Wow, n = 1..4 |
 
-Current lines use `who: "frost" | "nuan"`; every English-bearing lesson/phrase belongs to Anna, Elsa speaks Chinese only. Anna's zh/en entries must have the same bilingual voice identity and pitch; English can be slower, never a different speaker. `narrator` is only a deprecated Anna voice alias and is not used by active lines. The parser retains legacy `companion` support and its two generated file variants, but runtime always selects Anna for such a line. Segment: string (zh voice of that speaker) | `{"w": wordId}` (en voice, the word's `en`) | `{"en": "Yay!"}` (fixed phrase; skipped/replaced by its zh gloss when setting english === 'words').
+Current lines use `who: "frost" | "nuan"`; every English-bearing lesson/phrase belongs to Anna, Elsa speaks Chinese only. Anna's zh/en entries must have the same bilingual voice identity and pitch; English can be slower, never a different speaker. Elsa has a Chinese voice only (`voices.frost` has no `en`; art/narration.py rejects English segments in her lines). The parser retains legacy `companion` support and its two generated file variants, but runtime always selects Anna for such a line. Segment: string (zh voice of that speaker) | `{"w": wordId}` (en voice, the word's `en`) | `{"en": "Yay!"}` (fixed phrase; skipped/replaced by its zh gloss when setting english === 'words').
 
 `words.json`: `[{ "id", "en", "zh", "icon": "word_<id>", "room": "<lv>" | null }]`. Write all ~38 words from PLAN A5 now (rooms 5–10 included, ids from the table; `room` uses these future ids: `slope` `spring` `bunny` `floe` `music` `garden` for rooms 3,5,6,7,8,10 — and `hall` `lake` `tower` `ballroom` for 1,2,4,9).
 
 ## 4. Audio and talk API (agent e)
 
 ```
-voice.line(key, opts?) → Promise   play vo_<key>.mp3 (or __frost/__nuan for companion lines, by g.player);
+voice.line(key, opts?) → Promise   play vo_<key>.mp3 (a legacy `who: "companion"` line plays vo_<key>__nuan.mp3, Anna's; the `__w` suffix is the words-only variant);
                                    ducks music; opts {interrupt:true|false, priority}; resolves when finished or skipped;
                                    counts words only after audible completion; resolves true then, otherwise false; fires subtitle callback
 voice.word(wordId) → Promise       Anna's word_<id>.mp3 (slow standard pronunciation); same voice as mixed lessons
@@ -122,7 +121,7 @@ d1 (60-story, 70-ui):
   showWordbook()                   pages per room, grey silhouettes for unheard, click = voice.word
   showSettings()                   opened by 2 s long-press on the gear; subtitles / english / mode
   hoverable(el, uiName)            adds hover scale + voice.ui(uiName); every button uses it; hit area ≥ 64 CSS px
-  hud(g)                           avatar (click = swap), counters with icons, hint bulb (click = voice.line(g.guide().say)), fullscreen,
+  hud(g)                           avatar (Elsa big, Anna small; not clickable), counters with icons, hint bulb (click = voice.line(g.guide().say)), fullscreen,
                                    keyboard diagram (4 keys light up on press) — d2 calls hud(g) every frame
   subtitleView                     renders onSubtitle when subtitles on
 d2 (00-core, 10-stage, 20-sisters, 30-fx, 80-input, 90-main):
@@ -130,7 +129,7 @@ d2 (00-core, 10-stage, 20-sisters, 30-fx, 80-input, 90-main):
   guide: light column on g.guide() target, edge arrow when off-screen, stuck timer on the target:
          10 s → voice.line(target.say), 20 s → sparkle path; resets only when the target changes (g.progress does
          not: building ice or pausing a floe over and over is not getting closer)
-  input: solo keys ← → ↑ Space, Tab = g.swap(); duo keeps A/D/W/S/F and ← → ↑ ↓ Enter; Gamepad optional
+  input: solo keys ← → ↑ Space; duo keeps A/D/W/S/F and ← → ↑ ↓ Enter; Gamepad optional
   blink fx: star-light fade out/in + sfx('blink'); small-star '+' drawing using fx_star
   tutorial: first room first time → tutor_move / tutor_jump / tutor_magic, keyboard diagram highlights the key being taught
   flow: title → (first time: prologue) → recall(prev) → chapter → play → clear → next
@@ -179,7 +178,7 @@ Tiles (already reserved in TILE_CHARS.future; a moves them to live):
 | `R` | lost bunny | Entity, not a tile after load. States `lost` → `follow` (when any sister comes within 1.5 tiles; Nuan's lantern: within 3 tiles if Nuan) → `home` (when it reaches a `N` tile while following). Followers trail the player (≈ 30 px apart, hop over 1-tile steps; blink to the player if > 6 tiles away). Emits `{type:'bunny', id, state}`. All bunnies home = room's item requirement (door opens when every item + every bunny is done). |
 | `N` | bunny home | Non-solid decoration tile where bunnies settle. |
 | `M` | moving ice floe | Entity 1 tile tall, width = run of consecutive `M` in the map. Moves horizontally at 60 px/s. It reverses when the tile ahead in its own row is solid, or when the tile below its leading edge is not water `~` (so it shuttles along the water surface; b places `M` runs directly above `~` rows). Solid on top, carries riders. Frost's act within 3 tiles pauses it 3 s: `{type:'floe', id, paused:true|false}`. |
-| `1`–`5` | note steps | Solid steps. Stepping onto one emits `{type:'note', n, ok}` (n = 1..5 → do re mi so la). Level field `melody: [n, ...]`; stepping the next expected note advances `g.melody.pos`; a wrong note does nothing bad (pos stays, `ok:false`). Completing it emits `{type:'melody'}` and opens the door. The companion never steps on notes. |
+| `1`–`5` | note steps | Solid steps. Stepping onto one emits `{type:'note', n, ok, who, c, r, pos}` (n = 1..5 → do re mi so la, i.e. C D E G A, drawn red orange yellow green blue). Level field `melody: [n, ...]`; stepping the next expected note advances `g.melody.pos`; a wrong note does nothing bad (pos stays, `ok:false`). Completing it emits `{type:'melody'}` and opens the door. The companion never steps on notes. |
 | `F` | ice flower | Non-solid. Any sister touching it (solo) / Nuan touching or acting within 2 tiles (duo) makes it bloom: `{type:'bloom', c, r, n, total}`. In `goal:'garden'` rooms, all flowers bloomed = clear (then `win` since it is the last room). |
 
 State the view can read: `g.floes[] {id,x,y,w,vx,paused}`, `g.bunnies[] {id,x,y,state,dir}`, `g.melody {seq,pos}` (or null), `g.flowers[] {c,r,open}`, `g.bunniesHome` count. Springs and slopes are read from `g.grid`.
@@ -198,3 +197,49 @@ Companion (b): springs → follow through; bunnies → nothing; floes → wait f
 ## 11. Rewards (agent e)
 
 Save fields of PLAN §5: `stickers[]`, `board[{id,x,y}]`, `outfit`. Award rules per PLAN B2 (room clear → `<lv>`, all 3 stars → `<lv>_gold`, every 5 words heard → `words5_<k>`); awarding happens in `markRoom`-adjacent code in 75-rewards (`awardStickers(levelId)` called from showClear — e adds the one-line hook in 70-ui). Wardrobe unlocks at 3 / 6 / 10 stickers. Until outfit images exist, the wardrobe shows the dresses as locked silhouettes and the hats only if their images exist — never broken images.
+
+---
+
+# Phase two addendum (PLAN-2: fixes, clean-up, tooling)
+
+Everything above still holds except where a section above was corrected in place (splash and note event shapes, the fixed player, the voice file names). This addendum fixes the names that phase two added.
+
+## 12. Ownership and files
+
+| Area | Files |
+|---|---|
+| Logic group (one `<script id="logic">`) | `src/companion.js` `src/levels.js` `src/logic.js`: plain globals, filename order, no module syntax |
+| Pure view helpers (`src/lib/`, new) | `save.js` `voice.js` `heard.js` `play-gate.js`: plain global scripts without `document` / `window`; inlined in front of the view fragments, loaded directly by the node tests |
+| View fragments | `src/view/00-core.js` ... `90-main.js`, one shared scope, filename order |
+| Content | `src/content/lines.json` `words.json`; `exposure.md` is GENERATED by `node test/exposure.mjs --write`, never edited by hand |
+| Voice | `art/narration.py` and `game/vo_manifest.json` (written by the tool, not by hand) |
+| Gate | `package.json` `eslint.config.mjs` `tsconfig.json` `types/page.d.ts` `Makefile` `.github/workflows/check.yml` |
+
+Agents edit only the files their package lists; a change needed elsewhere goes into the delivery note.
+
+## 13. `src/lib` rules
+
+- A lib file is a plain script written like a view fragment (indented two spaces, ends with a newline). It declares top-level `const` / `function` names that the rest of the view may use, and lists in its header the page names it expects ("Free names").
+- It must not touch `document` or `window` (checked with `grep -rnE "document|window" src/lib`); the page (audio graph, storage, DOM) reaches it only through those free names, so a test can supply stand-ins.
+- Tests load it with `loadLib(names, context, expr)` from `test/harness.mjs`; tests do not cut view sources apart with `source.indexOf` / `source.slice`.
+- The build puts lib files before the view fragments in the same IIFE, so view code and tests see the same names.
+- What lives where: `save.js` `SETTING_CHECK` `SAVE_VERSION` `defaultSave` `sanitizeSave` `saveVersionTooNew` `storedSaveIsNewer` `mergeSaveInto` `mergeSaves` (the `save` object, `saveWrite`, `loadSave` and the storage event stay in `view/00-core.js`); `voice.js` the `voice` queue (`40-audio.js` keeps the audio graph and `sfx`); `heard.js` `heardLog` and `noteWordHeard`; `play-gate.js` `canPlay`.
+
+## 14. Fixed player
+
+`g.player` is `'frost'` and nothing assigns it. In solo no key, button, event or line lets the sisters trade places (the `#tSwitch` touch button remains for duo only), and no solo run has Anna as the player; `test/unit/legacy-removed.test.mjs` bans the old names from `src/` and `art/narration.py`. Saves with `settings.player: 'nuan'` migrate to Elsa in `sanitizeSave`. Only Anna speaks English: `voices` in `lines.json` holds exactly `frost` (a `zh` entry only) and `nuan`, and `art/narration.py` rejects English segments in Elsa's lines.
+
+## 15. Gate: `make check`
+
+`make check` runs, in order: `eslint .`, `tsc -p tsconfig.json` (`--checkJs` over `src/*.js`, `src/lib/*.js`, `src/view/*.js` as global scripts, plus `types/page.d.ts` for vendor-prefixed browser members), `node test/run.mjs`, and a build check (a fresh `python3 art/build_page.py --out ...` must be byte-identical to `ice-castle.html` in the working tree, staged or not). CI runs only `make check`. Not type-checked: `test/` (linted only), `art/` and `castle3d/`. Cross-file globals are known to ESLint by parsing each script's top-level declarations (`eslint.config.mjs`), so there is no list to maintain; a name used but declared nowhere fails both ESLint (`no-undef`) and `tsc`.
+
+## 16. Voice manifest and pruning
+
+- `game/vo_manifest.json` = `{"v":1,"clips":{file: sha1}}`; the hash covers, per spoken segment in order, voice, effective rate, pitch and text. `python3 art/narration.py` (no flags) makes only the clips whose file is missing, whose hash changed or that are not listed, then records them; `--dry-run` lists them as `name | reason | segments`.
+- `--prune` deletes the `.mp3` files directly in `game/` that `plan()` does not expect (`--dry-run` lists them); `--write-manifest` records the files now present without synthesizing; `--verify-manifest` exits 1 on any stale, unrecorded or extra entry.
+- `test/content_keys.mjs` fails on a missing clip, an orphan clip or a manifest that disagrees with `lines.json`; `art/package_release.py` refuses to package then.
+- After editing a line: run `python3 art/narration.py` with edge-tts available (see the docstring of `art/narration.py`), then rebuild and run `make check`.
+
+## 17. Exposure report
+
+`test/exposure.mjs` counts, per room and core word, the in-context hearings of a normal playthrough (chapter card, start lines, door open, clear sentence, clear card; beside them pickups and toy lines) from `lines.json`, `levels.js` and the view's own tables (`KIND_WORD` in `50-talk.js`, `TY_LINES` in `15-toys.js`, read from the source). `node test/run.mjs` prints it as a report; PLAN-2 2C makes the threshold (6) a gate. `node test/exposure.mjs --write` regenerates `src/content/exposure.md`.

@@ -1,7 +1,6 @@
 {
   "voices": {
-    "narrator": {"zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"]},
-    "frost": {"zh": ["zh-CN-XiaoxiaoNeural", "-6%", "-4Hz"], "en": ["en-US-JennyNeural", "-15%", "-4Hz"]},
+    "frost": {"zh": ["zh-CN-XiaoxiaoNeural", "-6%", "-4Hz"]},
     "nuan": {"zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"]}
   },
   "lines": {
@@ -280,7 +279,6 @@
     "tutor_move": {"who": "nuan", "say": ["按左右方向键，就能走路啦。"]},
     "tutor_jump": {"who": "nuan", "say": ["按上面的方向键，跳一跳！"]},
     "tutor_magic": {"who": "nuan", "say": ["按一下长长的空格键，魔法就出来啦！", {"en": "One, two, three!", "zh": "一、二、三！"}]},
-    "tutor_swap": {"who": "nuan", "say": ["我会一直跟着艾莎姐姐，在需要的时候帮她。"]},
     "tutor_fullscreen": {"who": "nuan", "say": ["给大人的小提示：点右上角的全屏按钮，画面会更大哦。"]},
     "splash_1": {"who": "nuan", "say": ["哎呀，扑通！没关系，再来一次！"]},
     "splash_2": {"who": "nuan", "say": ["哇，", {"w": "water"}, "好凉呀！我们回到岸边吧。"]},
@@ -291,7 +289,6 @@
     "idle_3": {"who": "nuan", "say": ["点一点右上角的小灯泡，我就告诉你。"]},
     "idle_4": {"who": "nuan", "say": ["慢慢来，不着急。"]},
     "miss_frost": {"who": "nuan", "say": ["姐姐，你在哪儿呀？"]},
-    "miss_nuan": {"who": "frost", "say": ["安娜，你在哪儿呀？"]},
     "together_1": {"who": "nuan", "say": [{"en": "Yay!", "zh": "耶！"}, "我们在一起啦！"]},
     "together_2": {"who": "frost", "say": ["和你在一起，真暖和。"]},
     "mem_m1": {"who": "nuan", "say": ["姐姐，还记得吗？我每天画一幅画，从门缝里塞给你。画里是我们俩，还有红围巾雪人。原来你都悄悄收好了呀。"], "art": "mem_door"},
@@ -319,7 +316,6 @@
     "ui_settings": {"who": "nuan", "say": ["家长设置"]},
     "ui_hint": {"who": "nuan", "say": ["小提示"]},
     "ui_fullscreen": {"who": "nuan", "say": ["全屏"]},
-    "ui_swap": {"who": "nuan", "say": ["艾莎是主角，我是陪着她的安娜。"]},
     "ui_solo": {"who": "nuan", "say": ["一个人玩"]},
     "ui_duo": {"who": "nuan", "say": ["两个人玩"]},
     "ui_sound": {"who": "nuan", "say": ["声音"]},

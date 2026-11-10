@@ -21,7 +21,7 @@ export const duo = async (h) => {
   h.walk('frost', 21);
 };
 
-/* Solo: one sister does it all. Down the first slide (memory fragment on the first landing), down the second, up the ledges
+/* Solo: Elsa does it all. Down the first slide (memory fragment on the first landing), down the second, up the ledges
    (snowflake), over the bridge for the heart and the high stars, back to the start shelf and down again, this time jumping for the
    star above the second slide. The last small star near the door is taken before the heart opens the door. */
 export const solo = async (h, me) => {
@@ -51,7 +51,7 @@ export const solo = async (h, me) => {
   h.walk(me, 20);
   h.walk(me, 21);                 // the door
   if (!h.g.memoryFound) throw new Error('slope: the memory fragment was not found');
-  const other = me === 'nuan' ? 'frost' : 'nuan';
+  const other = 'nuan';
   const slides = h.log.filter(e => e.type === 'slide' && e.who === other).length;
   if (slides < 3) throw new Error(`slope: the companion slid ${slides} times, she should slide down with the player`);
 };

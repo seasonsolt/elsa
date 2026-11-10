@@ -120,7 +120,7 @@
 
   /* ---------- pointer helpers ---------- */
   function rwPoint(ev) {
-    const m = $('overlay').getScreenCTM();
+    const m = /** @type {any} */ ($('overlay')).getScreenCTM();
     if (!m) return { x: 0, y: 0 };
     const p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m.inverse());
     return { x: p.x, y: p.y };
@@ -287,7 +287,7 @@
     }
     n.removeAttribute('visibility');
   }
-  /* Hook of 20-sisters: after a sister is drawn. Applies her chosen dress colour (swapping the frame pictures) and hat. */
+  /* Hook of 20-sisters: after a sister is drawn. Applies her chosen dress colour (replacing the frame pictures) and hat. */
   function drawOutfit(id, frame, node) {
     if (!node) return;
     try {
@@ -335,7 +335,7 @@
     const draw = () => {
       let html = `<g class="${first ? 'page' : ''}"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".62"/>`;
       ['frost', 'nuan'].forEach((who, i) => {
-        const cx = i ? 710 : 250, o = outfit(who);
+        const cx = i ? 710 : 250;
         html += `<rect x="${cx - 170}" y="46" width="340" height="276" rx="26" fill="${who === 'frost' ? '#cfe6ff' : '#ffd9a8'}" opacity=".9" filter="url(#softShadow)"/>
           <g class="rw-prev" data-who="${who}" transform="translate(${cx} 306) scale(2.5)"></g>`;
         const dress = [0, 1, 2].map(k => {
@@ -356,13 +356,13 @@
       first = false;
       const root = uxPaint(html);
       uxBind(root, { back: () => showTitle() });
-      root.querySelectorAll('.rw-prev').forEach(node => {
+      root.querySelectorAll('.rw-prev').forEach(/** @param {HTMLElement} node */ node => {
         const who = node.dataset.who, o = outfit(who), sz = SIZES[who + '_idle'] || [80, 168, 40];
         const k = o.dress && rwDressReady(who, o.dress) ? o.dress : 0;
         img(rwDressName(who, 'idle', k), -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, node);
         rwPlaceHat(node, who, 'idle', o.hat);
       });
-      root.querySelectorAll('.rw-choice').forEach(n => hoverable(n, '', () => {
+      root.querySelectorAll('.rw-choice').forEach(/** @param {HTMLElement} n */ n => hoverable(n, '', () => {
         const who = n.dataset.who, kind = n.dataset.kind, val = n.dataset.val, state = n.dataset.state;
         if (state === 'lock' || state === 'miss') { n.classList.remove('ux-shake'); void n.getBoundingClientRect(); n.classList.add('ux-shake'); return; }
         if (!uxAlive(tok)) return;

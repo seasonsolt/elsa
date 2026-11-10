@@ -21,8 +21,8 @@ export const duo = async (h) => {
   h.walk('nuan', 20);
 };
 
-/* Solo: the player does everything alone. The companion follows; if she is Nuan she melts the pink wall when the player comes
-   near, if the player is Nuan she melts it herself. */
+/* Solo: the player does everything alone. Elsa is the player; the companion Anna follows and melts the pink wall
+   when Elsa comes near. */
 export const solo = async (h, me) => {
   h.hop(me, 2);                   // small star at (2,8), straight above the start
   h.walk(me, 4);                  // heart at (4,11)
@@ -38,7 +38,7 @@ export const solo = async (h, me) => {
   h.walk(me, 13);                 // snowflake at (13,11)
   h.hop(me, 14);                  // small star at (14,8)
   h.walk(me, 16);                 // to the pink wall
-  if (me === 'nuan') h.act(me);   // Nuan melts it herself; otherwise the companion does
+                                  // (Anna, the companion, melts the wall when Elsa stands in front of it)
   h.walk(me, 18);
   h.hop(me, 18);                  // small star at (18,8)
   h.expectStars();

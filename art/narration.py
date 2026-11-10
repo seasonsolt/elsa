@@ -6,8 +6,8 @@ Needs ffmpeg on PATH (mp3 encoder libmp3lame).
 
 Input   src/content/lines.json  {"voices": {...}, "lines": {key: {who, say:[segments], art?}}, "pages"?: {...}}
         src/content/words.json  [{id, en, zh, icon, room}]
-Output  <out>/vo_<key>.mp3                 narrator / frost / nuan / fixed-voice lines
-        <out>/vo_<key>__frost.mp3          "companion" lines are rendered once per sister; the view picks by g.player
+Output  <out>/vo_<key>.mp3                 frost / nuan lines
+        <out>/vo_<key>__frost.mp3          legacy "companion" lines are rendered once per sister; the view always plays Anna's (__nuan)
         <out>/vo_<key>__nuan.mp3
         <out>/vo_<key>[__who]__w.mp3       only for lines with {"en": ...} segments: the "english = words only" variant,
                                            where each {"en","zh"} phrase becomes its zh gloss (skipped without a gloss)
@@ -20,14 +20,28 @@ words.json), {"en": "Yay!"} with the en voice. English segments are 15 % slower 
 trimmed, joined with a 0.12 s gap, loudness-normalised and encoded as 48 kbps mono mp3.
 
 Flags
-    (none)              only clips whose file is missing
+    (none)              only clips whose file is missing or whose recipe changed since the manifest was written (see below)
     --all               regenerate everything
     --only a,b,word_x   only these line keys / word_<id> ("words" = every word reading)
     --sample N          write N representative clips (mixed zh/en lines of every speaker first) into <out>/sample/, always
                         regenerated, no subs.json: for listening before the batch run
-    --dry-run           print what would be generated, no network, no ffmpeg
+    --dry-run           print what would be generated as "name | reason | segments" (reason: missing, changed, unrecorded, forced),
+                        no network, no ffmpeg
     --segments DIR      also keep every distinct synthesized segment as DIR/<id>.wav plus DIR/segments.json, for art/asr_check.py
+    --prune             delete the .mp3 files directly in <out> that plan() does not expect any more (the clips of removed or renamed
+                        lines, old speaker variants); every other file and sub-directory is left alone. With --dry-run only list them.
+                        Never synthesizes. A normal run afterwards rewrites subs.json (and says if a clip is missing)
+    --write-manifest    record the manifest for the clips now in <out> WITHOUT synthesizing anything: use it once when the audio is known to
+                        match the text (a clip whose file is missing is not recorded). Do not combine with --sample/--only/--all/--prune/--dry-run
+    --verify-manifest   check that the manifest and lines.json/words.json agree (no clip stale, unrecorded or without a line); lists the
+                        differences as "name | kind" and exits 1, or 0 when they agree. test/content_keys.mjs runs it
+    --manifest PATH     the manifest file (default <out>/vo_manifest.json)
     --lines/--words/--out PATH   override the default locations (used by tests)
+
+vo_manifest.json (PLAN-2 B3): {"v": 1, "clips": {"vo_p1.mp3": sha1, ...}}. The hash covers what decides how a clip sounds: for every spoken
+segment, in order, the voice, the effective rate, the pitch and the text (punctuation-only segments have no voice and are not part of it).
+A normal run regenerates a clip when its file is missing or its hash differs from the manifest (an unlisted clip counts as "unrecorded"
+and is regenerated too), then records the new hashes. Changing one line's text therefore redoes exactly the clips of that line.
 
 subs.json (always rewritten from lines + words, whatever the other flags):
     {"v": 1,
@@ -55,14 +69,13 @@ EN_SLOWER = 15        # percent, on top of the voice's own en rate
 SAMPLE_RATE = 24000
 BITRATE = '48k'
 LOUDNESS = 'I=-18:TP=-2:LRA=11'
-SPEAKERS = ('narrator', 'frost', 'nuan')
+SPEAKERS = ('frost', 'nuan')
 # Used when lines.json carries no "voices" block; mirrors PLAN A4.
 DEFAULT_VOICES = {
-    # Compatibility alias for old content; current lessons are spoken by Anna.
-    'narrator': {'zh': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz'], 'en': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz']},
-    'frost': {'zh': ['zh-CN-XiaoxiaoNeural', '-6%', '-4Hz'], 'en': ['en-US-JennyNeural', '-15%', '-4Hz']},
+    'frost': {'zh': ['zh-CN-XiaoxiaoNeural', '-6%', '-4Hz']},   # Elsa speaks Chinese only
     'nuan': {'zh': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz'], 'en': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz']},
 }
+MANIFEST_NAME = 'vo_manifest.json'
 PUNCT_ONLY = re.compile(r'^[\W_]*$', re.UNICODE)   # nothing a voice could say
 
 
@@ -95,7 +108,7 @@ class Content:
             raise Fail(f'{lines_path} has no "lines" object (old S0 format?)')
         self.voices = doc.get('voices') or DEFAULT_VOICES
         for who in SPEAKERS:
-            for lang in ('zh', 'en'):
+            for lang in ('zh', 'en') if who == 'nuan' else ('zh',):   # Elsa has no English voice: she speaks Chinese only
                 v = self.voices.get(who, {}).get(lang)
                 if not (isinstance(v, list) and len(v) == 3):
                     raise Fail(f'voices.{who}.{lang} must be [voice, rate, pitch]')
@@ -116,7 +129,7 @@ class Content:
 
     def check(self, key, line):
         if line.get('who') not in SPEAKERS + ('companion',):
-            raise Fail(f'line {key}: who must be narrator|frost|nuan|companion, got {line.get("who")!r}')
+            raise Fail(f'line {key}: who must be frost|nuan|companion, got {line.get("who")!r}')
         if not isinstance(line.get('say'), list) or not line['say']:
             raise Fail(f'line {key}: "say" must be a non-empty list')
         for seg in line['say']:
@@ -127,6 +140,8 @@ class Content:
                     raise Fail(f'line {key}: word {seg["w"]!r} is not in words.json')
             elif not (isinstance(seg, dict) and isinstance(seg.get('en'), str)):
                 raise Fail(f'line {key}: bad segment {seg!r}')
+        if line['who'] != 'nuan' and any(isinstance(seg, dict) for seg in line['say']):
+            raise Fail(f'line {key}: Elsa speaks Chinese only, English segments belong to nuan')
 
     def voice(self, who, lang):
         v = self.voices[who][lang]
@@ -184,13 +199,25 @@ def seg_hash(voice, text):
     return hashlib.sha1('\x00'.join((*voice, text)).encode('utf-8')).hexdigest()[:12]
 
 
+def clip_hash(segs):
+    """sha1 of what decides how one clip sounds: voice, effective rate, pitch and text of every spoken segment, in order."""
+    spoken = [[*s['voice'], s['text']] for s in segs if s['voice']]
+    return hashlib.sha1(json.dumps(spoken, ensure_ascii=False, separators=(',', ':')).encode('utf-8')).hexdigest()
+
+
 class Job:
-    """One mp3 to write: a list of segments (dicts with 'voice' possibly None)."""
-    def __init__(self, name, segs, label):
-        self.name, self.segs, self.label = name, [s for s in segs if s['voice']], label
+    """One mp3 to write: a list of segments (dicts with 'voice' possibly None). `reason` says why plan() picked it."""
+    def __init__(self, name, segs, label, reason=''):
+        self.name, self.segs, self.label, self.reason = name, [s for s in segs if s['voice']], label, reason
+
+    @property
+    def hash(self):
+        return clip_hash(self.segs)
 
 
-def plan(content, only, redo, out_dir, sample):
+def plan(content, only, redo, out_dir, sample, manifest=None):
+    """-> [Job]. Without --all/--only a clip is picked when its file is missing or, given a manifest ({file name: hash}), when its
+    recorded hash differs ('changed') or is absent ('unrecorded'). manifest=None skips the hash check."""
     jobs = []
     if sample:
         return [Job(name, segs, label) for name, segs, label in sample_items(content, sample)]
@@ -199,23 +226,88 @@ def plan(content, only, redo, out_dir, sample):
         bad = sorted(only - known)
         if bad:
             raise Fail('--only: unknown key(s): ' + ', '.join(bad))
+
+    def why(fname, segs):
+        if redo or only is not None:
+            return 'forced'
+        if not os.path.exists(os.path.join(out_dir, fname)):
+            return 'missing'
+        if manifest is not None and manifest.get(fname) != clip_hash(segs):
+            return 'changed' if fname in manifest else 'unrecorded'
+        return ''
+
     want_words = only is None or 'words' in only or any(o.startswith('word_') for o in only)
     for key in content.lines:
         if only is not None and key not in only:
             continue
         for fname, sp, wo in content.outputs(key):
-            if redo or only is not None or not os.path.exists(os.path.join(out_dir, fname)):
-                segs = content.segments(key, sp, wo)
-                if any(s['voice'] for s in segs):
-                    jobs.append(Job(fname, segs, key))
+            segs = content.segments(key, sp, wo)
+            reason = why(fname, segs)
+            if reason and any(s['voice'] for s in segs):
+                jobs.append(Job(fname, segs, key, reason))
     if want_words:
         for wid, w in content.words.items():
             if only is not None and 'words' not in only and f'word_{wid}' not in only:
                 continue
             fname = f'word_{wid}.mp3'
-            if redo or only is not None or not os.path.exists(os.path.join(out_dir, fname)):
-                jobs.append(Job(fname, [{'text': w['en'], 'lang': 'en', 'en': True, 'voice': content.voice('nuan', 'en')}], f'word_{wid}'))
+            segs = [{'text': w['en'], 'lang': 'en', 'en': True, 'voice': content.voice('nuan', 'en')}]
+            reason = why(fname, segs)
+            if reason:
+                jobs.append(Job(fname, segs, f'word_{wid}', reason))
     return jobs
+
+
+def expected_clips(content):
+    """-> set of mp3 file names a full run of plan() writes: the complete set <out> should hold, no more and no less."""
+    return {j.name for j in plan(content, None, True, '', None)}
+
+
+def find_orphans(content, out_dir):
+    """-> (orphans, missing): mp3 files in out_dir that plan() does not expect, and expected ones that are not there."""
+    if not content.lines:
+        raise Fail('lines.json has no lines (wrong --lines file?): refusing to call every mp3 an orphan')
+    expected = expected_clips(content)
+    try:
+        present = {f for f in os.listdir(out_dir) if f.endswith('.mp3') and os.path.isfile(os.path.join(out_dir, f))}
+    except OSError as e:
+        raise Fail(f'cannot list {out_dir}: {e}')
+    return sorted(present - expected), sorted(expected - present)
+
+
+def current_hashes(content):
+    """-> {file name: hash} for every clip a full run writes."""
+    return {j.name: j.hash for j in plan(content, None, True, '', None)}
+
+
+def load_manifest(path):
+    """-> {file name: hash}, or None when there is no manifest file."""
+    if not os.path.exists(path):
+        return None
+    doc = load_json(path, 'manifest')
+    if not (isinstance(doc, dict) and doc.get('v') == 1 and isinstance(doc.get('clips'), dict)):
+        raise Fail(f'{path} is not a v1 voice manifest ({{"v": 1, "clips": {{...}}}})')
+    return doc['clips']
+
+
+def write_manifest(path, clips):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    tmp = path + '.part'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump({'v': 1, 'clips': dict(sorted(clips.items()))}, f, indent=1, ensure_ascii=False)
+        f.write('\n')
+    os.replace(tmp, path)
+
+
+def manifest_problems(content, manifest):
+    """-> [(file name, kind)]: where the manifest and the content disagree. kind is 'stale' (the recipe changed since it was
+    recorded), 'unrecorded' (a clip the content needs is not listed) or 'extra' (listed, but no line or word needs it)."""
+    if not content.lines:
+        raise Fail('lines.json has no lines (wrong --lines file?): refusing to compare it with the manifest')
+    cur = current_hashes(content)
+    out = [(n, 'stale') for n in cur if n in manifest and manifest[n] != cur[n]]
+    out += [(n, 'unrecorded') for n in cur if n not in manifest]
+    out += [(n, 'extra') for n in manifest if n not in cur]
+    return sorted(out)
 
 
 def sample_items(content, n):
@@ -329,7 +421,7 @@ def duration(path):
     return float(run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path]).stdout)
 
 
-def generate(jobs, out_dir, seg_dir):
+def generate(jobs, out_dir, seg_dir, record=None):
     specs = {}
     for job in jobs:
         for s in job.segs:
@@ -346,6 +438,8 @@ def generate(jobs, out_dir, seg_dir):
             out = os.path.join(out_dir, job.name)
             assemble(job, [wavs[seg_hash(s['voice'], s['text'])] for s in job.segs], tmp, out, gap, tail)
             done[job.name] = round(duration(out), 2)
+            if record is not None:
+                record[job.name] = job.hash
             print(f'  {job.name}  {done[job.name]:.2f}s  {os.path.getsize(out) // 1024} KB', file=sys.stderr)
         if seg_dir:
             os.makedirs(seg_dir, exist_ok=True)
@@ -372,6 +466,10 @@ def main(argv=None):
     ap.add_argument('--only', help='comma separated line keys / word_<id> / words')
     ap.add_argument('--sample', type=int, metavar='N', help='write N representative clips into <out>/sample/')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--prune', action='store_true', help='delete the mp3 files in <out> that plan() does not expect (--dry-run: list them)')
+    ap.add_argument('--write-manifest', action='store_true', help='record the manifest for the clips now in <out>, no synthesis')
+    ap.add_argument('--verify-manifest', action='store_true', help='fail when the manifest and lines.json disagree')
+    ap.add_argument('--manifest', metavar='PATH', help='manifest file (default <out>/vo_manifest.json)')
     ap.add_argument('--segments', metavar='DIR', help='keep per-segment wavs + segments.json for asr_check.py')
     ap.add_argument('--lines', default=os.path.join(HERE, '..', 'src', 'content', 'lines.json'))
     ap.add_argument('--words', default=os.path.join(HERE, '..', 'src', 'content', 'words.json'))
@@ -381,10 +479,54 @@ def main(argv=None):
         content = Content(a.lines, a.words)
         only = {k.strip() for k in a.only.split(',') if k.strip()} if a.only else None
         out_dir = os.path.join(a.out, 'sample') if a.sample else a.out
-        jobs = plan(content, only, a.all, out_dir, a.sample)
+        manifest_path = a.manifest or os.path.join(a.out, MANIFEST_NAME)
+        if a.write_manifest or a.verify_manifest:
+            if a.write_manifest and a.verify_manifest:
+                raise Fail('--write-manifest and --verify-manifest are separate modes')
+            if a.sample or only is not None or a.all or a.prune or (a.dry_run and a.write_manifest):
+                raise Fail('--write-manifest / --verify-manifest work on the whole output directory: do not combine them with --sample / --only / --all / --prune / --dry-run')
+            if a.write_manifest:
+                cur = current_hashes(content)
+                absent = sorted(n for n in cur if not os.path.isfile(os.path.join(a.out, n)))
+                write_manifest(manifest_path, {n: h for n, h in cur.items() if n not in absent})
+                if absent:
+                    print(f'warning: {len(absent)} expected clip(s) have no file in {a.out} and are not recorded (a normal run generates them)', file=sys.stderr)
+                print(f'recorded {len(cur) - len(absent)} clip(s) in {manifest_path}', file=sys.stderr)
+                return 0
+            manifest = load_manifest(manifest_path)
+            if manifest is None:
+                raise Fail(f'no voice manifest at {manifest_path} (run --write-manifest once the audio matches the text)')
+            problems = manifest_problems(content, manifest)
+            for name, kind in problems:
+                print(name, '|', kind)
+            print(f'{len(problems)} difference(s) between {manifest_path} and the content', file=sys.stderr)
+            return 1 if problems else 0
+        if a.prune:
+            if a.sample or only is not None or a.all:
+                raise Fail('--prune works on the whole output directory: do not combine it with --sample / --only / --all')
+            orphans, missing = find_orphans(content, a.out)
+            size = 0
+            for f in orphans:
+                size += os.path.getsize(os.path.join(a.out, f))
+                print(f)
+            if missing:
+                print(f'warning: {len(missing)} expected clip(s) are missing from {a.out} (run without --prune to generate them)', file=sys.stderr)
+            if not a.dry_run:
+                for f in orphans:
+                    os.remove(os.path.join(a.out, f))
+            print(f'{len(orphans)} orphan mp3 file(s), {size / 1048576:.2f} MB, {"would be " if a.dry_run else ""}deleted from {a.out}', file=sys.stderr)
+            return 0
+        manifest = None
+        if not a.sample:
+            manifest = load_manifest(manifest_path)
+            if manifest is None:
+                manifest = {}
+                print(f'note: no voice manifest at {manifest_path}: every existing clip counts as unrecorded '
+                      '(--write-manifest records the current files without synthesizing)', file=sys.stderr)
+        jobs = plan(content, only, a.all, out_dir, a.sample, manifest)
         if a.dry_run:
             for j in jobs:
-                print(j.name, '|', ' + '.join(f'{s["lang"]}:{s["text"]}' for s in j.segs))
+                print(j.name, '|', j.reason or 'sample', '|', ' + '.join(f'{s["lang"]}:{s["text"]}' for s in j.segs))
             print(f'{len(jobs)} clips would be written to {out_dir}', file=sys.stderr)
             return 0
         if not a.sample:
@@ -395,7 +537,13 @@ def main(argv=None):
             if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
                 raise Fail('ffmpeg/ffprobe not found on PATH')
             os.makedirs(out_dir, exist_ok=True)
-            generate(jobs, out_dir, a.segments)
+            record = {}
+            try:
+                generate(jobs, out_dir, a.segments, record)
+            finally:
+                if record and not a.sample:   # clips already written stay recorded even when a later one fails
+                    wanted = current_hashes(content)
+                    write_manifest(manifest_path, {n: h for n, h in {**manifest, **record}.items() if n in wanted})
         print(f'{len(jobs)} clips written to {out_dir}' if jobs else 'nothing to do, every clip exists', file=sys.stderr)
         return 0
     except Fail as e:

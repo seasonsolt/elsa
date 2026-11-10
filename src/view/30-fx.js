@@ -216,7 +216,6 @@
         case 'gate': drawGates(); break;
         case 'blink': blinkFx(e); break;
         case 'memory': foundFragment(); break;
-        case 'swap': flashPlayerMark(2.4); onPlayerSwapped(e); break;
         case 'clear': cheerBurst(); break;
       }
     }

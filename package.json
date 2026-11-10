@@ -1,0 +1,17 @@
+{
+  "name": "elsa-anna-ice-castle",
+  "private": true,
+  "description": "Dev tooling only (lint, type check). The game itself has no runtime dependencies.",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "make check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "espree": "^11.2.0",
+    "globals": "^17.14.0",
+    "typescript": "^7.0.2"
+  }
+}

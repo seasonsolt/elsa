@@ -2,12 +2,13 @@
    lesson, and the touch buttons must steer the sister the child picked.
 
    The view files are plain scripts that share one scope, so these tests do what art/build_page.py does: run the logic, then the
-   real src/view files inside one function scope, against a small fake DOM. `viewEnv` is exported as an object (not a function)
+   real src/lib files and the src/view files inside one function scope, against a small fake DOM. `viewEnv` is exported as an object (not a function)
    so test/run.mjs does not mistake it for a test; guide-timer.test.mjs reuses it. */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { libNames } from '../harness.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -84,6 +85,7 @@ function makeClock() {
  * Load the real logic and the named src/view files (without .js) into one fake page.
  *   opts.touch       the device has a touch screen
  *   opts.globals     extra globals (stand-ins for the view files that are not loaded)
+ *   opts.localStorage  the storage object the page sees (default: a plain Map-backed one, readable as `env.store`)
  *   opts.exports     names from the view scope to hand back
  * Returns { ctx, clock, pads, windowListeners, keydown(code, extra), exports }.
  */
@@ -132,7 +134,7 @@ function load(files, opts = {}) {
     ...(opts.globals || {}),
   };
   ctx.window = ctx;
-  ctx.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => { store.set(k, String(v)); }, removeItem: k => { store.delete(k); } };
+  ctx.localStorage = opts.localStorage || { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => { store.set(k, String(v)); }, removeItem: k => { store.delete(k); } };
   if (opts.touch) ctx.ontouchstart = null;
   vm.createContext(ctx);
 
@@ -141,7 +143,10 @@ function load(files, opts = {}) {
   vm.runInContext(logic, ctx, { filename: 'logic' });
 
   const viewDir = path.join(ROOT, 'src', 'view');
-  let view = files.map(f => fs.readFileSync(path.join(viewDir, f + '.js'), 'utf8')).join('');
+  const libDir = path.join(ROOT, 'src', 'lib');
+  // in front of the view files, like the build; a test that passes its own `voice` stand-in leaves the real queue out (a `const voice` here would shadow it)
+  const lib = libNames().filter(n => !(n === 'voice' && opts.globals && opts.globals.voice)).map(n => fs.readFileSync(path.join(libDir, n + '.js'), 'utf8')).join('');
+  let view = lib + files.map(f => fs.readFileSync(path.join(viewDir, f + '.js'), 'utf8')).join('');
   view = view.replace("/*ASSET_VERSION*/'dev'", "'dev'").replace('/*SIZES*/{}', JSON.stringify(sizes)).replace('/*LINES*/{}', JSON.stringify(lines)).replace('/*WORDS*/[]', JSON.stringify(words));
   const names = ['game', ...(opts.exports || [])];
   const code = `(() => {\n${view}\nreturn { ${names.join(', ')} };\n})()`;

@@ -1,6 +1,7 @@
 """Package the built static game, omitting obsolete audio and all authoring/QA files.
 
 Run after build_page.py: python3 art/package_release.py --out /path/to/game.zip
+Refuses to package when game/vo_manifest.json and src/content disagree (a line changed without its audio being redone).
 """
 import argparse
 import hashlib
@@ -9,7 +10,7 @@ import re
 from pathlib import Path
 import zipfile
 
-from narration import Content, plan
+from narration import Content, MANIFEST_NAME, load_manifest, manifest_problems, plan
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -17,6 +18,13 @@ ROOT = Path(__file__).resolve().parent.parent
 def package(out):
     page = (ROOT / 'ice-castle.html').read_bytes()
     content = Content(ROOT / 'src/content/lines.json', ROOT / 'src/content/words.json')
+    voices = load_manifest(ROOT / 'game' / MANIFEST_NAME)
+    if voices is None:
+        raise ValueError(f'game/{MANIFEST_NAME} is missing: run art/narration.py --write-manifest once the audio matches the text')
+    stale = manifest_problems(content, voices)
+    if stale:
+        raise ValueError(f'game/{MANIFEST_NAME} disagrees with lines.json (redo the audio with art/narration.py): '
+                         + ', '.join(f'{n} {kind}' for n, kind in stale[:8]) + (' ...' if len(stale) > 8 else ''))
     jobs = plan(content, None, True, str(ROOT / 'game'), None)
     files = {p.name: p for p in (ROOT / 'game').glob('*.webp')}
     files.update({j.name: ROOT / 'game' / j.name for j in jobs})

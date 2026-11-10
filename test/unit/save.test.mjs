@@ -69,7 +69,8 @@ export function aSaveFromANewerBuildIsPlayedButNeverOverwritten({ assert }) {
 
 export function versionHelpersOnlyFlagStrictlyNewerSaves({ assert }) {
   const api = pureSave();
-  assert.equal(api.saveVersionTooNew({ v: 3 }), true);
+  assert.equal(api.saveVersionTooNew({ v: 4 }), true);
+  assert.equal(api.saveVersionTooNew({ v: 3 }), false, 'v3 is what this build writes');
   assert.equal(api.saveVersionTooNew({ v: 2 }), false);
   assert.equal(api.saveVersionTooNew({ v: 1 }), false);
   assert.equal(api.saveVersionTooNew({}), false);
@@ -150,4 +151,71 @@ export function theStorageEventMergesInPlaceAndWritesOnlyWhenSomethingChanged({ 
   fire('storage', { key: KEY, newValue: JSON.stringify({ v: 99, rooms: { garden: { cleared: true } } }) });
   assert.equal(store.writes.length, writes);
   assert.equal(api.save.rooms.garden, undefined, 'a newer build\'s save is not merged into an older model of it');
+}
+
+/* PLAN-2 C2 / C5: save v3 carries the review fields per word, roomClock and totalPlaySeconds; a v2 save loses nothing. */
+const v2Save = () => ({
+  v: 2, settings: { subtitles: true, english: 'words', mode: 'duo', player: 'frost', sound: false },
+  rooms: { hall: { cleared: true, stars: [true, true, false], memory: true }, lake: { cleared: true, stars: [true, false, false], memory: false }, slope: { cleared: false, stars: [false, false, false], memory: false } },
+  words: { heart: { heard: 9, quiz: 2, seen: true }, door: { heard: 2, quiz: 0 }, water: { heard: 0, quiz: 0 } },
+  stickers: ['hall', 'words5_1'], board: [{ id: 'hall', x: 10, y: 20 }], outfit: { frost: { dress: 2, hat: 'crown' }, nuan: { dress: 1, hat: null } },
+  unlocked: { rooms: 3 }, flags: { prologue: true, tutorial: false, fullscreenTip: true }, futureField: { keep: 'me' },
+});
+
+export function aV2SaveMigratesToV3AndLosesNothing({ assert }) {
+  const api = pureSave();
+  const old = v2Save();
+  const m = plain(api.sanitizeSave(old));
+  assert.equal(m.v, 3);
+  const rest = { ...m }, before = { ...old };
+  for (const k of ['v', 'totalPlaySeconds', 'roomClock']) delete rest[k];
+  delete before.v;
+  assert.deepEqual(rest, before, 'every v2 field comes through unchanged');
+  assert.equal(m.totalPlaySeconds, 0);
+  assert.equal(m.roomClock, 2, 'the clock starts at the number of rooms already cleared');
+  assert.deepEqual(m.words.water, { heard: 0, quiz: 0 }, 'no review fields are invented for a word');
+  assert.deepEqual(plain(api.sanitizeSave(m)), m, 'sanitizing a v3 save changes nothing');
+}
+
+export function theV3FieldsRoundTripAndAreCleaned({ assert }) {
+  const api = pureSave();
+  const m = plain(api.sanitizeSave({
+    v: 3, totalPlaySeconds: 123.9, roomClock: 7,
+    words: { heart: { heard: 3, quiz: 1, wrong: 2, lastSeen: 6, lastWrong: 5, lastReviewed: 4, reviews: 1 }, door: { heard: 1, quiz: 0, wrong: -3, lastSeen: 'x', reviews: NaN } },
+  }));
+  assert.equal(m.totalPlaySeconds, 123, 'whole seconds');
+  assert.equal(m.roomClock, 7, 'an existing clock is not recomputed');
+  assert.deepEqual(m.words.heart, { heard: 3, quiz: 1, wrong: 2, lastSeen: 6, lastWrong: 5, lastReviewed: 4, reviews: 1 });
+  assert.deepEqual(m.words.door, { heard: 1, quiz: 0 }, 'junk values are dropped');
+  const junk = plain(api.sanitizeSave({ totalPlaySeconds: -4, roomClock: 'many' }));
+  assert.equal(junk.totalPlaySeconds, 0);
+  assert.equal(junk.roomClock, 0);
+}
+
+export function mergingKnowsTheV3FieldsAndStaysIdempotent({ assert }) {
+  const api = pureSave();
+  const a = { ...v2Save(), v: 3, totalPlaySeconds: 600, roomClock: 5, words: { heart: { heard: 9, quiz: 2, wrong: 1, lastSeen: 4, lastWrong: 3, reviews: 1 }, door: { heard: 2, quiz: 0 } } };
+  const b = { ...v2Save(), v: 3, totalPlaySeconds: 450, roomClock: 8, words: { heart: { heard: 4, quiz: 3, wrong: 2, lastSeen: 7, lastReviewed: 6 }, star: { heard: 1, quiz: 0, lastSeen: 2 } } };
+  const m = plain(api.mergeSaves(a, b));
+  assert.equal(m.totalPlaySeconds, 600);
+  assert.equal(m.roomClock, 8);
+  assert.deepEqual(m.words.heart, { heard: 9, quiz: 3, wrong: 2, lastSeen: 7, lastWrong: 3, lastReviewed: 6, reviews: 1 }, 'each counter takes its larger value');
+  assert.deepEqual(m.words.star, { heard: 1, quiz: 0, lastSeen: 2 });
+  assert.deepEqual(plain(api.mergeSaves(m, b)), m, 'merging again changes nothing');
+  assert.deepEqual(plain(api.mergeSaves(b, a)).words, plain(api.mergeSaves(a, b)).words, 'order does not matter for the words');
+}
+
+export function aV2SaveOnDiskIsReadAndWrittenBackAsV3({ assert }) {
+  const store = fakeStorage({ [KEY]: JSON.stringify(v2Save()) });
+  const { api } = boot(store);
+  assert.equal(api.save.v, 3);
+  assert.equal(api.save.rooms.hall.memory, true);
+  assert.equal(api.save.words.heart.heard, 9);
+  assert.equal(api.save.futureField.keep, 'me');
+  api.save.totalPlaySeconds += 30;
+  assert.equal(api.saveWrite(), true, 'a v2 save is upgraded, not treated as newer');
+  const written = JSON.parse(store.getItem(KEY));
+  assert.equal(written.v, 3);
+  assert.equal(written.totalPlaySeconds, 30);
+  assert.equal(written.words.heart.seen, true);
 }

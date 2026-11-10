@@ -29,15 +29,19 @@
     im.src = SRC(name);
   }
   const tyHas = name => tyImgState[name] === 'ok';
-  /* 90-main decodes the toy pictures before the first frame; remember that, so the first room does not flash the vector stand-ins. */
+  /* The room's pictures decode while its cards are up (00-core loadArt); remember that, so the room does not flash the vector stand-ins. */
   function toyImageReady(name) { if (!tyImgState[name]) tyImgState[name] = 'ok'; }
+  /* A picture that is known or on its way (loadArt) is placed at once: the browser paints it when it arrives, no stand-in is drawn. */
+  const tyComing = name => tyImgState[name] === 'ok' || (tyImgState[name] !== 'bad' && typeof artPending === 'function' && artPending(name));
+  /* DEV: stand-ins that were drawn and later replaced by the picture. The lazy room loading (PLAN-2 D4) keeps this at 0. */
+  const tyStats = { replaced: 0 };
   /* A <g> that holds the picture `name` in the box, or fallback(g) until the picture exists. */
   function tyPic(parent, name, x, y, w, h, fallback, extra) {
     const g = el('g', {}, parent);
     const put = () => { g.textContent = ''; img(name, x, y, w, h, g, Object.assign({ preserveAspectRatio: 'xMidYMax meet' }, extra)); };
-    if (tyImgState[name] === 'ok') { put(); return g; }
+    if (tyComing(name)) { put(); return g; }
     if (fallback) fallback(g);
-    if (tyImgState[name] !== 'bad') tyProbe(name, ok => { if (ok) put(); });
+    if (tyImgState[name] !== 'bad') tyProbe(name, ok => { if (ok) { tyStats.replaced++; put(); } });
     return g;
   }
   const tyShow = (node, on) => { if (node) node.setAttribute('visibility', on ? 'visible' : 'hidden'); };
@@ -380,17 +384,22 @@
   /* A floe is painted in three pieces (floe_l, floe_m, floe_r: one tile each); a one-tile floe is the middle piece.
      Until all three load (or if they never do) the vector slab stands in. */
   function tyFloeArt(art, w) {
-    el('g', {}, art).appendChild(tyVector(w));
     const cells = Math.max(1, Math.round(w / T)), names = ['floe_l', 'floe_m', 'floe_r'];
-    let left = names.length, dead = false;
-    for (const nm of names) tyProbe(nm, ok => {
-      if (!ok) dead = true;
-      if (--left || dead) return;
+    const paint = () => {
       art.textContent = '';
       for (let i = 0; i < cells; i++) {
         const nm2 = cells === 1 ? 'floe_m' : i === 0 ? 'floe_l' : i === cells - 1 ? 'floe_r' : 'floe_m';
         img(nm2, i * T - 1, -2, T + 2, T + 2, art, { preserveAspectRatio: 'none' });
       }
+    };
+    if (names.every(tyComing)) { paint(); return; }
+    el('g', {}, art).appendChild(tyVector(w));
+    let left = names.length, dead = false;
+    for (const nm of names) tyProbe(nm, ok => {
+      if (!ok) dead = true;
+      if (--left || dead) return;
+      tyStats.replaced++;
+      paint();
     });
   }
   function tyVector(w) {

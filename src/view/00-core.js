@@ -112,6 +112,41 @@
   const assetURL = file => `game/${file}?v=${ASSET_VERSION}`;
   const SRC = n => assetURL(`${n}.webp`);
 
+  /* Pictures load by group (PLAN-2 D4, plan in src/lib/assets.js): the title set first, a room's set while its recall / chapter cards are
+     up. loadArt starts every picture of `names` that is not loading or loaded yet, decodes it, and resolves when all are decoded or
+     `patience` ms have passed (the child is never stranded behind a slow network; the pictures keep arriving afterwards).
+     artPending(name) says a picture is on its way, so a drawing routine can place it at once instead of a stand-in. */
+  const ART_PATIENCE = 1500;
+  const artJobs = new Map();   // name -> promise of its decode, settled (never rejected) when it is decoded or has failed
+  const artWait = new Set();
+  const artLive = new Set();   // the Image objects whose picture is still loading: held so nothing can collect them mid-load
+  const artStats = { requested: 0, decoded: 0, failed: 0 };
+  const artPending = name => artWait.has(name);
+  /* the toy families of rooms 3-10: slope, spring, floe, note steps, ice flower, bunny (and its nest) */
+  const TOY_ART = /^(tile_slope_|spring_|floe_|note_|flower_|bunny_)/;
+  function loadArt(names, patience) {
+    const jobs = [];
+    for (const n of names) {
+      let p = artJobs.get(n);
+      if (!p) {
+        const im = new Image();
+        im.src = SRC(n);
+        artStats.requested++;
+        artWait.add(n); artLive.add(im);
+        p = im.decode().then(() => {
+          artWait.delete(n); artLive.delete(im); artStats.decoded++;
+          if (TOY_ART.test(n) && typeof toyImageReady === 'function') toyImageReady(n);   // 15-toys: remembers the picture exists
+        }, () => {
+          artWait.delete(n); artLive.delete(im); artStats.failed++; artJobs.delete(n);     // a failed picture is asked for again next time
+        });
+        artJobs.set(n, p);
+      }
+      jobs.push(p);
+    }
+    const all = Promise.all(jobs).then(() => {});
+    return patience > 0 ? Promise.race([all, new Promise(ok => setTimeout(ok, patience))]) : all;
+  }
+
   function el(tag, attrs, parent) {
     const n = document.createElementNS(NS, tag);
     for (const k in attrs) n.setAttribute(k, attrs[k]);

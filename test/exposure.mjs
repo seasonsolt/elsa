@@ -4,8 +4,9 @@
 
      node test/exposure.mjs              print the table and the summary
      node test/exposure.mjs --write      also regenerate src/content/exposure.md (never edit that file by hand)
-     node test/exposure.mjs --check      exit 1 when a core word is below the threshold or exposure.md is stale (2C turns this into a gate)
-   test/run.mjs prints the same table as a REPORT ("exposure"); it does not fail the run yet.
+     node test/exposure.mjs --check      exit 1 when a core word is below the threshold (6) or exposure.md is stale
+   This is a gate (PLAN-2 C1): test/run.mjs prints the table, and test/unit/exposure.test.mjs fails the run on the same problems
+   (exposureProblems below). The threshold counts "in-context" only; pickups and toy lines never make up for a short room.
 
    What counts as one hearing: one {"w": id} segment of a line the view plays, or one voice.word(id) call. The playthrough is the
    normal one: chapter card watched, every start line played, every required item picked up, door opened, clear page watched once.
@@ -174,6 +175,13 @@ ${formatSummary(rows)}.
 `;
 }
 
+/** The problems that fail the gate, one sentence each: every core word below THRESHOLD in-context hearings, and a stale exposure.md. */
+export function exposureProblems(rep) {
+  const out = rep.rows.filter(r => r.low).map(r => `${r.room}/${r.word}: ${r.inContext} in-context hearings, need at least ${THRESHOLD}`);
+  if (rep.stale) out.push(`${rep.doc} is stale: run node test/exposure.mjs --write`);
+  return out;
+}
+
 /** Everything the CLI and run.mjs need. `stale` is true when exposure.md differs from what the script generates now. */
 export function exposureReport(logic) {
   const rows = computeExposure(repoInputs(logic));
@@ -192,5 +200,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     fs.writeFileSync(path.join(ROOT, DOC), rep.markdown);
     console.log(`wrote ${DOC}`);
   } else if (rep.stale) console.log(`${DOC} is stale: run node test/exposure.mjs --write`);
-  if (args.includes('--check') && (rep.rows.some(r => r.low) || (rep.stale && !args.includes('--write')))) process.exit(1);
+  if (args.includes('--check')) {
+    const problems = exposureProblems(args.includes('--write') ? { ...rep, stale: false } : rep);
+    if (problems.length) { console.error('exposure check FAILED:\n  ' + problems.join('\n  ')); process.exit(1); }
+  }
 }

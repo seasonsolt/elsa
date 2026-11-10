@@ -1,0 +1,744 @@
+{
+ "tool": "art/asr_check.py -> art/asr_whisper.py, faster-whisper small int8, beam 5; zh segments with language zh, en segments with language en",
+ "scope": "every segment of every clip changed in this run (9 clips, 51 distinct segments), not a sample",
+ "human_listening_performed": false,
+ "segment_tally": {
+  "OK": 33,
+  "NEAR": 11,
+  "DIFF": 6,
+  "SHORT": 1
+ },
+ "diff_total": 6,
+ "diff_unexplained": [],
+ "note": "DIFF is the checker verdict, kept as is. Each DIFF carries an explanation; none is proven to be a synthesis fault and none is proven to be fine: ASR cannot settle homophones, so these segments are first on the listening list.",
+ "clips": [
+  {
+   "clip": "vo_start_hall_3.mp3",
+   "key": "start_hall_3",
+   "who": "nuan",
+   "text": "不怕不怕！看，到处都是heart，红红的heart，还有star。最后要走到那边的door",
+   "transcript": "不怕不怕，看,到处都是。 | heart | 红红的 | heart | 还有， | Star | 最后要走到那边的。 | Door",
+   "verdict": "OK",
+   "duration_s": 9.57,
+   "segments": [
+    "seg_b54658b879ba",
+    "seg_cf0e20109784",
+    "seg_cbbbefb9fd31",
+    "seg_cf0e20109784",
+    "seg_9f3042d873dd",
+    "seg_b16e44e2203f",
+    "seg_eeb2648bd388",
+    "seg_28da4f4de3de"
+   ]
+  },
+  {
+   "clip": "vo_start_lake_1.mp3",
+   "key": "start_lake_1",
+   "who": "nuan",
+   "text": "哇，好大的湖！看，是water，水好凉呀。水里有fish",
+   "transcript": "哇!好大的壶!看!是! | water | 谁好凉呀，谁理由。 | Fish",
+   "verdict": "DIFF",
+   "duration_s": 7.24,
+   "segments": [
+    "seg_2085caa2dacc",
+    "seg_e9aca04ed59b",
+    "seg_21f0e3222fa9",
+    "seg_2c92660d06a6"
+   ]
+  },
+  {
+   "clip": "vo_start_slope_3.mp3",
+   "key": "start_slope_3",
+   "who": "nuan",
+   "text": "好呀，我们一起slidefastfast，往down滑，抓紧我的手！",
+   "transcript": "好呀,我们一起。 | Slide | FAST | FAST | 哇﹐ | Down. | 划﹑扎紧我的手。",
+   "verdict": "DIFF",
+   "duration_s": 7.33,
+   "segments": [
+    "seg_87917ad4c9e9",
+    "seg_824d127cfd51",
+    "seg_027589b141d3",
+    "seg_027589b141d3",
+    "seg_c94bc9181127",
+    "seg_d41f533559fb",
+    "seg_8f7ef28d6967"
+   ]
+  },
+  {
+   "clip": "vo_start_tower_3.mp3",
+   "key": "start_tower_3",
+   "who": "nuan",
+   "text": "好主意！一个人pushgate就open，另一个人再过去。我们分工吧！",
+   "transcript": "好主意,一个人。 | Push. | Got The | 秀， | Open. | 另一个人,再过去。我们分工吧!",
+   "verdict": "DIFF",
+   "duration_s": 8.16,
+   "segments": [
+    "seg_e18c000e5bea",
+    "seg_4230c39ecdf5",
+    "seg_28e99579514c",
+    "seg_4a0a85986a04",
+    "seg_5619be1d2b07",
+    "seg_209ee051937d"
+   ]
+  },
+  {
+   "clip": "vo_start_spring_3.mp3",
+   "key": "start_spring_3",
+   "who": "nuan",
+   "text": "我想往up飞，飞得更high，去拿那颗星星！",
+   "transcript": "我想网。 | up | 飞 飞的钢 | Hi. | 去拿那颗星星。",
+   "verdict": "DIFF",
+   "duration_s": 5.27,
+   "segments": [
+    "seg_a3862c67c213",
+    "seg_7ab79e2ea8c0",
+    "seg_b0eb234e74cb",
+    "seg_648cbb18effd",
+    "seg_f8c897516073"
+   ]
+  },
+  {
+   "clip": "vo_start_garden_3.mp3",
+   "key": "start_garden_3",
+   "who": "nuan",
+   "text": "有了warm的灯笼，醒来的flower是彩色的！这样，spring就回来啦。",
+   "transcript": "有啦! | Warm | 的灯笼醒来的。 | Flower | 是彩色的，这样。 | Spring | 就回来了。",
+   "verdict": "NEAR",
+   "duration_s": 7.94,
+   "segments": [
+    "seg_026eb9285417",
+    "seg_70e9e66eb56b",
+    "seg_8559de352bf8",
+    "seg_7bbc659ab99e",
+    "seg_9f07f6fc1501",
+    "seg_c6950142b4a2",
+    "seg_74559dd0c7a7"
+   ]
+  },
+  {
+   "clip": "vo_open_tower.mp3",
+   "key": "open_tower",
+   "who": "nuan",
+   "text": "踏板被push住啦，gate也open啦！门开啦，姐姐，我们走吧！",
+   "transcript": "踏板背 | Push. | 助啦! | Got The | yeh | Open. | 乐，,门开了,姐姐,我们走吧。",
+   "verdict": "DIFF",
+   "duration_s": 8.0,
+   "segments": [
+    "seg_7a9ecdfa43e8",
+    "seg_4230c39ecdf5",
+    "seg_45942fe21690",
+    "seg_28e99579514c",
+    "seg_84c327988f9f",
+    "seg_5619be1d2b07",
+    "seg_43ec9636e872"
+   ]
+  },
+  {
+   "clip": "vo_open_bunny.mp3",
+   "key": "open_bunny",
+   "who": "nuan",
+   "text": "谢谢你们，bunny！回home啦，吃carrot吧，门开啦。",
+   "transcript": "谢谢你们。 | Bunny | 回， | Home. | 辣 吃 | Carrot | 把 门开啦。",
+   "verdict": "NEAR",
+   "duration_s": 6.3,
+   "segments": [
+    "seg_84ad741a4601",
+    "seg_cc3adb2ac241",
+    "seg_a7553666fea6",
+    "seg_aa47fa619926",
+    "seg_e63b605feb1a",
+    "seg_0a22a363dc63",
+    "seg_1e2716ab1a4e"
+   ]
+  },
+  {
+   "clip": "vo_open_floe.mp3",
+   "key": "open_floe",
+   "who": "nuan",
+   "text": "我们过河啦！先wait，再往right走，门也开啦。姐姐，快过去！",
+   "transcript": "我们过河了， 先。 | Wait! | 再往﹐ | Right. | 走,门也开啦。姐姐,快过去。",
+   "verdict": "NEAR",
+   "duration_s": 7.96,
+   "segments": [
+    "seg_d1f6679860c5",
+    "seg_1f6c282ede4b",
+    "seg_c524f5c796fe",
+    "seg_2f268e44be0a",
+    "seg_0f54a900e90e"
+   ]
+  }
+ ],
+ "segments": [
+  {
+   "id": "seg_b54658b879ba",
+   "lang": "zh",
+   "text": "不怕不怕！看，到处都是",
+   "transcript": "不怕不怕，看,到处都是。",
+   "verdict": "OK",
+   "duration_s": 3.1,
+   "used_by": [
+    "start_hall_3"
+   ]
+  },
+  {
+   "id": "seg_cbbbefb9fd31",
+   "lang": "zh",
+   "text": "，红红的",
+   "transcript": "红红的",
+   "verdict": "OK",
+   "duration_s": 0.82,
+   "used_by": [
+    "start_hall_3"
+   ]
+  },
+  {
+   "id": "seg_9f3042d873dd",
+   "lang": "zh",
+   "text": "，还有",
+   "transcript": "还有，",
+   "verdict": "OK",
+   "duration_s": 0.56,
+   "used_by": [
+    "start_hall_3"
+   ]
+  },
+  {
+   "id": "seg_eeb2648bd388",
+   "lang": "zh",
+   "text": "。最后要走到那边的",
+   "transcript": "最后要走到那边的。",
+   "verdict": "OK",
+   "duration_s": 2.02,
+   "used_by": [
+    "start_hall_3"
+   ]
+  },
+  {
+   "id": "seg_2085caa2dacc",
+   "lang": "zh",
+   "text": "哇，好大的湖！看，是",
+   "transcript": "哇!好大的壶!看!是!",
+   "verdict": "NEAR",
+   "duration_s": 3.32,
+   "used_by": [
+    "start_lake_1"
+   ]
+  },
+  {
+   "id": "seg_21f0e3222fa9",
+   "lang": "zh",
+   "text": "，水好凉呀。水里有",
+   "transcript": "谁好凉呀，谁理由。",
+   "verdict": "DIFF",
+   "duration_s": 2.43,
+   "used_by": [
+    "start_lake_1"
+   ],
+   "explanation": "水 heard as 谁 (shui / shei) and 有 as 由 (you / you, same sound): homophones. whisper-small (int8, CPU) misheard a Chinese homophone or a word-final syllable; the same clip re-run whole gave the same confusion, so it is a recogniser limit that cannot be separated from a synthesis fault without listening"
+  },
+  {
+   "id": "seg_87917ad4c9e9",
+   "lang": "zh",
+   "text": "好呀，我们一起",
+   "transcript": "好呀,我们一起。",
+   "verdict": "OK",
+   "duration_s": 1.75,
+   "used_by": [
+    "start_slope_3"
+   ]
+  },
+  {
+   "id": "seg_c94bc9181127",
+   "lang": "zh",
+   "text": "，往",
+   "transcript": "哇﹐",
+   "verdict": "NEAR",
+   "duration_s": 0.43,
+   "used_by": [
+    "start_slope_3"
+   ]
+  },
+  {
+   "id": "seg_8f7ef28d6967",
+   "lang": "zh",
+   "text": "滑，抓紧我的手！",
+   "transcript": "划﹑扎紧我的手。",
+   "verdict": "DIFF",
+   "duration_s": 1.85,
+   "used_by": [
+    "start_slope_3"
+   ],
+   "explanation": "滑 heard as 划 / 花 and 抓 as 扎 (hua, zhua / zha): homophones. whisper-small (int8, CPU) misheard a Chinese homophone or a word-final syllable; the same clip re-run whole gave the same confusion, so it is a recogniser limit that cannot be separated from a synthesis fault without listening"
+  },
+  {
+   "id": "seg_e18c000e5bea",
+   "lang": "zh",
+   "text": "好主意！一个人",
+   "transcript": "好主意,一个人。",
+   "verdict": "OK",
+   "duration_s": 1.95,
+   "used_by": [
+    "start_tower_3"
+   ]
+  },
+  {
+   "id": "seg_4a0a85986a04",
+   "lang": "zh",
+   "text": "就",
+   "transcript": "秀，",
+   "verdict": "NEAR",
+   "duration_s": 0.4,
+   "used_by": [
+    "start_tower_3"
+   ]
+  },
+  {
+   "id": "seg_209ee051937d",
+   "lang": "zh",
+   "text": "，另一个人再过去。我们分工吧！",
+   "transcript": "另一个人,再过去。我们分工吧!",
+   "verdict": "OK",
+   "duration_s": 3.28,
+   "used_by": [
+    "start_tower_3"
+   ]
+  },
+  {
+   "id": "seg_a3862c67c213",
+   "lang": "zh",
+   "text": "我想往",
+   "transcript": "我想网。",
+   "verdict": "NEAR",
+   "duration_s": 0.84,
+   "used_by": [
+    "start_spring_3"
+   ]
+  },
+  {
+   "id": "seg_b0eb234e74cb",
+   "lang": "zh",
+   "text": "飞，飞得更",
+   "transcript": "飞 飞的钢",
+   "verdict": "DIFF",
+   "duration_s": 1.48,
+   "used_by": [
+    "start_spring_3"
+   ],
+   "explanation": "\"飞得更\" ends the segment on 更 with the English word \"high\" cut off after it, heard as 的钢: 更 / 钢 (geng / gang) differ in the final only. whisper-small (int8, CPU) misheard a Chinese homophone or a word-final syllable; the same clip re-run whole gave the same confusion, so it is a recogniser limit that cannot be separated from a synthesis fault without listening"
+  },
+  {
+   "id": "seg_f8c897516073",
+   "lang": "zh",
+   "text": "，去拿那颗星星！",
+   "transcript": "去拿那颗星星。",
+   "verdict": "OK",
+   "duration_s": 1.54,
+   "used_by": [
+    "start_spring_3"
+   ]
+  },
+  {
+   "id": "seg_026eb9285417",
+   "lang": "zh",
+   "text": "有了",
+   "transcript": "有啦!",
+   "verdict": "NEAR",
+   "duration_s": 0.54,
+   "used_by": [
+    "start_garden_3"
+   ]
+  },
+  {
+   "id": "seg_8559de352bf8",
+   "lang": "zh",
+   "text": "的灯笼，醒来的",
+   "transcript": "的灯笼醒来的。",
+   "verdict": "OK",
+   "duration_s": 1.75,
+   "used_by": [
+    "start_garden_3"
+   ]
+  },
+  {
+   "id": "seg_9f07f6fc1501",
+   "lang": "zh",
+   "text": "是彩色的！这样，",
+   "transcript": "是彩色的，这样。",
+   "verdict": "OK",
+   "duration_s": 2.12,
+   "used_by": [
+    "start_garden_3"
+   ]
+  },
+  {
+   "id": "seg_74559dd0c7a7",
+   "lang": "zh",
+   "text": "就回来啦。",
+   "transcript": "就回来了。",
+   "verdict": "NEAR",
+   "duration_s": 0.91,
+   "used_by": [
+    "start_garden_3"
+   ]
+  },
+  {
+   "id": "seg_7a9ecdfa43e8",
+   "lang": "zh",
+   "text": "踏板被",
+   "transcript": "踏板背",
+   "verdict": "NEAR",
+   "duration_s": 0.89,
+   "used_by": [
+    "open_tower"
+   ]
+  },
+  {
+   "id": "seg_45942fe21690",
+   "lang": "zh",
+   "text": "住啦，",
+   "transcript": "助啦!",
+   "verdict": "NEAR",
+   "duration_s": 0.52,
+   "used_by": [
+    "open_tower"
+   ]
+  },
+  {
+   "id": "seg_84c327988f9f",
+   "lang": "zh",
+   "text": "也",
+   "transcript": "yeh",
+   "verdict": "SHORT",
+   "duration_s": 0.32,
+   "used_by": [
+    "open_tower"
+   ],
+   "explanation": "One character, whisper repeats its own prompt on so little audio; not judged by ASR."
+  },
+  {
+   "id": "seg_43ec9636e872",
+   "lang": "zh",
+   "text": "啦！门开啦，姐姐，我们走吧！",
+   "transcript": "乐，,门开了,姐姐,我们走吧。",
+   "verdict": "DIFF",
+   "duration_s": 3.63,
+   "used_by": [
+    "open_tower"
+   ],
+   "explanation": "啦 heard as 乐 / 了 (la / le): a sentence-final particle and a homophone; the rest of the 14 characters match. whisper-small (int8, CPU) misheard a Chinese homophone or a word-final syllable; the same clip re-run whole gave the same confusion, so it is a recogniser limit that cannot be separated from a synthesis fault without listening"
+  },
+  {
+   "id": "seg_84ad741a4601",
+   "lang": "zh",
+   "text": "谢谢你们，",
+   "transcript": "谢谢你们。",
+   "verdict": "OK",
+   "duration_s": 0.97,
+   "used_by": [
+    "open_bunny"
+   ]
+  },
+  {
+   "id": "seg_a7553666fea6",
+   "lang": "zh",
+   "text": "！回",
+   "transcript": "回，",
+   "verdict": "OK",
+   "duration_s": 0.4,
+   "used_by": [
+    "open_bunny"
+   ]
+  },
+  {
+   "id": "seg_e63b605feb1a",
+   "lang": "zh",
+   "text": "啦，吃",
+   "transcript": "辣 吃",
+   "verdict": "NEAR",
+   "duration_s": 1.14,
+   "used_by": [
+    "open_bunny"
+   ]
+  },
+  {
+   "id": "seg_1e2716ab1a4e",
+   "lang": "zh",
+   "text": "吧，门开啦。",
+   "transcript": "把 门开啦。",
+   "verdict": "NEAR",
+   "duration_s": 1.43,
+   "used_by": [
+    "open_bunny"
+   ]
+  },
+  {
+   "id": "seg_d1f6679860c5",
+   "lang": "zh",
+   "text": "我们过河啦！先",
+   "transcript": "我们过河了， 先。",
+   "verdict": "NEAR",
+   "duration_s": 1.95,
+   "used_by": [
+    "open_floe"
+   ]
+  },
+  {
+   "id": "seg_c524f5c796fe",
+   "lang": "zh",
+   "text": "，再往",
+   "transcript": "再往﹐",
+   "verdict": "OK",
+   "duration_s": 0.61,
+   "used_by": [
+    "open_floe"
+   ]
+  },
+  {
+   "id": "seg_0f54a900e90e",
+   "lang": "zh",
+   "text": "走，门也开啦。姐姐，快过去！",
+   "transcript": "走,门也开啦。姐姐,快过去。",
+   "verdict": "OK",
+   "duration_s": 3.81,
+   "used_by": [
+    "open_floe"
+   ]
+  },
+  {
+   "id": "seg_cf0e20109784",
+   "lang": "en",
+   "text": "heart",
+   "transcript": "heart",
+   "verdict": "OK",
+   "duration_s": 0.51,
+   "used_by": [
+    "start_hall_3"
+   ]
+  },
+  {
+   "id": "seg_b16e44e2203f",
+   "lang": "en",
+   "text": "star",
+   "transcript": "Star",
+   "verdict": "OK",
+   "duration_s": 0.64,
+   "used_by": [
+    "start_hall_3"
+   ]
+  },
+  {
+   "id": "seg_28da4f4de3de",
+   "lang": "en",
+   "text": "door",
+   "transcript": "Door",
+   "verdict": "OK",
+   "duration_s": 0.46,
+   "used_by": [
+    "start_hall_3"
+   ]
+  },
+  {
+   "id": "seg_e9aca04ed59b",
+   "lang": "en",
+   "text": "water",
+   "transcript": "water",
+   "verdict": "OK",
+   "duration_s": 0.5,
+   "used_by": [
+    "start_lake_1"
+   ]
+  },
+  {
+   "id": "seg_2c92660d06a6",
+   "lang": "en",
+   "text": "fish",
+   "transcript": "Fish",
+   "verdict": "OK",
+   "duration_s": 0.52,
+   "used_by": [
+    "start_lake_1"
+   ]
+  },
+  {
+   "id": "seg_824d127cfd51",
+   "lang": "en",
+   "text": "slide",
+   "transcript": "Slide",
+   "verdict": "OK",
+   "duration_s": 0.71,
+   "used_by": [
+    "start_slope_3"
+   ]
+  },
+  {
+   "id": "seg_027589b141d3",
+   "lang": "en",
+   "text": "fast",
+   "transcript": "FAST",
+   "verdict": "OK",
+   "duration_s": 0.65,
+   "used_by": [
+    "start_slope_3"
+   ]
+  },
+  {
+   "id": "seg_d41f533559fb",
+   "lang": "en",
+   "text": "down",
+   "transcript": "Down.",
+   "verdict": "OK",
+   "duration_s": 0.47,
+   "used_by": [
+    "start_slope_3"
+   ]
+  },
+  {
+   "id": "seg_4230c39ecdf5",
+   "lang": "en",
+   "text": "push",
+   "transcript": "Push.",
+   "verdict": "OK",
+   "duration_s": 0.54,
+   "used_by": [
+    "start_tower_3",
+    "open_tower"
+   ]
+  },
+  {
+   "id": "seg_28e99579514c",
+   "lang": "en",
+   "text": "gate",
+   "transcript": "Got The",
+   "verdict": "DIFF",
+   "duration_s": 0.73,
+   "used_by": [
+    "start_tower_3",
+    "open_tower"
+   ],
+   "explanation": "English \"gate\" heard as \"Got The\" (alone) and \"jail\" / \"God\" (inside two clips). This segment is byte-identical to the already shipped game/word_gate.mp3 (same voice, same text); it was not changed by this work, but it is the weakest word and needs a human ear."
+  },
+  {
+   "id": "seg_5619be1d2b07",
+   "lang": "en",
+   "text": "open",
+   "transcript": "Open.",
+   "verdict": "OK",
+   "duration_s": 0.55,
+   "used_by": [
+    "start_tower_3",
+    "open_tower"
+   ]
+  },
+  {
+   "id": "seg_7ab79e2ea8c0",
+   "lang": "en",
+   "text": "up",
+   "transcript": "up",
+   "verdict": "OK",
+   "duration_s": 0.46,
+   "used_by": [
+    "start_spring_3"
+   ]
+  },
+  {
+   "id": "seg_648cbb18effd",
+   "lang": "en",
+   "text": "high",
+   "transcript": "Hi.",
+   "verdict": "DIFF",
+   "duration_s": 0.36,
+   "used_by": [
+    "start_spring_3"
+   ],
+   "explanation": "English \"high\" heard as \"Hi.\" when alone (short word, whisper drops the vowel glide); inside vo_start_spring_3 the whole-clip transcript has \"high\". Same segment as the shipped game/word_high.mp3."
+  },
+  {
+   "id": "seg_70e9e66eb56b",
+   "lang": "en",
+   "text": "warm",
+   "transcript": "Warm",
+   "verdict": "OK",
+   "duration_s": 0.53,
+   "used_by": [
+    "start_garden_3"
+   ]
+  },
+  {
+   "id": "seg_7bbc659ab99e",
+   "lang": "en",
+   "text": "flower",
+   "transcript": "Flower",
+   "verdict": "OK",
+   "duration_s": 0.6,
+   "used_by": [
+    "start_garden_3"
+   ]
+  },
+  {
+   "id": "seg_c6950142b4a2",
+   "lang": "en",
+   "text": "spring",
+   "transcript": "Spring",
+   "verdict": "OK",
+   "duration_s": 0.68,
+   "used_by": [
+    "start_garden_3"
+   ]
+  },
+  {
+   "id": "seg_cc3adb2ac241",
+   "lang": "en",
+   "text": "bunny",
+   "transcript": "Bunny",
+   "verdict": "OK",
+   "duration_s": 0.46,
+   "used_by": [
+    "open_bunny"
+   ]
+  },
+  {
+   "id": "seg_aa47fa619926",
+   "lang": "en",
+   "text": "home",
+   "transcript": "Home.",
+   "verdict": "OK",
+   "duration_s": 0.46,
+   "used_by": [
+    "open_bunny"
+   ]
+  },
+  {
+   "id": "seg_0a22a363dc63",
+   "lang": "en",
+   "text": "carrot",
+   "transcript": "Carrot",
+   "verdict": "OK",
+   "duration_s": 0.62,
+   "used_by": [
+    "open_bunny"
+   ]
+  },
+  {
+   "id": "seg_1f6c282ede4b",
+   "lang": "en",
+   "text": "wait",
+   "transcript": "Wait!",
+   "verdict": "OK",
+   "duration_s": 0.56,
+   "used_by": [
+    "open_floe"
+   ]
+  },
+  {
+   "id": "seg_2f268e44be0a",
+   "lang": "en",
+   "text": "right",
+   "transcript": "Right.",
+   "verdict": "OK",
+   "duration_s": 0.46,
+   "used_by": [
+    "open_floe"
+   ]
+  }
+ ]
+}

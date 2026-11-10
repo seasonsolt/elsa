@@ -41,10 +41,10 @@ body {
   height: auto;
   background: #2a3a86;
   touch-action: none;
-  user-select: none; -webkit-user-select: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 body.subs #stage { width: min(100vw, calc((100dvh - 84px) * 960 / 520)); }
-body.touch #stage { width: min(100vw, calc((100dvh - 84px) * 960 / 520)); }
+body.touch #stage { width: min(100vw, calc((100dvh - 96px) * 960 / 520)); }
 #stage text { font-family: var(--display); }
 #stage .latin { font-family: var(--latin); font-weight: 600; }
 .btn { cursor: pointer; outline: none; }
@@ -118,18 +118,35 @@ body[data-mode="solo"] #tSwitch { display: none; }
 body[data-mode="solo"] #touch { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--paper); }
 
-/* ---- Touch pad: symbols only ---- */
+/* ---- Touch pad: symbols only. Every key is at least 72 CSS px each way (PLAN-2 D1); a long press must not open the system menu or text callout ---- */
 #touch { display: none; width: min(100%, 720px); gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0 12px; box-sizing: border-box; }
 #touch button {
   appearance: none; border: 1px solid var(--line); border-radius: 14px; background: var(--ink); color: var(--paper);
-  font-family: var(--display); font-size: 26px; min-height: 64px; touch-action: none;
-  user-select: none; -webkit-user-select: none;
+  font-family: var(--display); font-size: 26px; min-height: 72px; min-width: 72px; touch-action: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
 }
 #touch button.on { background: #5a6fca; }
 #touch #tSwitch { color: var(--gold); }
 body.touch #touch { display: grid; }
 body.touch #info { grid-template-columns: minmax(0, 1fr); }
 body.touch .keys { display: none; }
+
+/* ---- Gamepad focus ring (80-input.js moves it over the button the D-pad picked; a picture, no text) ---- */
+#padFocus rect { fill: none; stroke: var(--gold); stroke-width: 6; animation: padRing .8s ease-in-out infinite alternate; }
+@keyframes padRing { from { stroke-opacity: .55; } to { stroke-opacity: 1; } }
+
+/* ---- Portrait: the game is landscape. Only a picture asks for the tablet to be turned; the stage, the touch pad and the parent strip are gone ---- */
+#turn { display: none; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center; background: var(--night); }
+#turn svg { width: min(60vmin, 360px); height: auto; }
+#turn .tablet { transform-box: fill-box; transform-origin: center; animation: turnTablet 2.4s ease-in-out infinite; }
+@keyframes turnTablet { 0%, 20% { transform: rotate(0); } 70%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) {
+  #turn { display: flex; }
+  #stage, #touch, #info { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #turn .tablet, #padFocus rect { animation: none; }
+}
 </style>
 
 <svg id="stage" viewBox="0 0 960 520" role="img" aria-label="艾莎和安娜在冰堡里的游戏画面">
@@ -169,8 +186,22 @@ body.touch .keys { display: none; }
   <g id="hud"></g>
   <g id="overlay"></g>
   <g id="modal"></g>
+  <g id="padFocus" pointer-events="none" visibility="hidden"><rect rx="18"/></g>
   <g id="subs" pointer-events="none"></g>
 </svg>
+
+<div id="turn" role="img" aria-label="请把平板横过来">
+  <svg viewBox="0 0 240 240" aria-hidden="true">
+    <rect x="30" y="30" width="180" height="180" rx="40" fill="#1b2559" opacity=".6"/>
+    <g class="tablet">
+      <rect x="82" y="46" width="76" height="148" rx="12" fill="#f6f7ff" stroke="#ffd27a" stroke-width="6"/>
+      <rect x="90" y="58" width="60" height="112" rx="5" fill="#2a3a86"/>
+      <circle cx="120" cy="182" r="5" fill="#a9b6e2"/>
+    </g>
+    <path d="M178 60a74 74 0 0 1 20 54" fill="none" stroke="#ffd27a" stroke-width="9" stroke-linecap="round"/>
+    <path d="M186 106l12 12 12-14z" fill="#ffd27a" stroke="#ffd27a" stroke-width="5" stroke-linejoin="round"/>
+  </svg>
+</div>
 
 <div id="touch">
   <button id="tLeft" aria-label="向左走">&#9664;</button><button id="tRight" aria-label="向右走">&#9654;</button><button id="tJump" aria-label="跳">&#9650;</button><button id="tAct" aria-label="魔法">&#10022;</button><button id="tSwitch" aria-label="换人">&#8646;</button>

@@ -2,8 +2,8 @@
 #   lint        ESLint over src/ and test/ (eslint.config.mjs)
 #   typecheck   tsc --checkJs over src/*.js, src/lib/*.js, src/view/*.js (tsconfig.json)
 #   test        node test/run.mjs (rooms, unit tests, content keys, exposure report)
-#   build-check a fresh build must be byte-identical to ice-castle.html as it is in the working tree (staged or not),
-#               so a source change cannot be committed without the rebuilt page. Needs no clean git state.
+#   build-check a fresh build must be byte-identical to ice-castle.html and sw.js as they are in the working tree (staged or not),
+#               so a source change cannot be committed without the rebuilt page and worker. Needs no clean git state.
 
 FRESH := .tools/fresh-ice-castle.html
 
@@ -31,5 +31,7 @@ build:
 build-check:
 	@mkdir -p .tools
 	@python3 art/build_page.py --out $(FRESH) > /dev/null
+	@if cmp -s .tools/sw.js sw.js; then echo "build-check: sw.js equals a fresh build"; \
+	 else echo "build-check FAILED: sw.js differs from a fresh build; run 'make build' and keep the result" >&2; exit 1; fi
 	@if cmp -s $(FRESH) ice-castle.html; then echo "build-check: ice-castle.html equals a fresh build"; \
 	 else echo "build-check FAILED: ice-castle.html differs from a fresh build; run 'make build' and keep the result" >&2; exit 1; fi

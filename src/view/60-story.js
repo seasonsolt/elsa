@@ -30,6 +30,10 @@
   }
   /* A scene that only the on-screen buttons and Enter may move. */
   function storyStrict(s) { s.strict = true; s.openedAt = performance.now(); return s; }
+  /* The gamepad (80-input) moves a focus ring over the on-screen buttons and A presses the focused one, which is a button press
+     like a click. A learning scene still ignores the pad in its quiet first second, and a pad press with no ring on screen only
+     places the ring, so mashing A never skips a lesson. */
+  function storyAcceptsPad(now) { return !story || !story.strict || now - story.openedAt >= STORY_QUIET_MS; }
 
   addEventListener('keydown', e => {
     const modal = uxState.modal;
@@ -142,13 +146,20 @@
   }
 
   /* ---------- recall (start of the next room) ---------- */
-  function showRecall(prevLevel, done) {
-    const lv = prevLevel == null ? null : uxLevel(prevLevel), words = lv ? uxRoomWords(lv) : [];
+  /* The words of the room just left, then up to two older ones that are due for review (90-main builds `ids` with recallWordsFor;
+     without `ids` it is just that room's words). An older word counts as reviewed once its line has been said, which keeps it
+     out of the next recall. The room's own words are not marked: their recap is not a spaced review (src/lib/review.js). */
+  function showRecall(prevLevel, done, ids) {
+    const lv = prevLevel == null ? null : uxLevel(prevLevel), own = lv ? lv.words || [] : [];
+    const words = uxWordList(Array.isArray(ids) ? ids : own);
     if (!lv || !words.length) { if (done) done(); return; }
     const s = storyStrict(uxScreen('recall', true));
     uxInputReset();
+    const older = recallOlderIds(own, words.map(w => w.id));
+    uxPreload(words.map(w => uxKey('recall', w.id)));
+    const wide = words.length > 3;   // up to five cards: smaller, so the row still fits the page
     const root = uxPaint(`<g class="page"><image href="${SRC(lv.bg)}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".5"/>
-      ${uxCardRow(words, 140, 200, 230, 30)}
+      ${wide ? uxCardRow(words, 150, 156, 196, 16) : uxCardRow(words, 140, 200, 230, 30)}
       ${uxButton({ act: 'skip', ui: 'next', icon: 'next', x: 886, y: 452, r: 34 })}</g>`);
     const finish = () => uxEnd(s, done);
     s.onKey = finish;
@@ -158,6 +169,8 @@
         if (!uxAlive(s)) return;
         uxPopSlot(root, k); uxSfx('page');
         await uxLine('recall_' + words[k].id);
+        if (!uxAlive(s)) return;
+        if (older.includes(words[k].id)) uxNoteReviewed(words[k].id);
         await uxWait(200);
       }
       await uxWait(500);
@@ -219,92 +232,45 @@
       })();
     };
 
-    /* B: word cards, each said once; sparkle badge (no text) the first time. The next button shows as soon as all three
-       have been said once; after that at most ONE extra round tops the room's hearings up towards eight, in the background. */
+    /* B: word cards, each said once; sparkle badge (no text) the first time. The next button shows as soon as all three have
+       been said. Nothing is repeated to pad a count: the words come back in later recalls, quizzes and the review game. */
     const phaseWords = () => {
       s.phase = 2; const ok = mark();
-      let ready = false, tappedAt = -1;
+      let ready = false;
       stars.style.transform = 'translate(480px,52px) scale(.42)';
       s.onKey = () => { if (ok() && ready) { uxStopVoice(); phaseQuiz(); } };
       const rec = words.map(w => uxWordRec(w.id));
       const isNew = rec.map(r => !r.seen);
       body.innerHTML = uxCardRow(words, 128, 200, 238, 30, (wd, k) => ({ isNew: isNew[k] }));
-      uxBind(body, { word: el => { tappedAt = performance.now(); word(el); } });
+      uxBind(body, { word });
       setCtl('');
-      /* say a card's word and report what happened to it: 'heard' | 'interrupted' | 'muted' | 'missing' */
-      const say = async id => {
-        const t0 = performance.now();
-        const result = await uxWordVoice(id);
-        return wordOutcome(result === true ? true : uxVoiceReason(uxKey('word', id)) || result, { muted: !uxSetting('sound'), interrupted: tappedAt >= t0 || uxVoiceBusy() });
-      };
       (async () => {
         await uxWait(300);
         for (let k = 0; k < words.length; k++) {
           if (!ok()) return;
           uxPopSlot(root, k); uxSfx('page');
           rec[k].seen = true;
-          await say(words[k].id);
+          await uxWordVoice(words[k].id);
           await uxWait(200);
         }
         if (!ok()) return;
         uxSaveNow();
         ready = true; setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse');
-        // The child may have skipped the chapter card or interrupted pickup speech: one more round for words short of
-        // eight audible hearings. Only a clip that is missing ends it; a tap that cut a clip off or a muted clip does not.
-        if (!uxSetting('sound')) return;
-        const baseline = (typeof playFlow === 'object' && playFlow.wordBaseline) || {};
-        for (const wd of words) {
-          if (!ok()) return;
-          if ((uxWordRec(wd.id).heard || 0) - (baseline[wd.id] || 0) >= 8) continue;
-          const card = body.querySelector(`[data-word="${wd.id}"]`);
-          if (card) card.classList.add('ux-pulse');
-          const outcome = await say(wd.id);
-          if (card) card.classList.remove('ux-pulse');
-          if (!ok()) return;
-          if (outcome === 'missing') break;
-          await uxWait(200);
-        }
-        uxSaveNow();
       })();
     };
 
-    /* C: quiz, 3 big picture cards, spoken question, skippable */
+    /* C: quiz, 3 big picture cards, spoken question, skippable. The wrong answers come from rooms already cleared, and every
+       answer is stored as it is given (storyQuestion), so skipping or leaving half way loses nothing. */
     const phaseQuiz = () => {
       s.phase = 3; const ok = mark();
       s.onKey = null;   // the quiz has no keyboard way out: skip is the on-screen button only
       if (!words.length) { finishPage(); return; }
-      const order = words.map((_, k) => k).sort(() => Math.random() - .5);
+      const ids = words.map(w => w.id), rng = storyRng(), order = storyShuffle(words, rng), pool = uxQuizPool(lv);
       (async () => {
         for (let q = 0; q < order.length; q++) {
           if (!ok()) return;
-          const target = words[order[q]];
-          const shown = words.slice().sort(() => Math.random() - .5);
-          const dots = order.map((_, k) => `<circle cx="${480 + (k - (order.length - 1) / 2) * 22}" cy="${112}" r="7" fill="${k < q ? '#ffd27a' : k === q ? '#fff' : '#5a6fca'}"/>`).join('');
-          body.innerHTML = dots + uxCardRow(shown, 150, 210, 210, 28, () => ({ label: false, act: 'pick', show: false }));
           setCtl(uxButton({ act: 'skip', ui: 'quiz_skip', icon: 'next', x: 886, y: 452, r: 34 }));
-          let wrong = 0, solved = false, resolve = null;
-          const result = new Promise(r => { resolve = r; });
-          uxBind(body, {
-            pick: el => {
-              if (!ok() || solved) return;
-              if (el.dataset.word === target.id) {
-                solved = true;
-                uxSfx('quiz_right'); uxConfetti(body, 480, 250, 36);
-                uxWordRec(target.id).quiz = (uxWordRec(target.id).quiz || 0) + (wrong ? 0 : 1);
-                body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', '0'); });
-                uxLine('quiz_right_' + (1 + q % 3), { interrupt: true }).then(() => resolve());
-              } else {
-                wrong++; uxSfx('quiz_wrong');
-                el.classList.remove('ux-shake'); void el.getBoundingClientRect(); el.classList.add('ux-shake');
-                const right = body.querySelector(`[data-word="${target.id}"] .ux-glowrect`);
-                if (right) right.classList.add('ux-glow');
-                uxLine('quiz_wrong_' + (1 + (wrong - 1) % 3), { interrupt: true });
-              }
-            },
-          });
-          [0, 1, 2].forEach(k => { const n = body.querySelectorAll('[data-pop]')[k]; if (n) setTimeout(() => n.classList.add('show'), 80 * k); });
-          uxLine('quiz_' + target.id);
-          await result;
+          await storyQuestion(ok, body, order[q], quizOptions(order[q].id, ids, pool, save.words, rng), q, order.length);
           await uxWait(600);
         }
         if (ok()) { uxSaveNow(); finishPage(); }
@@ -326,20 +292,86 @@
     phaseStars();
   }
 
-  /* What became of one spoken word. voice.word() answers true when the clip was heard to the end and false otherwise; the
-     audio side says why through voice.lastReason (passed in here as a string; 'expired' = never got its turn, which is an
-     interruption, not a missing file). Without a reason a plain false is told apart from the context: sound off -> muted;
-     something else started speaking over it -> interrupted; else the file never played -> missing. */
-  function wordOutcome(result, ctx) {
-    const kinds = ['heard', 'interrupted', 'muted', 'missing'];
-    if (result === true) return 'heard';
-    if (result === 'expired') return 'interrupted';
-    if (typeof result === 'string' && kinds.includes(result)) return result;
-    if (result && typeof result === 'object') {
-      if (result.heard) return 'heard';
-      if (kinds.includes(result.reason)) return result.reason;
+  /* ---------- questions: "which picture is it?", for the clear-page quiz and the wordbook's review game ---------- */
+  /* Randomness comes from a seeded generator (src/lib/review.js), seeded from the save's room clock and a counter, never from the
+     time of day: the same save asked the same way gives the same questions. */
+  let storyDraws = 0;
+  function storyRng() { return makeReviewRng(((save.roomClock || 0) * 7919 + ++storyDraws * 104729) >>> 0); }
+  /* Fisher-Yates on a copy. */
+  function storyShuffle(list, rng) {
+    const out = list.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.min(i, Math.floor(rng() * (i + 1)));
+      const t = out[i]; out[i] = out[j]; out[j] = t;
     }
-    if (ctx && ctx.muted) return 'muted';
-    if (ctx && ctx.interrupted) return 'interrupted';
-    return 'missing';
+    return out;
+  }
+
+  /* One question: the picture cards pop up, Anna asks for `target` (quiz_<word>), and it ends when the child taps that card and
+     the cheer has been said. A first wrong tap is stored at once as a miss; a right tap with no miss before it is stored at once
+     as a first-try answer. Either way one answer per question, saved before the next question starts (uxNoteQuiz).
+     target: the word asked for; ids: the word ids shown (3). q / total: the question number, for the dots and the cheer. */
+  function storyQuestion(ok, body, target, ids, q, total) {
+    const dots = Array.from({ length: total }, (_, k) => `<circle cx="${480 + (k - (total - 1) / 2) * 22}" cy="${112}" r="7" fill="${k < q ? '#ffd27a' : k === q ? '#fff' : '#5a6fca'}"/>`).join('');
+    body.innerHTML = dots + uxCardRow(uxWordList(ids), 150, 210, 210, 28, () => ({ label: false, act: 'pick', show: false }));
+    let wrong = 0, solved = false;
+    /** @type {(value?: any) => void} */ let resolve = () => {};
+    const result = new Promise(r => { resolve = r; });
+    uxBind(body, {
+      pick: el => {
+        if (!ok() || solved) return;
+        if (el.dataset.word === target.id) {
+          solved = true;
+          uxSfx('quiz_right'); uxConfetti(body, 480, 250, 36);
+          if (!wrong) uxNoteQuiz(target.id, true);
+          body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', '0'); });
+          uxLine('quiz_right_' + (1 + q % 3), { interrupt: true }).then(() => resolve());
+        } else {
+          if (!wrong) uxNoteQuiz(target.id, false);
+          wrong++; uxSfx('quiz_wrong');
+          el.classList.remove('ux-shake'); void el.getBoundingClientRect(); el.classList.add('ux-shake');
+          const right = body.querySelector(`[data-word="${target.id}"] .ux-glowrect`);
+          if (right) right.classList.add('ux-glow');
+          uxLine('quiz_wrong_' + (1 + (wrong - 1) % 3), { interrupt: true });
+        }
+      },
+    });
+    [0, 1, 2].forEach(k => { const n = body.querySelectorAll('[data-pop]')[k]; if (n) setTimeout(() => n.classList.add('show'), 80 * k); });
+    uxLine('quiz_' + target.id);
+    return result;
+  }
+
+  /* ---------- review game (wordbook): Anna says a word, the child taps its picture; 5 questions ---------- */
+  const REVIEW_QUESTIONS = 5;
+  /* done() runs when the child leaves. The questions are the words most in need of review (uxReviewQueue); the cards are the same
+     as in the quiz, and each answer is stored the same way, so a missed word comes back sooner. */
+  function showReview(done) {
+    const queue = uxReviewQueue(REVIEW_QUESTIONS), pool = uxReviewPool();
+    if (pool.length < 3 || !queue.length) { if (done) done(); return; }
+    const s = storyStrict(uxScreen('review', true));
+    uxInputReset();
+    uxPreload([...queue.map(id => uxKey('quiz', id)), 'quiz_right_1', 'quiz_right_2', 'quiz_right_3', 'quiz_wrong_1', 'quiz_wrong_2', 'quiz_wrong_3']);
+    uxPaint(`<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".6"/>
+      <g id="uxBody"></g><g id="uxCtl"></g></g>`);
+    const root = $('overlay'), body = root.querySelector('#uxBody'), ctl = root.querySelector('#uxCtl');
+    const setCtl = html => { ctl.innerHTML = html; uxBind(ctl, { back: () => uxEnd(s, done), done: () => uxEnd(s, done), replay: () => { if (uxAlive(s)) { uxEnd(s, null); showReview(done); } } }); };
+    const rng = storyRng(), ok = () => uxAlive(s);
+    (async () => {
+      for (let q = 0; q < queue.length; q++) {
+        if (!ok()) return;
+        const target = uxWord(queue[q]), room = LEVELS.find(lv => (lv.words || []).includes(target.id)), roomIds = room ? room.words || [] : [];
+        setCtl(uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 34 }));
+        const shown = quizOptions(target.id, reviewLearned(save.words, roomIds), pool.filter(id => !roomIds.includes(id)), save.words, rng);
+        await storyQuestion(ok, body, target, shown, q, queue.length);
+        await uxWait(600);
+      }
+      if (!uxAlive(s)) return;
+      uxSaveNow();
+      uxStopVoice();
+      s.onKey = () => uxEnd(s, done);
+      body.innerHTML = '';
+      setCtl(uxButton({ act: 'done', ui: 'next', icon: 'next', x: 600, y: 300, r: 56, plate: 'gold', cls: 'ux-pulse' }) + uxButton({ act: 'replay', ui: 'replay', x: 360, y: 300, r: 42 }));
+      uxLine('cheer_' + (1 + (storyDraws % 4)));
+      uxConfetti(root.querySelector('.page'), 480, 200, 24);
+    })();
   }

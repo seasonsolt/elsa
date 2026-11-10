@@ -199,11 +199,17 @@
       b.push({ id, x: +rwClamp(fx, .06, .94).toFixed(4), y: +rwClamp(fy, .08, .94).toFixed(4) });   // last = on top
     };
 
+    /* One finger (pointer) owns a drag from its pointerdown to its up / cancel; the pointer is captured by the sticker so the moves
+       and the lift arrive even outside the picture, and every other pointer (a second finger, the mouse) is ignored meanwhile. */
+    let dragPointer = null;
     const startDrag = (ev, n) => {
-      if (ev.button) return;
+      if (ev.button || dragPointer !== null) return;
       ev.preventDefault(); ev.stopPropagation(); uxWake();
       const id = n.dataset.id, from = n.dataset.from, p0 = rwPoint(ev), dragBox = $('rwDrag');
       if (!dragBox) return;
+      const pid = ev.pointerId;
+      dragPointer = pid;
+      try { if (n.setPointerCapture) n.setPointerCapture(pid); } catch (e) {}
       const proxy = el('g', { transform: `translate(${p0.x} ${p0.y}) scale(1.12)` }, dragBox);
       proxy.innerHTML = rwStickerArt(id, RW_STICKER);
       n.parentNode.setAttribute('opacity', '.28');
@@ -211,12 +217,16 @@
       let moved = false;
       const ring = $('rwBoardRing');
       const move = e => {
+        if (e.pointerId !== pid) return;
         const p = rwPoint(e);
         if (Math.hypot(p.x - p0.x, p.y - p0.y) > 6) moved = true;
         proxy.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(1.12)`);
         if (ring) ring.setAttribute('opacity', moved && rwInBoard(p) ? '.9' : '0');
       };
       const end = (e, cancel) => {
+        if (e.pointerId !== pid || dragPointer !== pid) return;
+        dragPointer = null;
+        try { if (n.releasePointerCapture) n.releasePointerCapture(pid); } catch (e2) {}
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', cancelUp);
@@ -237,6 +247,7 @@
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
       window.addEventListener('pointercancel', cancelUp);
+      n.addEventListener('lostpointercapture', cancelUp);   // the browser took the pointer away without a cancel: drop the sticker back (a no-op after a normal lift)
     };
     draw();
   }

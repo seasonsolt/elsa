@@ -78,33 +78,45 @@
     const target = Number.isInteger(index) && index >= 0 && index < LEVELS.length ? index : (save.flags.prologue ? nextRoomIndex() : 0);
     const pages = save.flags.prologue ? [] : storyPages(['p1', 'p2', 'p3']);
     if (pages.length && typeof openStory === 'function') {
-      newToken();
+      const tok = newToken();
       playFlow.phase = 'story';
-      openStory(pages, () => { save.flags.prologue = true; saveWrite(); enterRoom(target); });
+      /* the three prologue paintings are not part of the title set (PLAN-2 D4): fetch them now, the pages open as soon as they are decoded */
+      loadArt(ART.prologue, ART_PATIENCE).then(() => {
+        if (stale(tok)) return;
+        openStory(pages, () => { save.flags.prologue = true; saveWrite(); enterRoom(target); });
+      });
     } else {
       save.flags.prologue = true; saveWrite();
       enterRoom(target);
     }
   }
 
-  /* Recall of the previous room, the chapter card, then the room itself. The room is already drawn behind the cards. */
+  /* Recall of the previous room (plus up to two older words that are due, src/lib/review.js), the chapter card, then the room
+     itself. The room is already drawn behind the cards. Entering a room moves the review clock on by one. */
   async function enterRoom(i) {
     const tok = newToken();
     const lv = LEVELS[i];
-    playFlow.wordBaseline = Object.fromEntries((lv.words || []).map(id => [id, (save.words[id] || {}).heard || 0]));
+    reviewAdvanceClock(save); saveWrite();
     playFlow.phase = 'intro';
     playFlow.tutoring = false;
     game.kbd.teach = null;
     clearInput();
     applySettings();
     game.state = 'title';
+    /* The room's pictures (background, tiles, toys, memory, word icons) are asked for first and decode while the recall and chapter
+       cards are up (PLAN-2 D4); the room is drawn behind the cards already, with its pictures placed at once (artPending). */
+    const recall = i > 0 && typeof uxRecallWords === 'function' ? uxRecallWords(LEVELS[i - 1].words || [], lv.words || []) : [];
+    const art = roomArt(lv, LINES, { wear: save.outfit, extraWords: recall, last: i === LEVELS.length - 1 });
+    loadArt(art);
     game.load(i);
     handleEvents();
     /* a card that fails to open must not strand the child on a blank screen: treat it as already closed */
-    const card = (fn, level) => new Promise(/** @param {(done?: any) => void} ok */ ok => { try { fn(level, ok); } catch (e) { console.error(e); ok(); } });
-    if (i > 0 && typeof showRecall === 'function') await card(showRecall, LEVELS[i - 1]);
+    const card = (fn, level, extra) => new Promise(/** @param {(done?: any) => void} ok */ ok => { try { fn(level, ok, extra); } catch (e) { console.error(e); ok(); } });
+    if (i > 0 && typeof showRecall === 'function') await card(showRecall, LEVELS[i - 1], recall);
     if (stale(tok)) return;
     if (typeof showChapter === 'function') await card(showChapter, lv);
+    if (stale(tok)) return;
+    await loadArt(art, ART_PATIENCE);   // normally long done; on a slow network at most one patience more, never a stranded child
     if (stale(tok)) return;
     beginPlay(i, tok);
   }
@@ -199,13 +211,28 @@
     game.state = 'win';
     cheerBurst();
     if (typeof startMusic === 'function') guarded('startMusic', () => startMusic('end'));
+    const art = loadArt(ART.ending, ART_PATIENCE);
     await sleep(2600);
+    await art;
     if (stale(tok)) return;
     const pages = storyPages(['win', 'end']);
     if (pages.length && typeof openStory === 'function') openStory(pages, goTitle); else goTitle();
   }
 
   /* ---- frame loop ---- */
+  /* Play time for the parent page (PLAN-2 C5), in whole seconds. It runs while a room or a lesson is open: not on the title screens,
+     not under the parent settings. `dt` is capped per frame, so a hidden tab adds almost nothing. */
+  let playClock = 0;
+  function countPlayTime(dt) {
+    if (playFlow.phase === 'boot' || uxState.modal || (playFlow.phase === 'title' && !storyIsOpen())) return;
+    playClock += dt;
+    if (playClock < 1) return;
+    const whole = Math.floor(playClock);
+    playClock -= whole;
+    save.totalPlaySeconds = (save.totalPlaySeconds || 0) + whole;
+    saveSoon();
+  }
+
   let last = 0, acc = 0;
   function frame(ms) {
     try {
@@ -213,6 +240,7 @@
       last = ms;
       const now = ms / 1000;
       pollGamepad();
+      countPlayTime(dt);
       const live = canPlay();
       if (live) {
         acc += dt;
@@ -248,17 +276,12 @@
     requestAnimationFrame(frame);
   }
 
-  /* Decode every painting first, so frames never flash in empty. */
-  const lineArts = Object.values(LINES.lines || {}).map(l => l && l.art).filter(Boolean);
-  /* the six toy families of rooms 3-10: slope, spring, floe, note steps, ice flower, bunny (and its nest) */
-  const TOY_ART = /^(tile_slope_|spring_|floe_|note_|flower_|bunny_)/;
-  const names = [...new Set(['key', 'brick', 'water', 'pinkice', 'frozen', 'iceblock', 'door_open', 'door_closed', 'ball', 'two', 'snowman', 'flake', 'heart', 'gate', 'plate_up', 'plate_down', 'shelf0', 'shelf1', 'shelf2', 'drift0', 'drift1', ...lineArts, ...LEVELS.map(lv => lv.bg), ...Object.keys(SIZES).filter(k => k.startsWith('fx_') || /^fish_/.test(k) || /^(frost|nuan)_/.test(k) || TOY_ART.test(k))])];
-  const loads = names.map(n => {
-    const i = new Image(); i.src = SRC(n);
-    return i.decode().then(() => { if (TOY_ART.test(n) && typeof toyImageReady === 'function') toyImageReady(n); }, () => {});
-  });
+  /* Decode the title set first, so frames never flash in empty (PLAN-2 D4: the title, the UI and the first room only, src/lib/assets.js;
+     the prologue, every other room and the ending load when the flow reaches them). */
+  const ART = assetPlan(LEVELS, LINES, { wear: save.outfit });
+  const titleLoad = loadArt(ART.title, ART_PATIENCE);
 
-  if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom };
+  if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom, artStats, loadArt, ART, tyStats: typeof tyStats !== 'undefined' ? tyStats : null };
 
   fitStage();
   applySettings();
@@ -267,5 +290,10 @@
   game.state = 'title';
   playFlow.phase = 'title';
   if (typeof showTitle === 'function') showTitle();
-  const patience = new Promise(ok => setTimeout(ok, 1500));
-  Promise.race([Promise.all(loads), patience]).finally(() => { fitStage(); requestAnimationFrame(frame); });
+  titleLoad.finally(() => { fitStage(); requestAnimationFrame(frame); });
+
+  /* PLAN-2 D5: the offline worker (sw.js, generated by art/build_page.py). Not for ?dev=1, not from file://, not where the browser has none. */
+  if (offlineWorkerAllowed(location.search, location.protocol, typeof navigator !== 'undefined' && 'serviceWorker' in navigator)) {
+    const register = () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('offline worker:', e && e.message));
+    if (document.readyState === 'complete') register(); else addEventListener('load', register);
+  }

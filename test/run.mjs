@@ -16,7 +16,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { ROOT, loadLogic, loadLib, makeHarness, loadMap } from './harness.mjs';
 import { checkContentKeys } from './content_keys.mjs';
-import { exposureReport } from './exposure.mjs';
+import { exposureReport, exposureProblems } from './exposure.mjs';
 import { checkMapSize, checkTiles, checkStructure, checkLevelList, checkReach, legalChars } from './checks.mjs';
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -164,12 +164,13 @@ try { keyProblems = checkContentKeys(logic); } catch (e) { keyProblems = [`conte
 console.log(`\ncontent keys  ${keyProblems.length ? FAIL : OK}`);
 if (keyProblems.length) { failures++; details.push(`content keys:\n  ${keyProblems.join('\n  ')}`); }
 
-/* word exposure per room and core word (test/exposure.mjs): a REPORT for now, the numbers never fail the run (PLAN-2 2C makes them a gate);
-   only a crash of the script does, because then the report cannot be trusted */
+/* word exposure per room and core word (test/exposure.mjs): a GATE (PLAN-2 C1). A core word below the threshold, or a stale
+   src/content/exposure.md, fails the run, and so does a crash of the script, because then the numbers cannot be trusted */
 try {
   const rep = exposureReport(logic);
-  console.log(`\nexposure (report only, in-context hearings per core word; threshold 6)\n${rep.text.split('\n').map(l => '  ' + l).join('\n')}\n  ${rep.summary}`);
-  if (rep.stale) console.log(`  ${rep.doc} is stale: run node test/exposure.mjs --write`);
+  console.log(`\nexposure (gate, in-context hearings per core word; threshold 6)\n${rep.text.split('\n').map(l => '  ' + l).join('\n')}\n  ${rep.summary}`);
+  const exposureFailures = exposureProblems(rep);
+  if (exposureFailures.length) { failures++; details.push('exposure:\n  ' + exposureFailures.join('\n  ')); console.log(`  ${FAIL}`); }
 } catch (e) { failures++; details.push(`exposure report:\n  ${e.stack || e.message}`); console.log(`\nexposure  ${FAIL}`); }
 
 const skipped = rows.reduce((n, r) => n + Object.values(r.res).filter(x => x.status === SKIP).length, 0);

@@ -27,7 +27,7 @@
     function logRoomWords(lv) {
       if (!isDev() || !lv || !lv.words) return;
       const stats = wordStats();
-      const rows = lv.words.map(w => ({ word: w, heard: (stats[w] || {})[lv.id] || 0, target: 8, ok: ((stats[w] || {})[lv.id] || 0) >= 8 }));
+      const rows = lv.words.map(w => ({ word: w, heard: (stats[w] || {})[lv.id] || 0, target: 6, ok: ((stats[w] || {})[lv.id] || 0) >= 6 }));
       try { console.log('word exposure, room ' + lv.id); console.table(rows); } catch (e) {}
     }
 

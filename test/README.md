@@ -13,7 +13,7 @@ node test/run.mjs --no-unit                    # skip test/unit
 Browser acceptance: run `node test/build-browser-review.mjs`, serve the repository, open
 `/.tools/s56/review.html`, and click **Run acceptance**. This uses its own save key and accelerates
 audio/scene timing only in the generated fixture. It checks all ten chapter/clear/quiz flows,
-eight completed hearings per core word (including skipped chapters), progress/settings persistence,
+every word heard at least once per room (including skipped chapters; the in-context count is the static exposure gate), the quiz leaving only through its skip button, progress/settings persistence,
 parent-modal pause, stickers, and 10/20-second hints. This complements the 30 input-driven physics
 solutions; accelerated audio is not a human listening test or a child play-time measurement.
 
@@ -101,18 +101,27 @@ is missing, `--write-manifest` records the files now present without synthesizin
 ## Exposure report
 
 `test/exposure.mjs` statically counts, per room and core word, the hearings in context on a normal playthrough and prints the table (`node test/exposure.mjs`,
-`--write` regenerates `src/content/exposure.md`, `--check` exits 1 below the threshold of 6 or when that file is stale). `run.mjs` prints it as a report only;
-the numbers do not fail the run yet (PLAN-2 2C makes them a gate). It reads the item-kind and toy tables from the view source, so a renamed table fails loudly.
+`--write` regenerates `src/content/exposure.md`, `--check` exits 1 below the threshold of 6 or when that file is stale). `run.mjs` prints it and a word below 6
+or a stale `exposure.md` fails the run (also under `--no-unit`); the clear page has no top-up loop any more (PLAN-2 C1). It reads the item-kind and toy tables from the view source, so a renamed table fails loudly.
 `test/unit/exposure.test.mjs` pins the counting rules.
 
 ## View libs (`src/lib`)
 
-Pure view logic (save sanitizing and merging, the voice queue, the word-heard counters, `canPlay`) lives in `src/lib/*.js` as plain global scripts without
+Pure view logic (save sanitizing and merging, the voice queue, the word-heard counters, `canPlay`, spaced review `review.js`, sizes and gamepad focus picking `layout.js`, the picture plan and the offline-worker rule `assets.js`) lives in `src/lib/*.js` as plain global scripts without
 `document` / `window`. Tests load them as files: `loadLib(names, context, expr)` from `test/harness.mjs` (also in the unit-test context) evaluates the named
 lib files (all of them when `names` is null) in a fresh vm context holding the stand-ins you pass (`audio`, `game`, `LINES` ... as each file header lists),
 and returns the value of `expr`, e.g. `loadLib(['voice', 'heard'], { ...stand-ins }, '({ voice })')`. Code that needs the real page (storage, the storage event,
 `fitStage`) runs the real view fragment in a fake page (`test/unit/input-safety.test.mjs`, `save.test.mjs`, `fit-stage.test.mjs`). Unit tests do not cut view
 sources apart with `source.indexOf` / `source.slice`.
+
+## Learning, tablet and offline tests (PLAN-2 2C, 2D)
+
+- `review.test.mjs` (review.js: due order, wrong first, quiz options, save migration), `learning.test.mjs`, `learning-ui.test.mjs` (the real quiz, recall, wordbook review and parent progress page in a stand-in page; three rooms in a row; play time).
+- `layout.test.mjs`: the numbers of `layout.js`, the gamepad focus picking, and every screen painted in the fake page (title, rooms, wordbook, meet, settings, stickers, wardrobe, HUD, story page, chapter, recall, clear, quiz, review): each button, card, tile and sticker must have a hit shape of at least 64 CSS px at 1024 x 768. The title keeps four main buttons (`ux-minor` marks the corner ones).
+- `input-safety.test.mjs` also covers touch mode (`pointer: coarse`, first touch, mouse ends it), the touch keys per finger, the long-press menu, sticker drag by pointer id and the gamepad ring (first press only shows it, learning scenes ignore a mashed A). The fake page has `matchMedia` (`env.media.set`), `Event`, `DOMPoint`, `env.fire` and `env.on`.
+- `assets.test.mjs`: the title set is under 2 MB (real file sizes in `game/`), every listed name has a file, every picture in `game/` is in a list or named on demand, each room lists its own background, tiles, toys, memory painting and words; `loadArt` patience and re-asking in the real `00-core` / `90-main` in the fake page; no stand-in is replaced (`tyStats.replaced` is 0).
+- `offline.test.mjs`: `sw.js` is the stamped template (`build_page.py` output; only the stamps may differ), the cache name changes with the assets and with the page, the worker logic in a fake worker scope (precache, cache-first, `?dev=1` bypass, old caches deleted). `voice-suspend.test.mjs`: `voice.suspend()`, the watchdog and the context state change.
+- Browser-only checks that no node test can make (service worker install, offline reload, Resource Timing of the title) are listed in PLAN-2 section 7; a real iPad is the user's.
 
 ## Unit tests
 

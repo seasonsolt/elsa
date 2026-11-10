@@ -43,11 +43,27 @@
     return buf;
   }
   let noiseBuf = null;
+  /* PLAN-2 D6. A hidden tab, a locked tablet or a phone call puts the audio context to sleep ('suspended', and 'interrupted' on iOS). A voice clip
+     in flight can then never end: its job would hang with the music ducked for good. So when the context sleeps or the page is hidden the
+     voice queue ends its current job ('interrupted', nothing counted) and the music level comes back; when the page returns, the context
+     is resumed. Hiding the page also puts the context to sleep, so the music stops while the child is in another app. */
+  const audioAsleep = () => !!audio && (audio.state === 'suspended' || audio.state === 'interrupted');
+  const resumeAudio = () => { try { Promise.resolve(audio.resume()).catch(() => {}); } catch (e) {} };
+  function onAudioState() { if (audioAsleep()) voice.suspend(); }
+  function onVisibility() {
+    if (document.hidden) {
+      voice.suspend();
+      if (audio && audio.state === 'running') { try { Promise.resolve(audio.suspend()).catch(() => {}); } catch (e) {} }
+    } else if (audioAsleep()) resumeAudio();
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', onVisibility);
+
   function wakeAudio() {
-    if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+    if (audio) { if (audioAsleep()) resumeAudio(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     audio = new AC();
+    audio.onstatechange = onAudioState;
     const master = audio.createGain(); master.gain.value = soundWanted() ? 1 : 0; masterOn = soundWanted();
     const comp = audio.createDynamicsCompressor();
     master.connect(comp).connect(audio.destination);

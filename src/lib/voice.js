@@ -5,21 +5,25 @@
      Nothing here runs at load except building the `voice` object, so the load order against the view files does not matter. */
   /* Voice: lazy mp3 clips, one at a time, a small priority queue, the music ducks underneath.
        voice.line(key, opts)  opts { interrupt, priority 0..2 (default 1), maxWait ms, tag, subtitle:false }
-       voice.word(id) / voice.ui(name) / voice.stop() / voice.busy / voice.preload(keys) / voice.lastReason(key)
+       voice.word(id) / voice.ui(name) / voice.stop() / voice.suspend() / voice.busy / voice.preload(keys) / voice.lastReason(key)
      Every call returns quickly and never rejects: a missing or slow file just plays as silence for ~0.35 s so a story that
      waits on the promise keeps moving (subtitles, if wanted, stay up for a reading time).
      The promise resolves true when the clip was heard to the end (audible, not muted, not cut), false otherwise.
      WHY it was false: voice.lastReason(key) -> the reason of the most recent call for that key (the line key, 'word_<id>'
      for voice.word, 'ui_<name>' for hover names), set before the promise resolves; null when it completed or was never called.
        'missing'     no such line, or its mp3 failed to load / decode / arrive in time (played as silence)
-       'interrupted' cut by louder speech or voice.stop(), dropped from the queue, or a hover name that found speech playing
+       'interrupted' cut by louder speech, voice.stop() or voice.suspend(), dropped from the queue, a hover name that found speech
+                     playing, or a clip that started while the audio context was suspended and never got to play
        'muted'       the clip ran to the end but sound was off, so nothing was heard
        'expired'     waited in the queue longer than maxWait without getting its turn
      A failed mp3 load is not cached: the next request fetches it once more (a second failure is cached), one console warning per file.
      voice.ui (hover names) is priority 0, tag 'ui': it may cut another 'ui' clip but never anything else, it is dropped instead of
-     queued behind speech, and it says nothing at all while a story / learning scene (`story`) is open. */
+     queued behind speech, and it says nothing at all while a story / learning scene (`story`) is open.
+     voice.suspend() is for the audio context going to sleep (tab hidden, the tablet locked, a phone call: PLAN-2 D6). A clip on a
+     suspended context never ends, so the job would hang with the music ducked for good: it ends the current job and drops the queue
+     ('interrupted', no word counted) and puts the music level back. 40-audio.js calls it from visibilitychange and statechange. */
   const voice = (() => {
-    const FILE_WAIT = 2500, SILENT_MS = 350, CACHE_MAX = 48, QUEUE_MAX = 4;
+    const FILE_WAIT = 2500, SILENT_MS = 350, CACHE_MAX = 24, QUEUE_MAX = 4, SLEEP_GRACE_MS = 1500;
     const bufs = new Map();              // file -> Promise<AudioBuffer | null>, least recently used first
     const queue = [], listeners = [];
     let cur = null, seq = 0, SUBS = null, subsAsked = false, subTimer = 0, uiTimer = 0, uiLast = { name: '', t: -1e9 };
@@ -95,6 +99,8 @@
         src.onended = () => finish(job, true);
         job.src = src;
         src.start(audio.currentTime + .08);
+        // started on a sleeping context (suspended / interrupted): if it does not wake in time the clip never ends, so give up on it
+        if (audio.state === 'suspended' || audio.state === 'interrupted') job.timer = setTimeout(() => finish(job, false, 'interrupted'), Math.ceil((buf.duration || 1) * 1000) + SLEEP_GRACE_MS);
       };
       if (job.file && audio) {
         let t = 0;
@@ -178,6 +184,12 @@
       clearTimeout(subTimer);
       emitSub(null);
     }
+    /* The audio context is asleep: nothing playing can finish, so end it all now. Same effect as stop(), and the music level comes back
+       even when nothing was playing (duck() reads `cur`, which is empty by then). */
+    function suspend() {
+      stop();
+      duck();
+    }
     /* Warm the cache for lines that are likely to play soon (needs the audio context, i.e. after the first click). */
     function preload(keys) {
       if (!audio) return Promise.resolve();
@@ -193,7 +205,7 @@
       return files.reduce((p, f) => p.then(() => load(f)), Promise.resolve()).then(() => {});
     }
     return {
-      line, word, ui, stop, preload,
+      line, word, ui, stop, suspend, preload,
       lastReason: key => reasons.has(key) ? reasons.get(key) : null,
       wordInfo: id => (SUBS && SUBS.words && SUBS.words[id]) || null,   // { en, zh, room } once game/subs.json has loaded
       get busy() { return cur !== null; },

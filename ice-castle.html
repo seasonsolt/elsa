@@ -2,6 +2,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>艾莎和安娜的冰堡</title>
+<meta name="theme-color" content="#141c46">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="game/icon-192.png">
+<link rel="apple-touch-icon" href="game/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="冰堡">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Fredoka:wght@500;600&display=swap">
@@ -41,10 +49,10 @@ body {
   height: auto;
   background: #2a3a86;
   touch-action: none;
-  user-select: none; -webkit-user-select: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 body.subs #stage { width: min(100vw, calc((100dvh - 84px) * 960 / 520)); }
-body.touch #stage { width: min(100vw, calc((100dvh - 84px) * 960 / 520)); }
+body.touch #stage { width: min(100vw, calc((100dvh - 96px) * 960 / 520)); }
 #stage text { font-family: var(--display); }
 #stage .latin { font-family: var(--latin); font-weight: 600; }
 .btn { cursor: pointer; outline: none; }
@@ -118,24 +126,41 @@ body[data-mode="solo"] #tSwitch { display: none; }
 body[data-mode="solo"] #touch { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--paper); }
 
-/* ---- Touch pad: symbols only ---- */
+/* ---- Touch pad: symbols only. Every key is at least 72 CSS px each way (PLAN-2 D1); a long press must not open the system menu or text callout ---- */
 #touch { display: none; width: min(100%, 720px); gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0 12px; box-sizing: border-box; }
 #touch button {
   appearance: none; border: 1px solid var(--line); border-radius: 14px; background: var(--ink); color: var(--paper);
-  font-family: var(--display); font-size: 26px; min-height: 64px; touch-action: none;
-  user-select: none; -webkit-user-select: none;
+  font-family: var(--display); font-size: 26px; min-height: 72px; min-width: 72px; touch-action: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
 }
 #touch button.on { background: #5a6fca; }
 #touch #tSwitch { color: var(--gold); }
 body.touch #touch { display: grid; }
 body.touch #info { grid-template-columns: minmax(0, 1fr); }
 body.touch .keys { display: none; }
+
+/* ---- Gamepad focus ring (80-input.js moves it over the button the D-pad picked; a picture, no text) ---- */
+#padFocus rect { fill: none; stroke: var(--gold); stroke-width: 6; animation: padRing .8s ease-in-out infinite alternate; }
+@keyframes padRing { from { stroke-opacity: .55; } to { stroke-opacity: 1; } }
+
+/* ---- Portrait: the game is landscape. Only a picture asks for the tablet to be turned; the stage, the touch pad and the parent strip are gone ---- */
+#turn { display: none; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center; background: var(--night); }
+#turn svg { width: min(60vmin, 360px); height: auto; }
+#turn .tablet { transform-box: fill-box; transform-origin: center; animation: turnTablet 2.4s ease-in-out infinite; }
+@keyframes turnTablet { 0%, 20% { transform: rotate(0); } 70%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) {
+  #turn { display: flex; }
+  #stage, #touch, #info { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #turn .tablet, #padFocus rect { animation: none; }
+}
 </style>
 
 <svg id="stage" viewBox="0 0 960 520" role="img" aria-label="艾莎和安娜在冰堡里的游戏画面">
   <defs>
-    <pattern id="brick" width="160" height="160" patternUnits="userSpaceOnUse"><image href="game/brick.webp?v=42285340d575" width="160" height="160"/></pattern>
-    <pattern id="water" width="116" height="30" patternUnits="userSpaceOnUse"><image href="game/water.webp?v=42285340d575" width="116" height="30" preserveAspectRatio="none"/></pattern>
+    <pattern id="brick" width="160" height="160" patternUnits="userSpaceOnUse"><image href="game/brick.webp?v=907a6643691a" width="160" height="160"/></pattern>
+    <pattern id="water" width="116" height="30" patternUnits="userSpaceOnUse"><image href="game/water.webp?v=907a6643691a" width="116" height="30" preserveAspectRatio="none"/></pattern>
     <radialGradient id="warm"><stop offset="0" stop-color="#ffd089" stop-opacity=".75"/><stop offset=".45" stop-color="#ffb35f" stop-opacity=".26"/><stop offset="1" stop-color="#ffb35f" stop-opacity="0"/></radialGradient>
     <radialGradient id="cool"><stop offset="0" stop-color="#bfe6ff" stop-opacity=".62"/><stop offset="1" stop-color="#bfe6ff" stop-opacity="0"/></radialGradient>
     <radialGradient id="rose"><stop offset="0" stop-color="#ff9cc0" stop-opacity=".6"/><stop offset="1" stop-color="#ff9cc0" stop-opacity="0"/></radialGradient>
@@ -169,8 +194,22 @@ body.touch .keys { display: none; }
   <g id="hud"></g>
   <g id="overlay"></g>
   <g id="modal"></g>
+  <g id="padFocus" pointer-events="none" visibility="hidden"><rect rx="18"/></g>
   <g id="subs" pointer-events="none"></g>
 </svg>
+
+<div id="turn" role="img" aria-label="请把平板横过来">
+  <svg viewBox="0 0 240 240" aria-hidden="true">
+    <rect x="30" y="30" width="180" height="180" rx="40" fill="#1b2559" opacity=".6"/>
+    <g class="tablet">
+      <rect x="82" y="46" width="76" height="148" rx="12" fill="#f6f7ff" stroke="#ffd27a" stroke-width="6"/>
+      <rect x="90" y="58" width="60" height="112" rx="5" fill="#2a3a86"/>
+      <circle cx="120" cy="182" r="5" fill="#a9b6e2"/>
+    </g>
+    <path d="M178 60a74 74 0 0 1 20 54" fill="none" stroke="#ffd27a" stroke-width="9" stroke-linecap="round"/>
+    <path d="M186 106l12 12 12-14z" fill="#ffd27a" stroke="#ffd27a" stroke-width="5" stroke-linejoin="round"/>
+  </svg>
+</div>
 
 <div id="touch">
   <button id="tLeft" aria-label="向左走">&#9664;</button><button id="tRight" aria-label="向右走">&#9654;</button><button id="tJump" aria-label="跳">&#9650;</button><button id="tAct" aria-label="魔法">&#10022;</button><button id="tSwitch" aria-label="换人">&#8646;</button>
@@ -1787,25 +1826,312 @@ function createGame() {
 
 <script id="view">
 (() => {
+  /* Which pictures load when, and whether the offline worker may run (PLAN-2 D4, D5). Plain global script (see src/lib/save.js):
+     no DOM, no browser globals, no Image objects; everything comes in as arguments, so a test can add up the file sizes of a list.
+     Free names: none.
+       assetPlan(levels, lines, opts)  -> { title, prologue, ending, rooms }   picture names (no ".webp"), rooms[i] for LEVELS[i]
+       roomArt(level, lines, opts)     -> the pictures one room needs on top of the title set
+       offlineWorkerAllowed(search, protocol, hasApi)
+     opts: { wear: save.outfit, extraWords: [word ids the recall card shows], last: true for the final room }.
+     The title list is one literal on purpose: art/build_page.py reads it (the markers around it) to fill the precache list of
+     sw.js, so what the page loads before it is interactive and what the service worker keeps for offline play cannot drift apart.
+     It must stay valid JSON, and it names files (with .webp), not pictures. A test sums the file sizes of the list against the 2 MB budget and checks that it covers the first room. */
+  const ART_FRAMES = ['idle', 'blink', 'run1', 'run2', 'run3', 'run4', 'run5', 'run6', 'jump', 'fall', 'cast', 'cheer'];
+  /*TITLE_ART*/const ART_TITLE = [
+    "key.webp", "bg0.webp",
+    "ui_back.webp", "ui_book.webp", "ui_bulb.webp", "ui_duo.webp", "ui_ear.webp", "ui_fullscreen.webp", "ui_gear.webp",
+    "ui_key_left.webp", "ui_key_right.webp", "ui_key_up.webp", "ui_key_space.webp", "ui_keys.webp", "ui_meet.webp", "ui_mouth.webp",
+    "ui_next.webp", "ui_play.webp", "ui_replay.webp", "ui_solo.webp", "ui_sticker.webp", "ui_wardrobe.webp",
+    "fx_burst.webp", "fx_dust.webp", "fx_flake.webp", "fx_glow.webp", "fx_heart.webp", "fx_ring.webp", "fx_splash.webp", "fx_star.webp", "fx_steam.webp",
+    "frost_idle.webp", "frost_blink.webp", "frost_run1.webp", "frost_run2.webp", "frost_run3.webp", "frost_run4.webp", "frost_run5.webp", "frost_run6.webp", "frost_jump.webp", "frost_fall.webp", "frost_cast.webp", "frost_cheer.webp",
+    "nuan_idle.webp", "nuan_blink.webp", "nuan_run1.webp", "nuan_run2.webp", "nuan_run3.webp", "nuan_run4.webp", "nuan_run5.webp", "nuan_run6.webp", "nuan_jump.webp", "nuan_fall.webp", "nuan_cast.webp", "nuan_cheer.webp",
+    "portrait_frost.webp", "portrait_nuan.webp",
+    "brick.webp", "water.webp", "drift0.webp", "drift1.webp", "iceblock.webp", "frozen.webp",
+    "shelf0.webp", "shelf1.webp", "shelf2.webp", "pinkice.webp", "flake.webp", "heart.webp", "ball.webp", "door_closed.webp", "door_open.webp"
+  ];/*END_TITLE_ART*/
+  /* what one map character puts on the stage, beyond the title set (walls, water, drifts, and the ice blocks and frozen water that Elsa's
+     magic makes in any room: they are never in a map, so they are always loaded; the HUD counters flake, heart, ball are in the title set too) */
+  const ART_TILES = {
+    '=': ['shelf0', 'shelf1', 'shelf2'], X: ['pinkice'], I: ['frozen'], B: ['iceblock'], G: ['gate'], P: ['plate_up', 'plate_down'],
+    '*': ['flake'], h: ['heart'], o: ['ball'], D: ['door_closed', 'door_open'], S: ['ball', 'two', 'snowman'],
+    '/': ['tile_slope_l'], '\\': ['tile_slope_r'], J: ['spring_0', 'spring_1'],
+    R: ['bunny_idle', 'bunny_hop1', 'bunny_hop2', 'bunny_hop3', 'bunny_hop4', 'bunny_home'], N: ['bunny_nest', 'bunny_home'],
+    M: ['floe_l', 'floe_m', 'floe_r'], F: ['flower_0', 'flower_1', 'flower_2'],
+    1: ['note_1', 'note_1_lit'], 2: ['note_2', 'note_2_lit'], 3: ['note_3', 'note_3_lit'], 4: ['note_4', 'note_4_lit'], 5: ['note_5', 'note_5_lit'],
+  };
+
+  function roomArt(level, lines, opts) {
+    const o = opts || {}, L = (lines && lines.lines) || {}, out = [];
+    const add = name => { if (name && !out.includes(name)) out.push(name); };
+    const lineArt = key => { const d = L[key]; if (d && d.art) add(d.art); };
+    add(level.bg);
+    const chars = new Set((level.map || []).join(''));
+    for (const ch of chars) (ART_TILES[ch] || []).forEach(add);
+    (level.words || []).concat(o.extraWords || []).forEach(w => add(`word_${w}`));
+    if ((level.words || []).includes('fish')) { add('fish_1'); add('fish_2'); }
+    lineArt(`ch_${level.id}`); lineArt(`clear_${level.id}`);
+    if (level.memoryId) lineArt(`mem_${level.memoryId}`);
+    add(`sticker_${level.id}`); add(`sticker_${level.id}_gold`);
+    if (o.last) { lineArt('win'); lineArt('end'); }
+    return out.concat(outfitArt(o.wear)).filter((n, i, a) => a.indexOf(n) === i);
+  }
+  /* The dress frames and hats the sisters wear: only the worn ones are fetched (the other dresses stay on the server). */
+  function outfitArt(wear) {
+    const out = [];
+    for (const who of ['frost', 'nuan']) {
+      const w = wear && wear[who];
+      if (!w) continue;
+      if (w.dress === 1 || w.dress === 2) for (const f of ART_FRAMES) out.push(`${who}_${f}_d${w.dress}`);
+      if (typeof w.hat === 'string' && w.hat) out.push(`hat_${w.hat}`);
+    }
+    return out;
+  }
+  function assetPlan(levels, lines, opts) {
+    const o = opts || {}, L = (lines && lines.lines) || {};
+    const arts = keys => keys.map(k => L[k] && L[k].art).filter(Boolean).filter((n, i, a) => a.indexOf(n) === i);
+    return {
+      title: ART_TITLE.map(f => f.replace(/\.webp$/, '')).concat(outfitArt(o.wear)).filter((n, i, a) => a.indexOf(n) === i),
+      prologue: arts(['p1', 'p2', 'p3']),
+      ending: arts(['win', 'end']),
+      rooms: levels.map((lv, i) => roomArt(lv, lines, { wear: o.wear, last: i === levels.length - 1 })),
+    };
+  }
+  /* The offline worker (PLAN-2 D5) is registered on a real http(s) page only, never for ?dev=1 and never from file://. */
+  function offlineWorkerAllowed(search, protocol, hasApi) {
+    return !!hasApi && /^https?:$/.test(String(protocol)) && !/[?&]dev=1\b/.test(String(search || ''));
+  }
   /* Word-heard bookkeeping (PLAN-2 B5): the saved counter and the per-room dev counter, fed by one call.
      Plain global script (see src/lib/save.js). No DOM access.
-     Free names, supplied by the view scope: save, WORDS, LEVELS, game, saveSoon. */
+     Free names, supplied by the view scope: save, WORDS, LEVELS, game, saveSoon; noteHeard and reviewContext come from src/lib/review.js. */
   /* Dev counter: how often each word was heard, per room (?dev=1, CONTRACT §4 wordStats). */
   const heardLog = {};
   function noteWordHeard(wordId) {
     if (typeof wordId !== 'string' || !wordId) return;
-    const w = save.words[wordId] || (save.words[wordId] = { heard: 0, quiz: 0 });
-    w.heard++;
+    if (!noteHeard(save.words, wordId, reviewContext(save))) return;
     const word = WORDS.find(w => w.id === wordId);
     const lv = LEVELS[game.index], room = (word && word.room) || (lv && lv.id) || '?';
     const byRoom = heardLog[wordId] || (heardLog[wordId] = {});
     byRoom[room] = (byRoom[room] || 0) + 1;
     saveSoon();
   }
+  /* Sizes and gamepad focus picking (PLAN-2 D1, D2, D7). Pure: no page access, no clock. Plain global script (see src/lib/save.js).
+     Free names: none. Helpers are prefixed `layout` because lib and view share one scope.
+
+     The stage is an SVG of 960 x 520 stage units that 80-input.js (fitStage) scales to the screen; a hit target drawn in stage
+     units is therefore `units * stageCssWidth / 960` CSS px big. The rule for children's fingers is 64 CSS px at the reference
+     tablet (1024 x 768 landscape), where the stage is as wide as the screen (1024 px). Everything is computed here, from numbers,
+     so a test can check it without a browser.
+
+     Provided (hoisted, global):
+       LAYOUT                              the numbers: stage size, 64 px target, 72 px touch key, reference viewport
+       layoutStageWidth(availW, availH)    CSS width of the stage in a free area (fitStage uses this)
+       layoutStageHeight(width)            its height
+       layoutCssPx(units, stageCssW)       stage units -> CSS px
+       layoutHitMin(stageCssW?)            the smallest hit size in stage units that is still LAYOUT.minHitCss big on screen
+       layoutRefStageWidth()               stage width at the reference viewport (with the touch pad showing)
+       layoutHitRadius(r, ring)            hit radius of a round picture button of plate radius r (a hold ring widens it)
+       layoutPadPick(dir, cur, rects)      the rect a D-pad press moves the focus to ('l' 'r' 'u' 'd'), -1 when none lies that way
+       layoutPadStart(rects)               where the focus first lands on a screen: the pulsing button, else the first one */
+  const LAYOUT = Object.freeze({ stageW: 960, stageH: 520, minHitCss: 64, touchKeyCss: 72, refW: 1024, refH: 768, touchBarCss: 72 + 2 * 8, ringPad: 8 });
+
+  function layoutStageWidth(availW, availH) { return Math.max(240, Math.floor(Math.min(availW, availH * (LAYOUT.stageW / LAYOUT.stageH)))); }
+  function layoutStageHeight(width) { return Math.round(width / (LAYOUT.stageW / LAYOUT.stageH)); }
+  function layoutCssPx(units, stageCssW) { return units * stageCssW / LAYOUT.stageW; }
+  function layoutRefStageWidth() { return layoutStageWidth(LAYOUT.refW, LAYOUT.refH - LAYOUT.touchBarCss); }
+  function layoutHitMin(stageCssW) { return Math.ceil(LAYOUT.minHitCss * LAYOUT.stageW / (stageCssW || layoutRefStageWidth())); }
+  function layoutHitRadius(r, ring) { return Math.max(r + (ring ? LAYOUT.ringPad : 0), layoutHitMin() / 2); }
+
+  /* rects: [{ x, y, w, h }] in one unit. A candidate must lie ahead of the focus along the pressed direction, not more than twice as
+     far sideways as ahead (so down from the middle button never jumps to a far corner); the nearer along that axis and the straighter
+     ahead, the better (sideways drift counts double). Ties go to the earlier rect. */
+  function layoutPadPick(dir, cur, rects) {
+    const from = rects[cur];
+    if (!from) return -1;
+    const fx = from.x + from.w / 2, fy = from.y + from.h / 2;
+    let best = -1, bestScore = Infinity;
+    rects.forEach((r, i) => {
+      if (i === cur) return;
+      const dx = r.x + r.w / 2 - fx, dy = r.y + r.h / 2 - fy;
+      const along = dir === 'r' ? dx : dir === 'l' ? -dx : dir === 'd' ? dy : -dy;
+      const across = dir === 'l' || dir === 'r' ? Math.abs(dy) : Math.abs(dx);
+      if (along <= 1 || across > 2 * along) return;   // it must lie ahead, inside a cone about 127 degrees wide
+      const score = along + 2 * across;
+      if (score < bestScore) { best = i; bestScore = score; }
+    });
+    return best;
+  }
+  /* rects may carry `pulse: true` (the button the scene is waiting for). */
+  function layoutPadStart(rects) {
+    if (!rects.length) return -1;
+    const i = rects.findIndex(r => r.pulse);
+    return i >= 0 ? i : 0;
+  }
   /* When the room is live (PLAN-2 B5). Plain global script (see src/lib/save.js). No DOM access.
-     Free names, supplied by the view scope: playFlow, game, storyIsOpen, uxState. */
-  /* True while the room is live and nothing is covering it. */
-  function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen() && !uxState.modal; }
+     Free names, supplied by the view scope: playFlow, game, storyIsOpen, uxState, isPortraitView. */
+  /* True while the room is live and nothing is covering it (a parent modal, a story page, or the turn-the-tablet picture in portrait). */
+  function canPlay() { return playFlow.phase === 'play' && game.state === 'play' && !storyIsOpen() && !uxState.modal && !isPortraitView(); }
+  /* Spaced review and quiz option picking (PLAN-2 C2, C3). Pure: no storage, no DOM, no clock, no random source of its own.
+     Plain global script (see src/lib/save.js). Time comes in as a "room clock" (a whole number that goes up by one every time the
+     child enters a room, kept in save.roomClock, first room = 1) and randomness as an `rng` function returning [0, 1).
+     Free names: none. Helpers are prefixed `rv` / `review` because lib and view share one scope.
+
+     `saveWords` is save.words: { [wordId]: { heard, quiz, seen?, wrong?, lastSeen?, lastWrong?, lastReviewed?, reviews? } }
+       heard         times the word was heard in full (noteWordHeard in heard.js)
+       quiz          quiz questions answered right at the first try
+       wrong         quiz questions that were not answered right at the first try
+       seen          met on a card even with the sound off
+       lastSeen      room clock of the latest encounter (heard, quiz, review)
+       lastWrong     room clock of the latest wrong quiz answer
+       lastReviewed  room clock of the latest review (recall card, or a right answer after a miss)
+       reviews       how many times it was reviewed; stretches the gap to the next review
+     The previous room's words in a recall are the recap of that room, not a spaced review: hear them with noteHeard like any word,
+     but call noteReviewed only for recallOlderIds(...), otherwise the recap would keep them out of the very next recall.
+     "Open miss": wrong > 0 and lastWrong >= lastReviewed, i.e. missed and not reviewed since. Open misses come first.
+     `context` is { clock, exclude?, limit? }: clock = the room clock now; exclude = word ids that must not come back (the words of
+     the room being entered); limit = at most this many ids from reviewDue.
+
+     Provided (hoisted, global):
+       reviewDue(saveWords, context)                          -> word ids due for review, most urgent first
+       recallWordsFor(prevRoomWords, saveWords, context)      -> the previous room's words, then at most 2 due older words
+       recallOlderIds(prevRoomWords, recall)                  -> just the older words of such a list: the ones to noteReviewed
+       quizOptions(targetId, roomWords, learnedOtherRoomWords, saveWords, rng) -> up to 3 distinct ids, the target among them
+       noteQuizAnswer(saveWords, id, firstTry, context)       -> counts one quiz question; the record, or null for a bad id
+       noteReviewed(saveWords, id, context)                   -> an OLDER word was shown again in a recall; the record, or null
+       noteHeard(saveWords, id, context)                      -> heard + 1 and lastSeen; the record, or null
+       reviewContext(save) / reviewAdvanceClock(save)         -> { clock } of a save / enter a room: bump save.roomClock, return it
+       reviewLearned(saveWords, ids)                          -> the ids of `ids` the child has met (never-learned ones dropped)
+       makeReviewRng(seed)                                    -> a seeded mulberry32 generator for tests and daily seeds */
+  const REVIEW_INTERVALS = [1, 3, 6, 12];   // rooms that must pass since the last encounter, by how often the word was reviewed already
+  const REVIEW_GAP = 2;                     // a reviewed word stays away for the next room: back after at least this many ticks
+  const REVIEW_OLD_MAX = 2;                 // older words added to the previous room's words in a recall
+
+  function rvNat(v) { return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0; }
+  function rvClock(context) { return Math.max(1, rvNat(context && context.clock)); }
+  function rvValidId(id) { return typeof id === 'string' && id !== '' && id !== '__proto__'; }
+  function rvRecord(saveWords, id) {
+    if (!saveWords || typeof saveWords !== 'object' || !rvValidId(id)) return null;
+    const w = saveWords[id];
+    if (w && typeof w === 'object') return w;
+    return (saveWords[id] = { heard: 0, quiz: 0 });
+  }
+  function rvLearned(w) { return !!w && typeof w === 'object' && (rvNat(w.heard) > 0 || !!w.seen || rvNat(w.quiz) > 0 || rvNat(w.wrong) > 0); }
+  function rvOpenMiss(w) { return rvNat(w.wrong) > 0 && rvNat(w.lastWrong) >= rvNat(w.lastReviewed); }
+  function rvByText(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
+
+  /* Fisher-Yates, in place; `rng` must return [0, 1). */
+  function rvShuffle(list, rng) {
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.min(i, Math.floor(rng() * (i + 1)));
+      const t = list[i]; list[i] = list[j]; list[j] = t;
+    }
+    return list;
+  }
+  function makeReviewRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function reviewContext(save) { return { clock: Math.max(1, rvNat(save && save.roomClock)) }; }
+  function reviewAdvanceClock(save) { save.roomClock = rvNat(save.roomClock) + 1; return save.roomClock; }
+  function reviewLearned(saveWords, ids) {
+    const out = [];
+    for (const id of ids || []) if (rvValidId(id) && !out.includes(id) && saveWords && rvLearned(saveWords[id])) out.push(id);
+    return out;
+  }
+
+  function reviewDue(saveWords, context) {
+    const clock = rvClock(context);
+    const skip = new Set((context && context.exclude) || []);
+    const open = [], spaced = [];
+    for (const id of Object.keys(saveWords || {})) {
+      const w = saveWords[id];
+      if (!rvValidId(id) || skip.has(id) || !rvLearned(w)) continue;
+      const lastReviewed = rvNat(w.lastReviewed);
+      if (lastReviewed > 0 && clock - lastReviewed < REVIEW_GAP) continue;   // reviewed within the last room
+      if (rvOpenMiss(w)) { open.push({ id, wrong: rvNat(w.wrong), at: rvNat(w.lastWrong) }); continue; }
+      const gap = REVIEW_INTERVALS[Math.min(rvNat(w.reviews), REVIEW_INTERVALS.length - 1)];
+      const overdue = clock - rvNat(w.lastSeen) - gap;
+      if (overdue >= 0) spaced.push({ id, overdue, quiz: rvNat(w.quiz) });
+    }
+    open.sort((a, b) => b.wrong - a.wrong || a.at - b.at || rvByText(a.id, b.id));
+    spaced.sort((a, b) => b.overdue - a.overdue || a.quiz - b.quiz || rvByText(a.id, b.id));
+    const ids = open.concat(spaced).map(x => x.id);
+    const limit = context && Number.isFinite(context.limit) ? Math.max(0, Math.floor(context.limit)) : ids.length;
+    return ids.slice(0, limit);
+  }
+
+  function recallWordsFor(prevRoomWords, saveWords, context) {
+    const prev = [];
+    for (const id of prevRoomWords || []) if (rvValidId(id) && !prev.includes(id)) prev.push(id);
+    const exclude = prev.concat((context && context.exclude) || []);
+    const older = reviewDue(saveWords, Object.assign({}, context, { exclude, limit: REVIEW_OLD_MAX }));
+    return prev.concat(older);
+  }
+
+  function recallOlderIds(prevRoomWords, recall) { return (recall || []).filter(id => !(prevRoomWords || []).includes(id)); }
+
+  /* Up to 3 distinct ids (fewer only when the words given are too few): the target, one word from another room whenever
+     `learnedOtherRoomWords` has any, and a third from the other rooms or the target's room. Among equals, words answered wrong
+     before are preferred (open misses most), then the rng decides. The result is shuffled so the target lands anywhere. */
+  function quizOptions(targetId, roomWords, learnedOtherRoomWords, saveWords, rng) {
+    const rand = typeof rng === 'function' ? rng : makeReviewRng(1);
+    const taken = new Set([targetId]);
+    const fresh = list => {
+      const out = [];
+      for (const id of list || []) if (rvValidId(id) && !taken.has(id) && !out.includes(id)) out.push(id);
+      return out;
+    };
+    const others = fresh(learnedOtherRoomWords);
+    const sameRoom = fresh(roomWords).filter(id => !others.includes(id));
+    const weight = id => {
+      const w = saveWords && saveWords[id];
+      return !w || typeof w !== 'object' ? 0 : rvOpenMiss(w) ? 2 : rvNat(w.wrong) > 0 ? 1 : 0;
+    };
+    const ranked = list => rvShuffle(list.slice(), rand).sort((a, b) => weight(b) - weight(a));   // stable: ties keep the shuffled order
+    const picks = [targetId];
+    if (others.length) picks.push(ranked(others)[0]);
+    const rest = ranked(others.concat(sameRoom).filter(id => !picks.includes(id)));
+    while (picks.length < 3 && rest.length) picks.push(rest.shift());
+    return rvShuffle(picks, rand);
+  }
+
+  function noteHeard(saveWords, id, context) {
+    const w = rvRecord(saveWords, id);
+    if (!w) return null;
+    w.heard = rvNat(w.heard) + 1;
+    w.lastSeen = Math.max(rvNat(w.lastSeen), rvClock(context));
+    return w;
+  }
+  function noteQuizAnswer(saveWords, id, firstTry, context) {
+    const w = rvRecord(saveWords, id);
+    if (!w) return null;
+    const clock = rvClock(context);
+    const missedBefore = rvOpenMiss(w);
+    if (firstTry) {
+      w.quiz = rvNat(w.quiz) + 1;
+      if (missedBefore && clock > rvNat(w.lastWrong)) w.lastReviewed = Math.max(rvNat(w.lastReviewed), clock);   // knew it now: the old miss is settled
+    } else {
+      w.wrong = rvNat(w.wrong) + 1;
+      w.lastWrong = Math.max(rvNat(w.lastWrong), clock);
+    }
+    w.lastSeen = Math.max(rvNat(w.lastSeen), clock);
+    return w;
+  }
+  function noteReviewed(saveWords, id, context) {
+    const w = rvRecord(saveWords, id);
+    if (!w) return null;
+    const clock = rvClock(context);
+    w.reviews = rvNat(w.reviews) + 1;
+    w.lastReviewed = Math.max(rvNat(w.lastReviewed), clock);
+    w.lastSeen = Math.max(rvNat(w.lastSeen), clock);
+    return w;
+  }
   /* Save data: shape, sanitizing, version check and merge. Pure functions, no storage, no DOM (PLAN-2 B5).
      Plain global script: art/build_page.py inlines it before the view fragments (indented like them), test/harness.mjs
      `loadLib` runs it in node. Reading and writing localStorage, the `save` object and the storage event stay in view/00-core.js.
@@ -1817,7 +2143,10 @@ function createGame() {
     player: v => v === 'frost',   // Elsa leads; kept in the save so an old 'nuan' choice is migrated to her instead of dropped
     sound: v => typeof v === 'boolean',
   };
-  const SAVE_VERSION = 2;   // what this build writes and understands; a stored v above it belongs to a newer build
+  const SAVE_VERSION = 3;   // what this build writes and understands; a stored v above it belongs to a newer build
+  /* v3 (PLAN-2 C2, C5): per-word review fields (see src/lib/review.js) and two top-level counters, totalPlaySeconds and roomClock.
+     v2 -> v3 needs no step of its own: sanitizeSave rebuilds every save at the current version and keeps all v2 data. */
+  const WORD_COUNTERS = ['wrong', 'lastSeen', 'lastWrong', 'lastReviewed', 'reviews'];   // optional per-word numbers, stored only when above 0
 
   function defaultSave() {
     return {
@@ -1825,6 +2154,8 @@ function createGame() {
       settings: { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true },
       rooms: {},
       words: {},
+      totalPlaySeconds: 0,   // whole seconds of play, for the parent page
+      roomClock: 0,          // rooms entered so far, the clock of the spaced review
       stickers: [],
       board: [],
       outfit: { frost: { dress: 0, hat: null }, nuan: { dress: 0, hat: null } },
@@ -1856,6 +2187,7 @@ function createGame() {
         if (!isObj(w)) continue;
         s.words[id] = { heard: nat(w.heard, 0), quiz: nat(w.quiz, 0) };
         if (w.seen) s.words[id].seen = true;   // "met on a card" survives a reload even when the sound was off
+        for (const k of WORD_COUNTERS) if (nat(w[k], 0) > 0) s.words[id][k] = nat(w[k], 0);
       }
     }
     if (Array.isArray(raw.stickers)) s.stickers = raw.stickers.filter(x => typeof x === 'string');
@@ -1866,6 +2198,9 @@ function createGame() {
         if (isObj(o)) s.outfit[who] = { dress: nat(o.dress, 0), hat: typeof o.hat === 'string' ? o.hat : null };
       }
     }
+    s.totalPlaySeconds = nat(raw.totalPlaySeconds, 0);
+    /* a save from before v3 has no clock: the rooms already cleared stand for the rooms already entered */
+    s.roomClock = Number.isFinite(raw.roomClock) && raw.roomClock >= 0 ? nat(raw.roomClock, 0) : Object.keys(s.rooms).filter(id => s.rooms[id].cleared).length;
     if (isObj(raw.unlocked)) s.unlocked.rooms = Math.max(1, nat(raw.unlocked.rooms, 1));
     if (isObj(raw.flags)) for (const k of Object.keys(s.flags)) s.flags[k] = !!raw.flags[k];
     return s;
@@ -1879,8 +2214,8 @@ function createGame() {
   }
 
   /* Fold another tab's save (already sanitized) into `mine`, in place, so objects held elsewhere stay valid.
-     Progress only ever grows: cleared rooms, stars, memories, stickers and flags are unions, counters take the larger
-     value, unlocked rooms the larger count. Settings, outfit and sticker positions stay as this tab has them.
+     Progress only ever grows: cleared rooms, stars, memories, stickers and flags are unions, counters (heard, quiz, the review
+     fields, totalPlaySeconds, roomClock) take the larger value, unlocked rooms the larger count. Settings, outfit and sticker positions stay as this tab has them.
      Merging the same save twice changes nothing. */
   function mergeSaveInto(mine, theirs) {
     if (!isObj(mine) || !isObj(theirs)) return mine;
@@ -1901,10 +2236,13 @@ function createGame() {
       w.heard = Math.max(nat(w.heard, 0), nat(o.heard, 0));
       w.quiz = Math.max(nat(w.quiz, 0), nat(o.quiz, 0));
       if (o.seen) w.seen = true;
+      for (const k of WORD_COUNTERS) if (nat(o[k], 0) > nat(w[k], 0)) w[k] = nat(o[k], 0);
       for (const k of Object.keys(o)) if (!(k in w)) w[k] = o[k];
     }
     for (const id of theirs.stickers || []) if (!mine.stickers.includes(id)) mine.stickers.push(id);
     for (const b of theirs.board || []) if (!mine.board.some(x => x.id === b.id)) mine.board.push({ id: b.id, x: b.x, y: b.y });
+    mine.totalPlaySeconds = Math.max(nat(mine.totalPlaySeconds, 0), nat(theirs.totalPlaySeconds, 0));
+    mine.roomClock = Math.max(nat(mine.roomClock, 0), nat(theirs.roomClock, 0));
     mine.unlocked.rooms = Math.max(1, nat(mine.unlocked.rooms, 1), nat(theirs.unlocked && theirs.unlocked.rooms, 1));
     for (const k of Object.keys(theirs.flags || {})) mine.flags[k] = !!mine.flags[k] || !!theirs.flags[k];
     for (const k of Object.keys(theirs)) if (!(k in mine) && k !== '__proto__') mine[k] = theirs[k];
@@ -1919,21 +2257,25 @@ function createGame() {
      Nothing here runs at load except building the `voice` object, so the load order against the view files does not matter. */
   /* Voice: lazy mp3 clips, one at a time, a small priority queue, the music ducks underneath.
        voice.line(key, opts)  opts { interrupt, priority 0..2 (default 1), maxWait ms, tag, subtitle:false }
-       voice.word(id) / voice.ui(name) / voice.stop() / voice.busy / voice.preload(keys) / voice.lastReason(key)
+       voice.word(id) / voice.ui(name) / voice.stop() / voice.suspend() / voice.busy / voice.preload(keys) / voice.lastReason(key)
      Every call returns quickly and never rejects: a missing or slow file just plays as silence for ~0.35 s so a story that
      waits on the promise keeps moving (subtitles, if wanted, stay up for a reading time).
      The promise resolves true when the clip was heard to the end (audible, not muted, not cut), false otherwise.
      WHY it was false: voice.lastReason(key) -> the reason of the most recent call for that key (the line key, 'word_<id>'
      for voice.word, 'ui_<name>' for hover names), set before the promise resolves; null when it completed or was never called.
        'missing'     no such line, or its mp3 failed to load / decode / arrive in time (played as silence)
-       'interrupted' cut by louder speech or voice.stop(), dropped from the queue, or a hover name that found speech playing
+       'interrupted' cut by louder speech, voice.stop() or voice.suspend(), dropped from the queue, a hover name that found speech
+                     playing, or a clip that started while the audio context was suspended and never got to play
        'muted'       the clip ran to the end but sound was off, so nothing was heard
        'expired'     waited in the queue longer than maxWait without getting its turn
      A failed mp3 load is not cached: the next request fetches it once more (a second failure is cached), one console warning per file.
      voice.ui (hover names) is priority 0, tag 'ui': it may cut another 'ui' clip but never anything else, it is dropped instead of
-     queued behind speech, and it says nothing at all while a story / learning scene (`story`) is open. */
+     queued behind speech, and it says nothing at all while a story / learning scene (`story`) is open.
+     voice.suspend() is for the audio context going to sleep (tab hidden, the tablet locked, a phone call: PLAN-2 D6). A clip on a
+     suspended context never ends, so the job would hang with the music ducked for good: it ends the current job and drops the queue
+     ('interrupted', no word counted) and puts the music level back. 40-audio.js calls it from visibilitychange and statechange. */
   const voice = (() => {
-    const FILE_WAIT = 2500, SILENT_MS = 350, CACHE_MAX = 48, QUEUE_MAX = 4;
+    const FILE_WAIT = 2500, SILENT_MS = 350, CACHE_MAX = 24, QUEUE_MAX = 4, SLEEP_GRACE_MS = 1500;
     const bufs = new Map();              // file -> Promise<AudioBuffer | null>, least recently used first
     const queue = [], listeners = [];
     let cur = null, seq = 0, SUBS = null, subsAsked = false, subTimer = 0, uiTimer = 0, uiLast = { name: '', t: -1e9 };
@@ -2009,6 +2351,8 @@ function createGame() {
         src.onended = () => finish(job, true);
         job.src = src;
         src.start(audio.currentTime + .08);
+        // started on a sleeping context (suspended / interrupted): if it does not wake in time the clip never ends, so give up on it
+        if (audio.state === 'suspended' || audio.state === 'interrupted') job.timer = setTimeout(() => finish(job, false, 'interrupted'), Math.ceil((buf.duration || 1) * 1000) + SLEEP_GRACE_MS);
       };
       if (job.file && audio) {
         let t = 0;
@@ -2092,6 +2436,12 @@ function createGame() {
       clearTimeout(subTimer);
       emitSub(null);
     }
+    /* The audio context is asleep: nothing playing can finish, so end it all now. Same effect as stop(), and the music level comes back
+       even when nothing was playing (duck() reads `cur`, which is empty by then). */
+    function suspend() {
+      stop();
+      duck();
+    }
     /* Warm the cache for lines that are likely to play soon (needs the audio context, i.e. after the first click). */
     function preload(keys) {
       if (!audio) return Promise.resolve();
@@ -2107,7 +2457,7 @@ function createGame() {
       return files.reduce((p, f) => p.then(() => load(f)), Promise.resolve()).then(() => {});
     }
     return {
-      line, word, ui, stop, preload,
+      line, word, ui, stop, suspend, preload,
       lastReason: key => reasons.has(key) ? reasons.get(key) : null,
       wordInfo: id => (SUBS && SUBS.words && SUBS.words[id]) || null,   // { en, zh, room } once game/subs.json has loaded
       get busy() { return cur !== null; },
@@ -2224,9 +2574,44 @@ function createGame() {
   game.mode = setting('mode');
   /* SIZES and LINES are JSON inlined by art/build_page.py; the placeholders keep this file valid JS on its own. */
   const SIZES = {"frost_idle":[96,170,75.0],"frost_blink":[91,170,70.0],"frost_jump":[122,177,79.0],"frost_fall":[123,166,83.0],"frost_cast":[175,161,84.0],"frost_cheer":[120,179,75.0],"frost_run1":[142,158,110.0],"frost_run2":[148,140,125.0],"frost_run3":[133,156,104.0],"frost_run4":[166,148,117.0],"frost_run5":[142,144,115.0],"frost_run6":[129,151,102.0],"nuan_idle":[84,153,50.0],"nuan_blink":[84,153,49.0],"nuan_jump":[102,155,66.0],"nuan_fall":[88,146,63.0],"nuan_cast":[149,139,85.0],"nuan_cheer":[137,150,76.0],"nuan_run1":[118,126,91.0],"nuan_run2":[105,133,79.0],"nuan_run3":[121,142,90.0],"nuan_run4":[106,128,86.0],"nuan_run5":[118,134,81.0],"nuan_run6":[127,149,72.0],"shelf0":[169,58],"shelf1":[164,59],"shelf2":[164,62],"pinkice":[96,96],"iceblock":[96,96],"frozen":[96,96],"plate_up":[132,55],"plate_down":[132,28],"gate":[204,211],"drift0":[227,48],"drift1":[134,34],"water":[232,58],"door_closed":[234,344],"door_open":[233,356],"flake":[122,142],"heart":[114,106],"ball":[128,128],"two":[177,254],"snowman":[238,326],"pile":[123,107],"bg0":[1672,906],"bg1":[1672,906],"bg2":[1672,906],"bg3":[1672,906],"fx_burst":[200,184],"fx_glow":[200,177],"fx_ring":[200,190],"fx_flake":[51,56],"fx_heart":[56,50],"fx_star":[56,56],"fx_steam":[139,160],"fx_dust":[160,90],"fx_splash":[140,107],"word_heart":[256,256],"word_star":[256,256],"word_door":[256,256],"word_water":[256,256],"word_ice":[256,256],"word_fish":[256,256],"word_slide":[256,256],"word_fast":[256,256],"word_down":[256,256],"word_push":[256,256],"word_open":[256,256],"word_gate":[256,256],"word_jump":[256,256],"alt_word_fast":[256,256],"alt_word_push":[256,256],"alt_word_open":[256,256],"word_up":[256,256],"word_high":[256,256],"word_bunny":[256,256],"word_home":[256,256],"word_carrot":[256,256],"word_left":[256,256],"word_right":[256,256],"word_wait":[256,256],"word_red":[256,256],"word_yellow":[256,256],"word_blue":[256,256],"word_snowman":[256,256],"word_ball":[256,256],"alt_word_wait":[256,256],"alt_word_up":[256,256],"alt_word_high":[256,256],"word_hat":[256,256],"word_flower":[256,256],"word_warm":[256,256],"word_spring":[256,256],"word_one":[256,256],"word_two":[256,256],"word_three":[256,256],"word_snowflake":[256,256],"word_hello":[256,256],"word_yay":[256,256],"word_music":[256,256],"word_sun":[256,256],"alt_word_warm":[256,256],"alt_word_spring":[256,256],"alt_word_hello":[256,256],"alt_word_yay":[256,256],"ui_book":[187,192],"ui_bulb":[174,192],"ui_gear":[192,187],"ui_fullscreen":[192,190],"ui_play":[256,256],"ui_next":[191,192],"ui_replay":[191,192],"ui_back":[192,192],"ui_ear":[192,174],"ui_mouth":[192,113],"ui_sticker":[192,177],"ui_wardrobe":[183,192],"ui_solo":[188,192],"ui_duo":[189,192],"ui_meet":[256,256],"hat_snowman":[120,102],"ui_keys":[320,281],"ui_key_left":[115,107],"ui_key_right":[115,108],"ui_key_up":[113,105],"ui_key_space":[325,114],"ui_keys_rects":{"up":[105,-1,110,96],"left":[42,98,111,96],"right":[165,99,111,95],"space":[-1,200,320,80]},"ui_keys_centers":{"left":[97,146],"right":[220,146],"up":[160,47],"space":[159,240]},"fish_1":[97,66],"fish_2":[97,66],"tile_slope_r":[96,96],"tile_slope_l":[96,96],"spring_0":[96,96],"spring_1":[96,96],"flower_0":[96,96],"flower_1":[96,96],"flower_2":[96,96],"bunny_nest":[96,67],"note_1":[96,96],"note_1_lit":[96,96],"note_2":[96,96],"note_2_lit":[96,96],"note_3":[96,96],"note_3_lit":[96,96],"note_4":[96,96],"note_4_lit":[96,96],"note_5":[96,96],"note_5_lit":[96,96],"bunny_idle":[66,78],"bunny_hop1":[66,78],"bunny_hop2":[66,78],"bunny_hop3":[66,78],"bunny_hop4":[66,78],"bunny_home":[66,78],"floe_m":[96,96],"floe_l":[96,96],"floe_r":[96,96],"floe":[96,96],"sticker_hall":[189,192],"sticker_lake":[188,192],"sticker_slope":[188,192],"sticker_tower":[189,192],"sticker_spring":[187,192],"sticker_bunny":[187,192],"sticker_floe":[188,192],"sticker_music":[188,192],"sticker_ballroom":[188,192],"sticker_garden":[187,192],"sticker_words5":[187,192],"sticker_hall_gold":[189,192],"sticker_lake_gold":[189,192],"sticker_slope_gold":[189,192],"sticker_tower_gold":[189,192],"sticker_spring_gold":[188,192],"sticker_bunny_gold":[188,192],"sticker_floe_gold":[188,192],"sticker_music_gold":[188,192],"sticker_ballroom_gold":[189,192],"sticker_garden_gold":[189,192],"sticker_board":[1280,720],"bg_slope":[1672,906],"bg_spring":[1672,906],"bg_bunny":[1672,906],"bg_floe":[1672,906],"bg_music":[1672,906],"bg_garden":[1672,906],"portrait_frost":[312,416],"portrait_nuan":[312,416],"frost_idle_d1":[96,170,75.0],"frost_idle_d2":[96,170,75.0],"frost_blink_d1":[91,170,70.0],"frost_blink_d2":[91,170,70.0],"frost_jump_d1":[122,177,79.0],"frost_jump_d2":[122,177,79.0],"frost_fall_d1":[123,166,83.0],"frost_fall_d2":[123,166,83.0],"frost_cast_d1":[175,161,84.0],"frost_cast_d2":[175,161,84.0],"frost_cheer_d1":[120,179,75.0],"frost_cheer_d2":[120,179,75.0],"frost_run1_d1":[142,158,110.0],"frost_run1_d2":[142,158,110.0],"frost_run2_d1":[148,140,125.0],"frost_run2_d2":[148,140,125.0],"frost_run3_d1":[133,156,104.0],"frost_run3_d2":[133,156,104.0],"frost_run4_d1":[166,148,117.0],"frost_run4_d2":[166,148,117.0],"frost_run5_d1":[142,144,115.0],"frost_run5_d2":[142,144,115.0],"frost_run6_d1":[129,151,102.0],"frost_run6_d2":[129,151,102.0],"nuan_idle_d1":[84,153,50.0],"nuan_idle_d2":[84,153,50.0],"nuan_blink_d1":[84,153,49.0],"nuan_blink_d2":[84,153,49.0],"nuan_jump_d1":[102,155,66.0],"nuan_jump_d2":[102,155,66.0],"nuan_fall_d1":[88,146,63.0],"nuan_fall_d2":[88,146,63.0],"nuan_cast_d1":[149,139,85.0],"nuan_cast_d2":[149,139,85.0],"nuan_cheer_d1":[137,150,76.0],"nuan_cheer_d2":[137,150,76.0],"nuan_run1_d1":[118,126,91.0],"nuan_run1_d2":[118,126,91.0],"nuan_run2_d1":[105,133,79.0],"nuan_run2_d2":[105,133,79.0],"nuan_run3_d1":[121,142,90.0],"nuan_run3_d2":[121,142,90.0],"nuan_run4_d1":[106,128,86.0],"nuan_run4_d2":[106,128,86.0],"nuan_run5_d1":[118,134,81.0],"nuan_run5_d2":[118,134,81.0],"nuan_run6_d1":[127,149,72.0],"nuan_run6_d2":[127,149,72.0],"hat_crown":[128,104],"hat_bow":[128,91],"hat_wreath":[128,86],"hat_clip":[128,106],"hat_offsets":{"frost":{"idle":[0.99,-3.01,0.46,0],"blink":[0.99,-3.51,0.46,0],"jump":[0.49,1.44,0.46,0],"fall":[0.99,0.94,0.46,0],"cast":[-0.49,-3.51,0.46,0],"cheer":[0.99,1.44,0.46,0],"run1":[1.48,-3.01,0.46,0],"run2":[2.47,-3.51,0.46,0],"run3":[1.48,-3.51,0.46,0],"run4":[1.48,-3.01,0.46,0],"run5":[2.47,-3.51,0.46,0],"run6":[1.98,-3.51,0.46,0]},"nuan":{"idle":[0.99,-3.51,0.46,0],"blink":[0.49,-3.51,0.46,0],"jump":[0.0,2.92,0.46,0],"fall":[0.74,4.89,0.46,0],"cast":[0.99,-3.51,0.46,0],"cheer":[0.49,1.44,0.46,0],"run1":[1.98,-3.51,0.46,0],"run2":[1.48,-3.51,0.46,0],"run3":[1.98,-3.51,0.46,0],"run4":[1.98,-3.51,0.46,0],"run5":[0.99,-3.51,0.46,0],"run6":[0.49,1.93,0.46,0]}}};
-  const ASSET_VERSION = "42285340d575";
+  const ASSET_VERSION = "907a6643691a";
   const assetURL = file => `game/${file}?v=${ASSET_VERSION}`;
   const SRC = n => assetURL(`${n}.webp`);
+
+  /* Pictures load by group (PLAN-2 D4, plan in src/lib/assets.js): the title set first, a room's set while its recall / chapter cards are
+     up. loadArt starts every picture of `names` that is not loading or loaded yet, decodes it, and resolves when all are decoded or
+     `patience` ms have passed (the child is never stranded behind a slow network; the pictures keep arriving afterwards).
+     artPending(name) says a picture is on its way, so a drawing routine can place it at once instead of a stand-in. */
+  const ART_PATIENCE = 1500;
+  const artJobs = new Map();   // name -> promise of its decode, settled (never rejected) when it is decoded or has failed
+  const artWait = new Set();
+  const artLive = new Set();   // the Image objects whose picture is still loading: held so nothing can collect them mid-load
+  const artStats = { requested: 0, decoded: 0, failed: 0 };
+  const artPending = name => artWait.has(name);
+  /* the toy families of rooms 3-10: slope, spring, floe, note steps, ice flower, bunny (and its nest) */
+  const TOY_ART = /^(tile_slope_|spring_|floe_|note_|flower_|bunny_)/;
+  function loadArt(names, patience) {
+    const jobs = [];
+    for (const n of names) {
+      let p = artJobs.get(n);
+      if (!p) {
+        const im = new Image();
+        im.src = SRC(n);
+        artStats.requested++;
+        artWait.add(n); artLive.add(im);
+        p = im.decode().then(() => {
+          artWait.delete(n); artLive.delete(im); artStats.decoded++;
+          if (TOY_ART.test(n) && typeof toyImageReady === 'function') toyImageReady(n);   // 15-toys: remembers the picture exists
+        }, () => {
+          artWait.delete(n); artLive.delete(im); artStats.failed++; artJobs.delete(n);     // a failed picture is asked for again next time
+        });
+        artJobs.set(n, p);
+      }
+      jobs.push(p);
+    }
+    const all = Promise.all(jobs).then(() => {});
+    return patience > 0 ? Promise.race([all, new Promise(ok => setTimeout(ok, patience))]) : all;
+  }
 
   function el(tag, attrs, parent) {
     const n = document.createElementNS(NS, tag);
@@ -2248,7 +2633,7 @@ function createGame() {
   }
 
   /** @type {{ lines?: Record<string, any>, pages?: Record<string, any>, voices?: any, words?: any[] }} */
-  const LINES = {"voices":{"frost":{"zh":["zh-CN-XiaoxiaoNeural","-6%","-4Hz"]},"nuan":{"zh":["en-US-EmmaMultilingualNeural","-5%","+8Hz"],"en":["en-US-EmmaMultilingualNeural","-5%","+8Hz"]}},"lines":{"p1":{"who":"nuan","say":["姐姐，你手里的雪花好漂亮！我是安娜，我会陪着你，一起在冰堡里探险。"],"art":"story_prologue"},"p2":{"who":"nuan","say":["姐姐，外面下雪啦。别担心，我带着小灯笼来找你了，我们一起想办法吧。"],"art":"story_winter"},"p3":{"who":"nuan","say":["艾莎，我们一起出发吧！你来变冰和雪，我在旁边帮你，我们再堆一个小时候的雪人。"],"art":"key"},"ch_hall":{"who":"nuan","say":["姐姐，我找到你啦！我们先看看大厅里藏着什么宝贝吧。"],"art":"bg0"},"ch_lake":{"who":"nuan","say":["冰堡后面有一片大湖，小鱼在水里游来游去。"],"art":"bg1"},"ch_slope":{"who":"nuan","say":["冰堡里有一条长长的雪坡，像一个大滑梯。呼——滑下去！"],"art":"bg_slope"},"ch_tower":{"who":"nuan","say":["塔楼里有一扇很重的铁门，要两个人一起想办法。"],"art":"bg2"},"ch_spring":{"who":"nuan","say":["雪地里长满了软软的蘑菇，踩上去，弹——弹到半空里去！"],"art":"bg_spring"},"ch_bunny":{"who":"nuan","say":["雪地里有三只小雪兔迷路了，我们带它们回家吧。"],"art":"bg_bunny"},"ch_floe":{"who":"nuan","say":["河面上漂着一块块浮冰，一会儿往左，一会儿往右。"],"art":"bg_floe"},"ch_music":{"who":"nuan","say":["台阶一级一级，闪着彩色的光。踩一踩，它们会唱歌！"],"art":"bg_music"},"ch_ballroom":{"who":"nuan","say":["舞厅里滚着好多大雪球，我们来堆雪人吧！"],"art":"bg3"},"ch_garden":{"who":"nuan","say":["冰堡的后花园里，冰花还在睡觉。我们用温暖的光，叫醒它们。"],"art":"bg_garden"},"learn_heart":{"who":"nuan","say":["姐姐，我们来找",{"w":"heart"},"。看，",{"w":"heart"},"就是爱心。和我一起念：",{"w":"heart"}]},"learn_star":{"who":"nuan","say":["还有",{"w":"star"},"。看，",{"w":"star"},"就是星星。和我一起念：",{"w":"star"}]},"learn_door":{"who":"nuan","say":["最后是",{"w":"door"},"。看，",{"w":"door"},"就是门。和我一起念：",{"w":"door"}]},"learn_water":{"who":"nuan","say":["姐姐，快看这片大湖，湖里是",{"w":"water"},"。看，",{"w":"water"},"就是水。和我一起念：",{"w":"water"}]},"learn_ice":{"who":"nuan","say":["姐姐，你的魔法能把水变成",{"w":"ice"},"。看，",{"w":"ice"},"就是冰。和我一起念：",{"w":"ice"}]},"learn_fish":{"who":"nuan","say":["水里还住着",{"w":"fish"},"。看，",{"w":"fish"},"就是小鱼。和我一起念：",{"w":"fish"}]},"learn_slide":{"who":"nuan","say":["看，好长的雪坡，我们来玩",{"w":"slide"},"。看，",{"w":"slide"},"就是滑滑梯。和我一起念：",{"w":"slide"}]},"learn_fast":{"who":"nuan","say":["从坡上滑下来的时候，会变得很",{"w":"fast"},"。看，",{"w":"fast"},"就是快。和我一起念：",{"w":"fast"}]},"learn_down":{"who":"nuan","say":["最后是",{"w":"down"},"。看，",{"w":"down"},"就是向下。和我一起念：",{"w":"down"}]},"learn_push":{"who":"nuan","say":["姐姐，我们一起来",{"w":"push"},"。看，",{"w":"push"},"就是推。和我一起念：",{"w":"push"}]},"learn_open":{"who":"nuan","say":["推了以后，门会",{"w":"open"},"。看，",{"w":"open"},"就是打开。和我一起念：",{"w":"open"}]},"learn_gate":{"who":"nuan","say":["这里有一扇铁门，叫",{"w":"gate"},"。看，",{"w":"gate"},"就是铁闸门。和我一起念：",{"w":"gate"}]},"learn_jump":{"who":"nuan","say":["蘑菇软软的，我们来试试",{"w":"jump"},"。看，",{"w":"jump"},"就是跳。和我一起念：",{"w":"jump"}]},"learn_up":{"who":"nuan","say":["踩上蘑菇，就会往",{"w":"up"},"飞。看，",{"w":"up"},"就是向上。和我一起念：",{"w":"up"}]},"learn_high":{"who":"nuan","say":["还会飞得很",{"w":"high"},"。看，",{"w":"high"},"就是高。和我一起念：",{"w":"high"}]},"learn_bunny":{"who":"nuan","say":["姐姐，这里有三只迷路的",{"w":"bunny"},"。看，",{"w":"bunny"},"就是小雪兔。和我一起念：",{"w":"bunny"}]},"learn_home":{"who":"nuan","say":["我们要送它们回",{"w":"home"},"。看，",{"w":"home"},"就是家。和我一起念：",{"w":"home"}]},"learn_carrot":{"who":"nuan","say":["兔窝门口，有它们最爱吃的",{"w":"carrot"},"。看，",{"w":"carrot"},"就是胡萝卜。和我一起念：",{"w":"carrot"}]},"learn_left":{"who":"nuan","say":["河上的浮冰，一会儿往",{"w":"left"},"走。看，",{"w":"left"},"就是左。和我一起念：",{"w":"left"}]},"learn_right":{"who":"nuan","say":["一会儿又往",{"w":"right"},"走。看，",{"w":"right"},"就是右。和我一起念：",{"w":"right"}]},"learn_wait":{"who":"nuan","say":["想上浮冰，要先",{"w":"wait"},"。看，",{"w":"wait"},"就是等一等。和我一起念：",{"w":"wait"}]},"learn_red":{"who":"nuan","say":["姐姐，台阶是彩色的，先看",{"w":"red"},"。看，",{"w":"red"},"就是红色。和我一起念：",{"w":"red"}]},"learn_yellow":{"who":"nuan","say":["还有",{"w":"yellow"},"。看，",{"w":"yellow"},"就是黄色。和我一起念：",{"w":"yellow"}]},"learn_blue":{"who":"nuan","say":["最后是",{"w":"blue"},"。看，",{"w":"blue"},"就是蓝色。和我一起念：",{"w":"blue"}]},"learn_snowman":{"who":"nuan","say":["我们要堆起",{"w":"snowman"},"。看，",{"w":"snowman"},"就是雪人。和我一起念：",{"w":"snowman"}]},"learn_ball":{"who":"nuan","say":["要用大大的",{"w":"ball"},"。看，",{"w":"ball"},"就是球，雪球的球。和我一起念：",{"w":"ball"}]},"learn_hat":{"who":"nuan","say":["雪人还要戴",{"w":"hat"},"。看，",{"w":"hat"},"就是帽子。和我一起念：",{"w":"hat"}]},"learn_flower":{"who":"nuan","say":["姐姐，花园里还睡着许多",{"w":"flower"},"。看，",{"w":"flower"},"就是花。和我一起念：",{"w":"flower"}]},"learn_warm":{"who":"nuan","say":["灯笼的光暖烘烘的，是",{"w":"warm"},"。看，",{"w":"warm"},"就是温暖。和我一起念：",{"w":"warm"}]},"learn_spring":{"who":"nuan","say":["温暖的风一吹，",{"w":"spring"},"就来啦。看，",{"w":"spring"},"就是春天。和我一起念：",{"w":"spring"}]},"recall_heart":{"who":"nuan","say":["还记得",{"w":"heart"},"吗？",{"w":"heart"},"，是爱心！"]},"recall_star":{"who":"nuan","say":["还记得",{"w":"star"},"吗？",{"w":"star"},"，是星星！"]},"recall_door":{"who":"nuan","say":["还记得",{"w":"door"},"吗？",{"w":"door"},"，是门！"]},"recall_water":{"who":"nuan","say":["还记得",{"w":"water"},"吗？",{"w":"water"},"，是水！"]},"recall_ice":{"who":"nuan","say":["还记得",{"w":"ice"},"吗？",{"w":"ice"},"，是冰！"]},"recall_fish":{"who":"nuan","say":["还记得",{"w":"fish"},"吗？",{"w":"fish"},"，是小鱼！"]},"recall_slide":{"who":"nuan","say":["还记得",{"w":"slide"},"吗？",{"w":"slide"},"，是滑滑梯！"]},"recall_fast":{"who":"nuan","say":["还记得",{"w":"fast"},"吗？",{"w":"fast"},"，是快！"]},"recall_down":{"who":"nuan","say":["还记得",{"w":"down"},"吗？",{"w":"down"},"，是向下！"]},"recall_push":{"who":"nuan","say":["还记得",{"w":"push"},"吗？",{"w":"push"},"，是推！"]},"recall_open":{"who":"nuan","say":["还记得",{"w":"open"},"吗？",{"w":"open"},"，是打开！"]},"recall_gate":{"who":"nuan","say":["还记得",{"w":"gate"},"吗？",{"w":"gate"},"，是铁闸门！"]},"recall_jump":{"who":"nuan","say":["还记得",{"w":"jump"},"吗？",{"w":"jump"},"，是跳！"]},"recall_up":{"who":"nuan","say":["还记得",{"w":"up"},"吗？",{"w":"up"},"，是向上！"]},"recall_high":{"who":"nuan","say":["还记得",{"w":"high"},"吗？",{"w":"high"},"，是高！"]},"recall_bunny":{"who":"nuan","say":["还记得",{"w":"bunny"},"吗？",{"w":"bunny"},"，是小雪兔！"]},"recall_home":{"who":"nuan","say":["还记得",{"w":"home"},"吗？",{"w":"home"},"，是家！"]},"recall_carrot":{"who":"nuan","say":["还记得",{"w":"carrot"},"吗？",{"w":"carrot"},"，是胡萝卜！"]},"recall_left":{"who":"nuan","say":["还记得",{"w":"left"},"吗？",{"w":"left"},"，是左边！"]},"recall_right":{"who":"nuan","say":["还记得",{"w":"right"},"吗？",{"w":"right"},"，是右边！"]},"recall_wait":{"who":"nuan","say":["还记得",{"w":"wait"},"吗？",{"w":"wait"},"，是等一等！"]},"recall_red":{"who":"nuan","say":["还记得",{"w":"red"},"吗？",{"w":"red"},"，是红色！"]},"recall_yellow":{"who":"nuan","say":["还记得",{"w":"yellow"},"吗？",{"w":"yellow"},"，是黄色！"]},"recall_blue":{"who":"nuan","say":["还记得",{"w":"blue"},"吗？",{"w":"blue"},"，是蓝色！"]},"recall_snowman":{"who":"nuan","say":["还记得",{"w":"snowman"},"吗？",{"w":"snowman"},"，是雪人！"]},"recall_ball":{"who":"nuan","say":["还记得",{"w":"ball"},"吗？",{"w":"ball"},"，是球！"]},"recall_hat":{"who":"nuan","say":["还记得",{"w":"hat"},"吗？",{"w":"hat"},"，是帽子！"]},"recall_flower":{"who":"nuan","say":["还记得",{"w":"flower"},"吗？",{"w":"flower"},"，是花！"]},"recall_warm":{"who":"nuan","say":["还记得",{"w":"warm"},"吗？",{"w":"warm"},"，是温暖！"]},"recall_spring":{"who":"nuan","say":["还记得",{"w":"spring"},"吗？",{"w":"spring"},"，是春天！"]},"start_hall_1":{"who":"nuan","say":[{"en":"Hello!","zh":"你好！"},"姐姐，我跟着",{"w":"star"},"的光，找到你啦！"]},"start_hall_2":{"who":"frost","say":["嗯，你好呀，安娜。我有一点点害羞。"]},"start_hall_3":{"who":"nuan","say":["不怕不怕！看，到处都是",{"w":"heart"},"和",{"w":"star"},"。最后要走到那边的",{"w":"door"}]},"start_hall_4":{"who":"frost","say":["好呀。我喜欢星星。找齐了宝贝，大门就会开。"]},"start_lake_1":{"who":"nuan","say":["哇，好大的湖！看，是",{"w":"water"},"，水好凉呀。"]},"start_lake_2":{"who":"frost","say":["你看，水里有小鱼，游来游去的。"]},"start_lake_3":{"who":"nuan","say":["姐姐，你能把",{"w":"water"},"变成",{"w":"ice"},"吗？这样我就能过去啦。"]},"start_lake_4":{"who":"frost","say":["我来试试。轻轻地变出冰路，小心不碰到小鱼。"]},"start_slope_1":{"who":"nuan","say":["哇，好长的雪坡！这是",{"w":"slide"},"，大滑梯！"]},"start_slope_2":{"who":"frost","say":["站在坡上，就会自己往下滑。越滑越快哦。"]},"start_slope_3":{"who":"nuan","say":["好呀，我们一起",{"w":"slide"},{"w":"fast"},{"w":"fast"},"，抓紧我的手！"]},"start_slope_4":{"who":"frost","say":["一路往下滑，坡底有一扇门。我先走，安娜，你跟着我。"]},"start_tower_1":{"who":"nuan","say":["哇，好重的",{"w":"gate"},"！我们怎么过去呢？"]},"start_tower_2":{"who":"frost","say":["你看，那里有个踏板。我来按住它，铁门就会打开。"]},"start_tower_3":{"who":"nuan","say":["好主意！一个人",{"w":"push"},"，一个人过",{"w":"gate"},"。我们分工吧！"]},"start_tower_4":{"who":"frost","say":["好呀。我们先按住踏板，等铁门打开，再一起过去。"]},"start_spring_1":{"who":"nuan","say":["哇，软软的蘑菇！我踩上去试试，",{"w":"jump"}]},"start_spring_2":{"who":"frost","say":["踩上去，就能弹得好高，一下子飞到云边啦。"]},"start_spring_3":{"who":"nuan","say":["我想飞得更",{"w":"high"},"，去拿那颗星星！"]},"start_spring_4":{"who":"frost","say":["我先去试试。够不到的地方，我还可以变冰块，给我们当小台阶。"]},"start_bunny_1":{"who":"nuan","say":["呀，是",{"w":"bunny"},"！小雪兔迷路了，它想回",{"w":"home"}]},"start_bunny_2":{"who":"frost","say":["我轻轻走过去，兔子就会跟着我们。我们带它回家吧。"]},"start_bunny_3":{"who":"nuan","say":["兔窝门口有",{"w":"carrot"},"，它们最爱吃",{"w":"carrot"},"啦！"]},"start_bunny_4":{"who":"frost","say":["三只小雪兔都回到家，我们再出发。"]},"start_floe_1":{"who":"nuan","say":["哇，浮冰在动！它往",{"w":"right"},"走了，又往",{"w":"left"},"走回来。"]},"start_floe_2":{"who":"frost","say":["别着急，先等一等。浮冰漂到身边，我们再跳上去。"]},"start_floe_3":{"who":"nuan","say":["它往",{"w":"left"},"走远了，我们",{"w":"wait"},"，等它回来。"]},"start_floe_4":{"who":"frost","say":["我的魔法能让浮冰停一停。安娜，你跟着我，我们一起过河。"]},"start_music_1":{"who":"nuan","say":["哇，台阶会发光！",{"w":"red"},"，橙色，",{"w":"yellow"},"，绿色，",{"w":"blue"},"，像彩虹一样。"]},"start_music_2":{"who":"frost","say":["这是会唱歌的楼梯。踩一级，就唱一个音。"]},"start_music_3":{"who":"nuan","say":[{"w":"red"},"像我的小灯笼，",{"w":"yellow"},"像星星，",{"w":"blue"},"像你的冰。"]},"start_music_4":{"who":"frost","say":["我先弹一遍，亮起来的台阶，你跟着踩。踩错了也没关系。"]},"start_ballroom_1":{"who":"nuan","say":["姐姐，快看！这里有好多",{"w":"ball"},"，大雪球！"]},"start_ballroom_2":{"who":"frost","say":["我来把雪球堆起来，变成一个大雪人吧。"]},"start_ballroom_3":{"who":"nuan","say":["好呀！",{"w":"snowman"},"还要戴",{"w":"hat"},"，帽子，才神气！"]},"start_ballroom_4":{"who":"frost","say":["我喜欢这个主意。安娜，我们再给雪人找一顶帽子吧。"]},"start_garden_1":{"who":"nuan","say":["哇，好大的花园！可是",{"w":"flower"},"都睡着了，冰冰的。"]},"start_garden_2":{"who":"frost","say":["安娜，带上你暖暖的小灯笼。我们一起叫醒花儿。"]},"start_garden_3":{"who":"nuan","say":["醒来的",{"w":"flower"},"是彩色的！这样，",{"w":"spring"},"就回来啦。"]},"start_garden_4":{"who":"frost","say":["我来带路，我们一朵一朵叫醒花儿，让花园暖和起来。"]},"guide_hall_1":{"who":"nuan","say":["我们去拿那个",{"w":"heart"},"，爱心！"]},"guide_hall_2":{"who":"nuan","say":["那边有一片",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_hall_3":{"who":"nuan","say":["上面还有一个",{"w":"heart"},"，跳高一点！"]},"guide_hall_4":{"who":"nuan","say":["这里有",{"w":"snowflake"},"，雪花，在地上闪闪发光。"]},"guide_hall_5":{"who":"nuan","say":[{"w":"door"},"，门在这边！我们一起走过去。"]},"guide_lake_1":{"who":"nuan","say":["先去拿那片",{"w":"snowflake"},"，雪花！"]},"guide_lake_2":{"who":"nuan","say":["湖对面有个",{"w":"heart"},"，爱心！用",{"w":"ice"},"搭一条路吧。"]},"guide_lake_3":{"who":"nuan","say":["那边还有一片",{"w":"snowflake"},"，雪花，上去拿吧！"]},"guide_lake_4":{"who":"nuan","say":["把",{"w":"water"},"冻成",{"w":"ice"},"，走过去，",{"w":"door"},"就在那边！"]},"guide_slope_1":{"who":"nuan","say":["站到坡上，往",{"w":"down"},"，向下滑，玩",{"w":"slide"},"，滑滑梯！"]},"guide_slope_2":{"who":"nuan","say":["再往",{"w":"down"},"滑，",{"w":"fast"},"，快，滑到坡底！"]},"guide_slope_3":{"who":"nuan","say":["边滑边跳，那边有一片",{"w":"snowflake"},"，雪花！"]},"guide_slope_4":{"who":"nuan","say":["上面的桥上有个",{"w":"heart"},"，爱心，跳上去拿！"]},"guide_slope_5":{"who":"nuan","say":[{"w":"door"},"，门在坡底，我们一起过去！"]},"guide_tower_1":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花！"]},"guide_tower_2":{"who":"nuan","say":["上面有颗",{"w":"heart"},"，爱心，跳上去！"]},"guide_tower_3":{"who":"nuan","say":["去",{"w":"push"},"踏板，把它压住，",{"w":"gate"},"才会",{"w":"open"}]},"guide_tower_4":{"who":"nuan","say":["过了",{"w":"gate"},"，还有一片",{"w":"snowflake"},"，雪花。"]},"guide_tower_5":{"who":"nuan","say":["再往上，拿那个",{"w":"heart"},"，爱心！"]},"guide_tower_6":{"who":"nuan","say":[{"w":"door"},"，门在那里，我们一起走！"]},"guide_spring_1":{"who":"nuan","say":["踩上蘑菇，",{"w":"jump"},"，往",{"w":"up"},"弹！"]},"guide_spring_2":{"who":"nuan","say":["弹到左边的小台阶上，那儿有",{"w":"snowflake"},"，雪花！"]},"guide_spring_3":{"who":"nuan","say":["墙上还有一个蘑菇，",{"w":"jump"},"上去！"]},"guide_spring_4":{"who":"nuan","say":["弹得再",{"w":"high"},"一点，拿那个",{"w":"heart"},"，爱心！"]},"guide_spring_5":{"who":"nuan","say":["右边还有一个蘑菇，踩上去，",{"w":"up"},"，向上飞！"]},"guide_spring_6":{"who":"nuan","say":["从蘑菇弹到右边，那儿有一片",{"w":"snowflake"},"，雪花！"]},"guide_spring_7":{"who":"nuan","say":[{"w":"door"},"，门在右下角，我们一起走过去！"]},"guide_bunny_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心，在左边的台阶上！"]},"guide_bunny_2":{"who":"nuan","say":["地上有只迷路的",{"w":"bunny"},"，小雪兔，走过去！"]},"guide_bunny_3":{"who":"nuan","say":["小土坡上还有一只",{"w":"bunny"},"，小雪兔！"]},"guide_bunny_4":{"who":"nuan","say":["坑那边也有一只",{"w":"bunny"},"，用",{"w":"ice"},"搭座桥吧！"]},"guide_bunny_5":{"who":"nuan","say":["右边的台阶上有",{"w":"snowflake"},"，雪花！"]},"guide_bunny_6":{"who":"nuan","say":["带它们回",{"w":"home"},"，兔窝在那边，还有",{"w":"carrot"}]},"guide_bunny_7":{"who":"nuan","say":[{"w":"door"},"，门在那边，我们走！"]},"guide_floe_1":{"who":"nuan","say":["我们在",{"w":"left"},"边的河岸，",{"w":"wait"},"，等一等，浮冰就来啦。"]},"guide_floe_2":{"who":"nuan","say":["坐上浮冰，去拿河上的",{"w":"heart"},"，爱心！"]},"guide_floe_3":{"who":"nuan","say":["小岛上歇一歇，再",{"w":"wait"},"下一块浮冰。"]},"guide_floe_4":{"who":"nuan","say":["坐上浮冰，河上有一片",{"w":"snowflake"},"，雪花！"]},"guide_floe_5":{"who":"nuan","say":["过河啦，往",{"w":"right"},"走，上岸！"]},"guide_floe_6":{"who":"nuan","say":[{"w":"door"},"，门就在",{"w":"right"},"边，走吧！"]},"guide_music_1":{"who":"nuan","say":["先踩",{"w":"red"},"，红色的台阶！"]},"guide_music_2":{"who":"nuan","say":["接着踩",{"w":"yellow"},"，黄色的台阶，在左边。"]},"guide_music_3":{"who":"nuan","say":["再踩",{"w":"blue"},"，蓝色的台阶！"]},"guide_music_4":{"who":"nuan","say":["叮叮咚咚，",{"w":"door"},"，门开啦，走过去！"]},"guide_ballroom_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心！"]},"guide_ballroom_2":{"who":"nuan","say":["左上角有个大",{"w":"ball"},"，雪球！"]},"guide_ballroom_3":{"who":"nuan","say":["中间也有一个",{"w":"ball"},"，跳上去拿！"]},"guide_ballroom_4":{"who":"nuan","say":["右上角还有一个",{"w":"ball"},"，雪球，跳高一点！"]},"guide_ballroom_5":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_ballroom_6":{"who":"nuan","say":["快去堆",{"w":"snowman"},{"w":"hat"},"也要戴上哦。"]},"guide_garden_1":{"who":"nuan","say":["左边的小塔上有一朵",{"w":"flower"},"，冰花，跳上去！"]},"guide_garden_2":{"who":"nuan","say":["地上有一朵",{"w":"flower"},"，花，走过去碰一碰！"]},"guide_garden_3":{"who":"nuan","say":["把水塘冻上，走过去，那边有一朵",{"w":"flower"},"，花！"]},"guide_garden_4":{"who":"nuan","say":["台阶上也有一朵",{"w":"flower"},"，跳上去叫醒它！"]},"guide_garden_5":{"who":"nuan","say":["那边又有一朵",{"w":"flower"},"，用",{"w":"warm"},"的光照一照它！"]},"guide_garden_6":{"who":"nuan","say":["右边的高台上，还有一朵",{"w":"flower"}]},"guide_garden_7":{"who":"nuan","say":["最高的台阶上也有一朵",{"w":"flower"},"，加油！"]},"guide_garden_8":{"who":"nuan","say":["右下角还有一朵",{"w":"flower"},"，叫醒它，",{"w":"spring"},"就来啦！"]},"pick_heart_1":{"who":"nuan","say":["看，是",{"w":"heart"},"，爱心！"]},"pick_heart_2":{"who":"nuan","say":["又一个",{"w":"heart"},"！真好看。"]},"pick_heart_3":{"who":"nuan","say":["哇，红红的",{"w":"heart"},"，热乎乎的。"]},"pick_snowflake_1":{"who":"nuan","say":["是",{"w":"snowflake"},"，雪花！亮晶晶的。"]},"pick_snowflake_2":{"who":"nuan","say":["又捡到一片",{"w":"snowflake"}]},"pick_snowflake_3":{"who":"nuan","say":["好漂亮的",{"w":"snowflake"},"，凉凉的。"]},"pick_ball_1":{"who":"nuan","say":["好大的",{"w":"ball"},"，雪球！"]},"pick_ball_2":{"who":"nuan","say":["又一个",{"w":"ball"},"，滚过来啦！"]},"pick_ball_3":{"who":"nuan","say":["第三个",{"w":"ball"},"，雪人有救啦！"]},"toy_slide_1":{"who":"nuan","say":["呼——",{"w":"slide"}]},"toy_slide_2":{"who":"nuan","say":[{"w":"fast"},{"w":"fast"},"！好快呀！"]},"toy_slide_3":{"who":"nuan","say":["往",{"w":"down"},"滑，往",{"w":"down"},"滑！"]},"toy_slide_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"滑得真",{"w":"fast"}]},"toy_bounce_1":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"up"}]},"toy_bounce_2":{"who":"nuan","say":["飞得好",{"w":"high"},"呀！"]},"toy_bounce_3":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"好",{"w":"high"}]},"toy_bounce_4":{"who":"nuan","say":[{"w":"jump"},"一下，再",{"w":"up"},"一点点！"]},"toy_bunny_1":{"who":"nuan","say":[{"w":"bunny"},{"w":"one"},"！第一只小雪兔，跟上来啦。"]},"toy_bunny_2":{"who":"nuan","say":[{"w":"bunny"},{"w":"two"},"！又找到一只！"]},"toy_bunny_3":{"who":"nuan","say":[{"w":"bunny"},{"w":"three"},"！三只都找到啦！"]},"toy_bunny_home_1":{"who":"nuan","say":[{"w":"bunny"},"回",{"w":"home"},"啦！"]},"toy_bunny_home_2":{"who":"nuan","say":["又一只回",{"w":"home"},"啦，它吃着",{"w":"carrot"},"呢。"]},"toy_bunny_home_3":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"最后一只也到",{"w":"home"},"啦！"]},"toy_floe_1":{"who":"nuan","say":[{"w":"wait"},"，浮冰停下来啦！"]},"toy_floe_2":{"who":"nuan","say":["浮冰在",{"w":"wait"},"我们呢，快上去！"]},"toy_floe_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"它停住啦，快过去。"]},"toy_note_ok_1":{"who":"nuan","say":[{"w":"red"},"，红色！"]},"toy_note_ok_2":{"who":"nuan","say":["橙色，叮！"]},"toy_note_ok_3":{"who":"nuan","say":[{"w":"yellow"},"，黄色！"]},"toy_note_ok_4":{"who":"nuan","say":["绿色，叮！"]},"toy_note_ok_5":{"who":"nuan","say":[{"w":"blue"},"，蓝色！"]},"toy_note_wrong_1":{"who":"nuan","say":["没关系，再来一次。"]},"toy_note_wrong_2":{"who":"nuan","say":["咦，这个不是，换一个试试。"]},"toy_note_wrong_3":{"who":"nuan","say":["嘿嘿，走错啦，再听一遍。"]},"toy_melody_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们弹完啦！"]},"toy_melody_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"真好听！"]},"toy_bloom_1":{"who":"nuan","say":["叮——一朵",{"w":"flower"},"醒啦！"]},"toy_bloom_2":{"who":"nuan","say":[{"w":"warm"},"的光，",{"w":"flower"},"开花啦！"]},"toy_bloom_3":{"who":"nuan","say":["又一朵！是",{"w":"flower"},"，彩色的。"]},"toy_bloom_4":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里的",{"w":"flower"},"都开啦，",{"w":"spring"},"来啦！"]},"star_1":{"who":"nuan","say":[{"w":"star"},{"w":"one"}]},"star_2":{"who":"nuan","say":[{"w":"star"},{"w":"two"}]},"star_3":{"who":"nuan","say":[{"w":"star"},{"w":"three"}]},"star_4":{"who":"nuan","say":[{"w":"star"},"，第四颗！"]},"star_5":{"who":"nuan","say":[{"w":"star"},"，第五颗，全找到啦！"]},"open_hall":{"who":"nuan","say":["看，",{"w":"door"},"开啦！走吧，姐姐！",{"en":"Let's go!","zh":"出发！"}]},"open_lake":{"who":"nuan","say":["有了",{"w":"ice"},"，我们走过",{"w":"water"},"啦！",{"w":"fish"},"也在拍手。"]},"open_slope":{"who":"nuan","say":["门开啦！这个",{"w":"slide"},"又",{"w":"fast"},"又好玩，我们再往",{"w":"down"},"走吧！"]},"open_tower":{"who":"frost","say":["看，铁门打开了！安娜，我们一起走吧。"]},"open_spring":{"who":"nuan","say":["门开啦！我们",{"w":"jump"},"一下，",{"w":"up"},"，到最",{"w":"high"},"的地方去！"]},"open_bunny":{"who":"nuan","say":["谢谢你们，",{"w":"bunny"},"！吃",{"w":"carrot"},"吧，门开啦。"]},"open_floe":{"who":"frost","say":["我们过河啦！等一等，安娜，门也已经开啦。"]},"open_music":{"who":"nuan","say":["叮叮咚咚，唱完啦！",{"w":"red"},{"w":"yellow"},{"w":"blue"},"，门也开啦！"]},"open_ballroom":{"who":"nuan","say":[{"w":"ball"},"都找到啦！快来堆",{"w":"snowman"},{"w":"hat"},"也准备好啦！"]},"open_garden":{"who":"nuan","say":["所有的",{"w":"flower"},"都开啦！好",{"w":"warm"},"呀，",{"w":"spring"},"来啦！"]},"clear_hall":{"who":"nuan","say":[{"w":"heart"},{"w":"star"},"都找到啦，",{"w":"door"},"也开了。真棒！"]},"clear_lake":{"who":"nuan","say":["冰路搭好了。",{"w":"fish"},"在",{"w":"water"},"里游，",{"w":"ice"},"亮晶晶。"]},"clear_slope":{"who":"nuan","say":["我们玩了",{"w":"slide"},"，滑得好",{"w":"fast"},"，一路",{"w":"down"},"到了坡底。真开心！"]},"clear_tower":{"who":"nuan","say":["一个",{"w":"push"},"，一个往前走，",{"w":"gate"},"就",{"w":"open"},"了。两个人一起，真棒！"]},"clear_spring":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"high"},"！蘑菇把我们弹到了云边。真棒！"]},"clear_bunny":{"who":"nuan","say":[{"w":"bunny"},"们回到",{"w":"home"},"，吃着",{"w":"carrot"},"，开心地晃耳朵。灯笼的光，让大家都不怕了。"]},"clear_floe":{"who":"nuan","say":["浮冰往",{"w":"left"},"，往",{"w":"right"},{"w":"wait"},"一等，我们就过了河。真棒！"]},"clear_music":{"who":"nuan","say":[{"w":"red"},{"w":"yellow"},{"w":"blue"},"，彩色的台阶唱起了歌。姐姐，我们去下一个房间看看吧！"]},"clear_ballroom":{"who":"nuan","say":["圆圆的",{"w":"ball"},"变成了",{"w":"snowman"},{"w":"hat"},"轻轻落下来啦！门外吹来一阵暖和的风，我们去看看吧。"]},"clear_garden":{"who":"nuan","say":[{"w":"flower"},"开满了花园，",{"w":"warm"},"的风吹过来，",{"w":"spring"},"回来了。"]},"quiz_heart":{"who":"nuan","say":["哪个是",{"w":"heart"},"？点一点！"]},"quiz_star":{"who":"nuan","say":["哪个是",{"w":"star"},"？点一点！"]},"quiz_door":{"who":"nuan","say":["哪个是",{"w":"door"},"？点一点！"]},"quiz_water":{"who":"nuan","say":["哪个是",{"w":"water"},"？点一点！"]},"quiz_ice":{"who":"nuan","say":["哪个是",{"w":"ice"},"？点一点！"]},"quiz_fish":{"who":"nuan","say":["哪个是",{"w":"fish"},"？点一点！"]},"quiz_slide":{"who":"nuan","say":["哪个是",{"w":"slide"},"？点一点！"]},"quiz_fast":{"who":"nuan","say":["哪个是",{"w":"fast"},"？点一点！"]},"quiz_down":{"who":"nuan","say":["哪个是",{"w":"down"},"？点一点！"]},"quiz_push":{"who":"nuan","say":["哪个是",{"w":"push"},"？点一点！"]},"quiz_open":{"who":"nuan","say":["哪个是",{"w":"open"},"？点一点！"]},"quiz_gate":{"who":"nuan","say":["哪个是",{"w":"gate"},"？点一点！"]},"quiz_jump":{"who":"nuan","say":["哪个是",{"w":"jump"},"？点一点！"]},"quiz_up":{"who":"nuan","say":["哪个是",{"w":"up"},"？点一点！"]},"quiz_high":{"who":"nuan","say":["哪个是",{"w":"high"},"？点一点！"]},"quiz_bunny":{"who":"nuan","say":["哪个是",{"w":"bunny"},"？点一点！"]},"quiz_home":{"who":"nuan","say":["哪个是",{"w":"home"},"？点一点！"]},"quiz_carrot":{"who":"nuan","say":["哪个是",{"w":"carrot"},"？点一点！"]},"quiz_left":{"who":"nuan","say":["哪个是",{"w":"left"},"？点一点！"]},"quiz_right":{"who":"nuan","say":["哪个是",{"w":"right"},"？点一点！"]},"quiz_wait":{"who":"nuan","say":["哪个是",{"w":"wait"},"？点一点！"]},"quiz_red":{"who":"nuan","say":["哪个是",{"w":"red"},"？点一点！"]},"quiz_yellow":{"who":"nuan","say":["哪个是",{"w":"yellow"},"？点一点！"]},"quiz_blue":{"who":"nuan","say":["哪个是",{"w":"blue"},"？点一点！"]},"quiz_snowman":{"who":"nuan","say":["哪个是",{"w":"snowman"},"？点一点！"]},"quiz_ball":{"who":"nuan","say":["哪个是",{"w":"ball"},"？点一点！"]},"quiz_hat":{"who":"nuan","say":["哪个是",{"w":"hat"},"？点一点！"]},"quiz_flower":{"who":"nuan","say":["哪个是",{"w":"flower"},"？点一点！"]},"quiz_warm":{"who":"nuan","say":["哪个是",{"w":"warm"},"？点一点！"]},"quiz_spring":{"who":"nuan","say":["哪个是",{"w":"spring"},"？点一点！"]},"quiz_right_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},{"en":"Good job!","zh":"做得好！"}]},"quiz_right_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"对啦，就是它！"]},"quiz_right_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"你真聪明！"]},"quiz_wrong_1":{"who":"nuan","say":["再找找看～"]},"quiz_wrong_2":{"who":"nuan","say":["嗯，再看一看。它在发光哦。"]},"quiz_wrong_3":{"who":"nuan","say":["没关系，我们再试一次。"]},"tutor_move":{"who":"nuan","say":["按左右方向键，就能走路啦。"]},"tutor_jump":{"who":"nuan","say":["按上面的方向键，跳一跳！"]},"tutor_magic":{"who":"nuan","say":["按一下长长的空格键，魔法就出来啦！",{"en":"One, two, three!","zh":"一、二、三！"}]},"tutor_fullscreen":{"who":"nuan","say":["给大人的小提示：点右上角的全屏按钮，画面会更大哦。"]},"splash_1":{"who":"nuan","say":["哎呀，扑通！没关系，再来一次！"]},"splash_2":{"who":"nuan","say":["哇，",{"w":"water"},"好凉呀！我们回到岸边吧。"]},"splash_3":{"who":"nuan","say":["扑通！没事没事，你已经很棒啦！"]},"splash_4":{"who":"nuan","say":["掉进",{"w":"water"},"也没关系，再试一次吧。"]},"idle_1":{"who":"nuan","say":["你在看什么呀？"]},"idle_2":{"who":"nuan","say":["要不要去那边看看？"]},"idle_3":{"who":"nuan","say":["点一点右上角的小灯泡，我就告诉你。"]},"idle_4":{"who":"nuan","say":["慢慢来，不着急。"]},"miss_frost":{"who":"nuan","say":["姐姐，你在哪儿呀？"]},"together_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们在一起啦！"]},"together_2":{"who":"frost","say":["和你在一起，真暖和。"]},"mem_m1":{"who":"nuan","say":["姐姐，还记得吗？我每天画一幅画，从门缝里塞给你。画里是我们俩，还有红围巾雪人。原来你都悄悄收好了呀。"],"art":"mem_door"},"mem_m3":{"who":"nuan","say":["姐姐，还记得那面冰镜子吗？你把湖面冻得亮亮的，我们手拉手，一直滑到星星出来。"],"art":"mem_lake"},"mem_m5":{"who":"nuan","say":["那条冰滑梯是你给我变出来的！我坐着小木盆，一路滑到山脚，开心得停不下来。"],"art":"mem_m5"},"mem_m2":{"who":"nuan","say":["姐姐，原来那条红围巾是你偷偷织给我的呀。软软的，暖暖的，我一直很喜欢。"],"art":"mem_gloves"},"mem_m6":{"who":"nuan","say":["我小时候总想摸到星星。你给我堆了一张软软的雪床，我一跳，好像真的碰到了星星！"],"art":"mem_m6"},"mem_m7":{"who":"nuan","say":["姐姐，我们捡到过一只小雪兔。我的灯笼给它暖身子，你给它做了个小冰窝，它很快就睡着啦。"],"art":"mem_m7"},"mem_m8":{"who":"nuan","say":["还记得那次坐浮冰吗？你让它停在岸边，我们一起坐上去，慢慢漂，一边数水里的小鱼。"],"art":"mem_m8"},"mem_m9":{"who":"nuan","say":["你做的冰风铃真好听！我轻轻一碰，叮叮咚咚，就忍不住跟着哼起歌来。"],"art":"mem_m9"},"mem_m4":{"who":"nuan","say":["哈哈，姐姐！那次打雪仗，雪球越滚越大，我们两个都摔进了软软的雪堆里，笑了好久。"],"art":"mem_fall"},"mem_m10":{"who":"nuan","say":["姐姐，我们小时候一起堆过一个雪人，还给它戴了一朵小花。我记得，我们说好下一年还要一起堆。"],"art":"mem_m10"},"me_frost":{"who":"frost","say":["你好，我是艾莎。我会变出冰和雪，铺成小路。跟我一起出发吧，安娜会在旁边帮我们。"]},"me_nuan":{"who":"nuan","say":["你好，我是安娜！艾莎姐姐带我们探险，我会跟着她，照亮小路，还会陪你一起念英文单词。"]},"win":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里开满了花！姐姐，拉着我的手，我们一起转个圈吧！"]},"end":{"who":"nuan","say":[{"w":"sun"},"出来啦！冰花都开成了真正的小花，",{"w":"spring"},"回来了。小时候的雪人戴着帽子，笑眯眯地站在花丛里。姐姐，牵着我的手，我们一起和大家说",{"en":"Hello!","zh":"你好！"}],"art":"story_thaw"},"ui_start":{"who":"nuan","say":["开始玩"]},"ui_continue":{"who":"nuan","say":["继续玩"]},"ui_next":{"who":"nuan","say":["下一个"]},"ui_replay":{"who":"nuan","say":["再玩一次"]},"ui_back":{"who":"nuan","say":["回去"]},"ui_words":{"who":"nuan","say":["单词本"]},"ui_stickers":{"who":"nuan","say":["贴纸本"]},"ui_wardrobe":{"who":"nuan","say":["换衣服"]},"ui_settings":{"who":"nuan","say":["家长设置"]},"ui_hint":{"who":"nuan","say":["小提示"]},"ui_fullscreen":{"who":"nuan","say":["全屏"]},"ui_solo":{"who":"nuan","say":["一个人玩"]},"ui_duo":{"who":"nuan","say":["两个人玩"]},"ui_sound":{"who":"nuan","say":["声音"]},"ui_quiz_skip":{"who":"nuan","say":["跳过"]},"ui_meet":{"who":"nuan","say":["认识她们"]},"ui_rooms":{"who":"nuan","say":["房间"]},"ui_room_hall":{"who":"nuan","say":["冰堡大厅"]},"ui_room_lake":{"who":"nuan","say":["冰湖长廊"]},"ui_room_slope":{"who":"nuan","say":["雪坡滑梯"]},"ui_room_tower":{"who":"nuan","say":["机关塔楼"]},"ui_room_spring":{"who":"nuan","say":["弹弹雪床"]},"ui_room_bunny":{"who":"nuan","say":["雪兔窝"]},"ui_room_floe":{"who":"nuan","say":["浮冰河"]},"ui_room_music":{"who":"nuan","say":["音乐楼梯"]},"ui_room_ballroom":{"who":"nuan","say":["星光舞厅"]},"ui_room_garden":{"who":"nuan","say":["春天花园"]},"cheer_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"}]},"cheer_2":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"}]},"cheer_3":{"who":"nuan","say":[{"en":"Let's go!","zh":"出发！"}]},"cheer_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"}]}}};
+  const LINES = {"voices":{"frost":{"zh":["zh-CN-XiaoxiaoNeural","-6%","-4Hz"]},"nuan":{"zh":["en-US-EmmaMultilingualNeural","-5%","+8Hz"],"en":["en-US-EmmaMultilingualNeural","-5%","+8Hz"]}},"lines":{"p1":{"who":"nuan","say":["姐姐，你手里的雪花好漂亮！我是安娜，我会陪着你，一起在冰堡里探险。"],"art":"story_prologue"},"p2":{"who":"nuan","say":["姐姐，外面下雪啦。别担心，我带着小灯笼来找你了，我们一起想办法吧。"],"art":"story_winter"},"p3":{"who":"nuan","say":["艾莎，我们一起出发吧！你来变冰和雪，我在旁边帮你，我们再堆一个小时候的雪人。"],"art":"key"},"ch_hall":{"who":"nuan","say":["姐姐，我找到你啦！我们先看看大厅里藏着什么宝贝吧。"],"art":"bg0"},"ch_lake":{"who":"nuan","say":["冰堡后面有一片大湖，小鱼在水里游来游去。"],"art":"bg1"},"ch_slope":{"who":"nuan","say":["冰堡里有一条长长的雪坡，像一个大滑梯。呼——滑下去！"],"art":"bg_slope"},"ch_tower":{"who":"nuan","say":["塔楼里有一扇很重的铁门，要两个人一起想办法。"],"art":"bg2"},"ch_spring":{"who":"nuan","say":["雪地里长满了软软的蘑菇，踩上去，弹——弹到半空里去！"],"art":"bg_spring"},"ch_bunny":{"who":"nuan","say":["雪地里有三只小雪兔迷路了，我们带它们回家吧。"],"art":"bg_bunny"},"ch_floe":{"who":"nuan","say":["河面上漂着一块块浮冰，一会儿往左，一会儿往右。"],"art":"bg_floe"},"ch_music":{"who":"nuan","say":["台阶一级一级，闪着彩色的光。踩一踩，它们会唱歌！"],"art":"bg_music"},"ch_ballroom":{"who":"nuan","say":["舞厅里滚着好多大雪球，我们来堆雪人吧！"],"art":"bg3"},"ch_garden":{"who":"nuan","say":["冰堡的后花园里，冰花还在睡觉。我们用温暖的光，叫醒它们。"],"art":"bg_garden"},"learn_heart":{"who":"nuan","say":["姐姐，我们来找",{"w":"heart"},"。看，",{"w":"heart"},"就是爱心。和我一起念：",{"w":"heart"}]},"learn_star":{"who":"nuan","say":["还有",{"w":"star"},"。看，",{"w":"star"},"就是星星。和我一起念：",{"w":"star"}]},"learn_door":{"who":"nuan","say":["最后是",{"w":"door"},"。看，",{"w":"door"},"就是门。和我一起念：",{"w":"door"}]},"learn_water":{"who":"nuan","say":["姐姐，快看这片大湖，湖里是",{"w":"water"},"。看，",{"w":"water"},"就是水。和我一起念：",{"w":"water"}]},"learn_ice":{"who":"nuan","say":["姐姐，你的魔法能把水变成",{"w":"ice"},"。看，",{"w":"ice"},"就是冰。和我一起念：",{"w":"ice"}]},"learn_fish":{"who":"nuan","say":["水里还住着",{"w":"fish"},"。看，",{"w":"fish"},"就是小鱼。和我一起念：",{"w":"fish"}]},"learn_slide":{"who":"nuan","say":["看，好长的雪坡，我们来玩",{"w":"slide"},"。看，",{"w":"slide"},"就是滑滑梯。和我一起念：",{"w":"slide"}]},"learn_fast":{"who":"nuan","say":["从坡上滑下来的时候，会变得很",{"w":"fast"},"。看，",{"w":"fast"},"就是快。和我一起念：",{"w":"fast"}]},"learn_down":{"who":"nuan","say":["最后是",{"w":"down"},"。看，",{"w":"down"},"就是向下。和我一起念：",{"w":"down"}]},"learn_push":{"who":"nuan","say":["姐姐，我们一起来",{"w":"push"},"。看，",{"w":"push"},"就是推。和我一起念：",{"w":"push"}]},"learn_open":{"who":"nuan","say":["推了以后，门会",{"w":"open"},"。看，",{"w":"open"},"就是打开。和我一起念：",{"w":"open"}]},"learn_gate":{"who":"nuan","say":["这里有一扇铁门，叫",{"w":"gate"},"。看，",{"w":"gate"},"就是铁闸门。和我一起念：",{"w":"gate"}]},"learn_jump":{"who":"nuan","say":["蘑菇软软的，我们来试试",{"w":"jump"},"。看，",{"w":"jump"},"就是跳。和我一起念：",{"w":"jump"}]},"learn_up":{"who":"nuan","say":["踩上蘑菇，就会往",{"w":"up"},"飞。看，",{"w":"up"},"就是向上。和我一起念：",{"w":"up"}]},"learn_high":{"who":"nuan","say":["还会飞得很",{"w":"high"},"。看，",{"w":"high"},"就是高。和我一起念：",{"w":"high"}]},"learn_bunny":{"who":"nuan","say":["姐姐，这里有三只迷路的",{"w":"bunny"},"。看，",{"w":"bunny"},"就是小雪兔。和我一起念：",{"w":"bunny"}]},"learn_home":{"who":"nuan","say":["我们要送它们回",{"w":"home"},"。看，",{"w":"home"},"就是家。和我一起念：",{"w":"home"}]},"learn_carrot":{"who":"nuan","say":["兔窝门口，有它们最爱吃的",{"w":"carrot"},"。看，",{"w":"carrot"},"就是胡萝卜。和我一起念：",{"w":"carrot"}]},"learn_left":{"who":"nuan","say":["河上的浮冰，一会儿往",{"w":"left"},"走。看，",{"w":"left"},"就是左。和我一起念：",{"w":"left"}]},"learn_right":{"who":"nuan","say":["一会儿又往",{"w":"right"},"走。看，",{"w":"right"},"就是右。和我一起念：",{"w":"right"}]},"learn_wait":{"who":"nuan","say":["想上浮冰，要先",{"w":"wait"},"。看，",{"w":"wait"},"就是等一等。和我一起念：",{"w":"wait"}]},"learn_red":{"who":"nuan","say":["姐姐，台阶是彩色的，先看",{"w":"red"},"。看，",{"w":"red"},"就是红色。和我一起念：",{"w":"red"}]},"learn_yellow":{"who":"nuan","say":["还有",{"w":"yellow"},"。看，",{"w":"yellow"},"就是黄色。和我一起念：",{"w":"yellow"}]},"learn_blue":{"who":"nuan","say":["最后是",{"w":"blue"},"。看，",{"w":"blue"},"就是蓝色。和我一起念：",{"w":"blue"}]},"learn_snowman":{"who":"nuan","say":["我们要堆起",{"w":"snowman"},"。看，",{"w":"snowman"},"就是雪人。和我一起念：",{"w":"snowman"}]},"learn_ball":{"who":"nuan","say":["要用大大的",{"w":"ball"},"。看，",{"w":"ball"},"就是球，雪球的球。和我一起念：",{"w":"ball"}]},"learn_hat":{"who":"nuan","say":["雪人还要戴",{"w":"hat"},"。看，",{"w":"hat"},"就是帽子。和我一起念：",{"w":"hat"}]},"learn_flower":{"who":"nuan","say":["姐姐，花园里还睡着许多",{"w":"flower"},"。看，",{"w":"flower"},"就是花。和我一起念：",{"w":"flower"}]},"learn_warm":{"who":"nuan","say":["灯笼的光暖烘烘的，是",{"w":"warm"},"。看，",{"w":"warm"},"就是温暖。和我一起念：",{"w":"warm"}]},"learn_spring":{"who":"nuan","say":["温暖的风一吹，",{"w":"spring"},"就来啦。看，",{"w":"spring"},"就是春天。和我一起念：",{"w":"spring"}]},"recall_heart":{"who":"nuan","say":["还记得",{"w":"heart"},"吗？",{"w":"heart"},"，是爱心！"]},"recall_star":{"who":"nuan","say":["还记得",{"w":"star"},"吗？",{"w":"star"},"，是星星！"]},"recall_door":{"who":"nuan","say":["还记得",{"w":"door"},"吗？",{"w":"door"},"，是门！"]},"recall_water":{"who":"nuan","say":["还记得",{"w":"water"},"吗？",{"w":"water"},"，是水！"]},"recall_ice":{"who":"nuan","say":["还记得",{"w":"ice"},"吗？",{"w":"ice"},"，是冰！"]},"recall_fish":{"who":"nuan","say":["还记得",{"w":"fish"},"吗？",{"w":"fish"},"，是小鱼！"]},"recall_slide":{"who":"nuan","say":["还记得",{"w":"slide"},"吗？",{"w":"slide"},"，是滑滑梯！"]},"recall_fast":{"who":"nuan","say":["还记得",{"w":"fast"},"吗？",{"w":"fast"},"，是快！"]},"recall_down":{"who":"nuan","say":["还记得",{"w":"down"},"吗？",{"w":"down"},"，是向下！"]},"recall_push":{"who":"nuan","say":["还记得",{"w":"push"},"吗？",{"w":"push"},"，是推！"]},"recall_open":{"who":"nuan","say":["还记得",{"w":"open"},"吗？",{"w":"open"},"，是打开！"]},"recall_gate":{"who":"nuan","say":["还记得",{"w":"gate"},"吗？",{"w":"gate"},"，是铁闸门！"]},"recall_jump":{"who":"nuan","say":["还记得",{"w":"jump"},"吗？",{"w":"jump"},"，是跳！"]},"recall_up":{"who":"nuan","say":["还记得",{"w":"up"},"吗？",{"w":"up"},"，是向上！"]},"recall_high":{"who":"nuan","say":["还记得",{"w":"high"},"吗？",{"w":"high"},"，是高！"]},"recall_bunny":{"who":"nuan","say":["还记得",{"w":"bunny"},"吗？",{"w":"bunny"},"，是小雪兔！"]},"recall_home":{"who":"nuan","say":["还记得",{"w":"home"},"吗？",{"w":"home"},"，是家！"]},"recall_carrot":{"who":"nuan","say":["还记得",{"w":"carrot"},"吗？",{"w":"carrot"},"，是胡萝卜！"]},"recall_left":{"who":"nuan","say":["还记得",{"w":"left"},"吗？",{"w":"left"},"，是左边！"]},"recall_right":{"who":"nuan","say":["还记得",{"w":"right"},"吗？",{"w":"right"},"，是右边！"]},"recall_wait":{"who":"nuan","say":["还记得",{"w":"wait"},"吗？",{"w":"wait"},"，是等一等！"]},"recall_red":{"who":"nuan","say":["还记得",{"w":"red"},"吗？",{"w":"red"},"，是红色！"]},"recall_yellow":{"who":"nuan","say":["还记得",{"w":"yellow"},"吗？",{"w":"yellow"},"，是黄色！"]},"recall_blue":{"who":"nuan","say":["还记得",{"w":"blue"},"吗？",{"w":"blue"},"，是蓝色！"]},"recall_snowman":{"who":"nuan","say":["还记得",{"w":"snowman"},"吗？",{"w":"snowman"},"，是雪人！"]},"recall_ball":{"who":"nuan","say":["还记得",{"w":"ball"},"吗？",{"w":"ball"},"，是球！"]},"recall_hat":{"who":"nuan","say":["还记得",{"w":"hat"},"吗？",{"w":"hat"},"，是帽子！"]},"recall_flower":{"who":"nuan","say":["还记得",{"w":"flower"},"吗？",{"w":"flower"},"，是花！"]},"recall_warm":{"who":"nuan","say":["还记得",{"w":"warm"},"吗？",{"w":"warm"},"，是温暖！"]},"recall_spring":{"who":"nuan","say":["还记得",{"w":"spring"},"吗？",{"w":"spring"},"，是春天！"]},"start_hall_1":{"who":"nuan","say":[{"en":"Hello!","zh":"你好！"},"姐姐，我跟着",{"w":"star"},"的光，找到你啦！"]},"start_hall_2":{"who":"frost","say":["嗯，你好呀，安娜。我有一点点害羞。"]},"start_hall_3":{"who":"nuan","say":["不怕不怕！看，到处都是",{"w":"heart"},"，红红的",{"w":"heart"},"，还有",{"w":"star"},"。最后要走到那边的",{"w":"door"}]},"start_hall_4":{"who":"frost","say":["好呀。我喜欢星星。找齐了宝贝，大门就会开。"]},"start_lake_1":{"who":"nuan","say":["哇，好大的湖！看，是",{"w":"water"},"，水好凉呀。水里有",{"w":"fish"},"！"]},"start_lake_2":{"who":"frost","say":["你看，水里有小鱼，游来游去的。"]},"start_lake_3":{"who":"nuan","say":["姐姐，你能把",{"w":"water"},"变成",{"w":"ice"},"吗？这样我就能过去啦。"]},"start_lake_4":{"who":"frost","say":["我来试试。轻轻地变出冰路，小心不碰到小鱼。"]},"start_slope_1":{"who":"nuan","say":["哇，好长的雪坡！这是",{"w":"slide"},"，大滑梯！"]},"start_slope_2":{"who":"frost","say":["站在坡上，就会自己往下滑。越滑越快哦。"]},"start_slope_3":{"who":"nuan","say":["好呀，我们一起",{"w":"slide"},{"w":"fast"},{"w":"fast"},"，往",{"w":"down"},"滑，抓紧我的手！"]},"start_slope_4":{"who":"frost","say":["一路往下滑，坡底有一扇门。我先走，安娜，你跟着我。"]},"start_tower_1":{"who":"nuan","say":["哇，好重的",{"w":"gate"},"！我们怎么过去呢？"]},"start_tower_2":{"who":"frost","say":["你看，那里有个踏板。我来按住它，铁门就会打开。"]},"start_tower_3":{"who":"nuan","say":["好主意！一个人",{"w":"push"},"，",{"w":"gate"},"就",{"w":"open"},"，另一个人再过去。我们分工吧！"]},"start_tower_4":{"who":"frost","say":["好呀。我们先按住踏板，等铁门打开，再一起过去。"]},"start_spring_1":{"who":"nuan","say":["哇，软软的蘑菇！我踩上去试试，",{"w":"jump"}]},"start_spring_2":{"who":"frost","say":["踩上去，就能弹得好高，一下子飞到云边啦。"]},"start_spring_3":{"who":"nuan","say":["我想往",{"w":"up"},"飞，飞得更",{"w":"high"},"，去拿那颗星星！"]},"start_spring_4":{"who":"frost","say":["我先去试试。够不到的地方，我还可以变冰块，给我们当小台阶。"]},"start_bunny_1":{"who":"nuan","say":["呀，是",{"w":"bunny"},"！小雪兔迷路了，它想回",{"w":"home"}]},"start_bunny_2":{"who":"frost","say":["我轻轻走过去，兔子就会跟着我们。我们带它回家吧。"]},"start_bunny_3":{"who":"nuan","say":["兔窝门口有",{"w":"carrot"},"，它们最爱吃",{"w":"carrot"},"啦！"]},"start_bunny_4":{"who":"frost","say":["三只小雪兔都回到家，我们再出发。"]},"start_floe_1":{"who":"nuan","say":["哇，浮冰在动！它往",{"w":"right"},"走了，又往",{"w":"left"},"走回来。"]},"start_floe_2":{"who":"frost","say":["别着急，先等一等。浮冰漂到身边，我们再跳上去。"]},"start_floe_3":{"who":"nuan","say":["它往",{"w":"left"},"走远了，我们",{"w":"wait"},"，等它回来。"]},"start_floe_4":{"who":"frost","say":["我的魔法能让浮冰停一停。安娜，你跟着我，我们一起过河。"]},"start_music_1":{"who":"nuan","say":["哇，台阶会发光！",{"w":"red"},"，橙色，",{"w":"yellow"},"，绿色，",{"w":"blue"},"，像彩虹一样。"]},"start_music_2":{"who":"frost","say":["这是会唱歌的楼梯。踩一级，就唱一个音。"]},"start_music_3":{"who":"nuan","say":[{"w":"red"},"像我的小灯笼，",{"w":"yellow"},"像星星，",{"w":"blue"},"像你的冰。"]},"start_music_4":{"who":"frost","say":["我先弹一遍，亮起来的台阶，你跟着踩。踩错了也没关系。"]},"start_ballroom_1":{"who":"nuan","say":["姐姐，快看！这里有好多",{"w":"ball"},"，大雪球！"]},"start_ballroom_2":{"who":"frost","say":["我来把雪球堆起来，变成一个大雪人吧。"]},"start_ballroom_3":{"who":"nuan","say":["好呀！",{"w":"snowman"},"还要戴",{"w":"hat"},"，帽子，才神气！"]},"start_ballroom_4":{"who":"frost","say":["我喜欢这个主意。安娜，我们再给雪人找一顶帽子吧。"]},"start_garden_1":{"who":"nuan","say":["哇，好大的花园！可是",{"w":"flower"},"都睡着了，冰冰的。"]},"start_garden_2":{"who":"frost","say":["安娜，带上你暖暖的小灯笼。我们一起叫醒花儿。"]},"start_garden_3":{"who":"nuan","say":["有了",{"w":"warm"},"的灯笼，醒来的",{"w":"flower"},"是彩色的！这样，",{"w":"spring"},"就回来啦。"]},"start_garden_4":{"who":"frost","say":["我来带路，我们一朵一朵叫醒花儿，让花园暖和起来。"]},"guide_hall_1":{"who":"nuan","say":["我们去拿那个",{"w":"heart"},"，爱心！"]},"guide_hall_2":{"who":"nuan","say":["那边有一片",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_hall_3":{"who":"nuan","say":["上面还有一个",{"w":"heart"},"，跳高一点！"]},"guide_hall_4":{"who":"nuan","say":["这里有",{"w":"snowflake"},"，雪花，在地上闪闪发光。"]},"guide_hall_5":{"who":"nuan","say":[{"w":"door"},"，门在这边！我们一起走过去。"]},"guide_lake_1":{"who":"nuan","say":["先去拿那片",{"w":"snowflake"},"，雪花！"]},"guide_lake_2":{"who":"nuan","say":["湖对面有个",{"w":"heart"},"，爱心！用",{"w":"ice"},"搭一条路吧。"]},"guide_lake_3":{"who":"nuan","say":["那边还有一片",{"w":"snowflake"},"，雪花，上去拿吧！"]},"guide_lake_4":{"who":"nuan","say":["把",{"w":"water"},"冻成",{"w":"ice"},"，走过去，",{"w":"door"},"就在那边！"]},"guide_slope_1":{"who":"nuan","say":["站到坡上，往",{"w":"down"},"，向下滑，玩",{"w":"slide"},"，滑滑梯！"]},"guide_slope_2":{"who":"nuan","say":["再往",{"w":"down"},"滑，",{"w":"fast"},"，快，滑到坡底！"]},"guide_slope_3":{"who":"nuan","say":["边滑边跳，那边有一片",{"w":"snowflake"},"，雪花！"]},"guide_slope_4":{"who":"nuan","say":["上面的桥上有个",{"w":"heart"},"，爱心，跳上去拿！"]},"guide_slope_5":{"who":"nuan","say":[{"w":"door"},"，门在坡底，我们一起过去！"]},"guide_tower_1":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花！"]},"guide_tower_2":{"who":"nuan","say":["上面有颗",{"w":"heart"},"，爱心，跳上去！"]},"guide_tower_3":{"who":"nuan","say":["去",{"w":"push"},"踏板，把它压住，",{"w":"gate"},"才会",{"w":"open"}]},"guide_tower_4":{"who":"nuan","say":["过了",{"w":"gate"},"，还有一片",{"w":"snowflake"},"，雪花。"]},"guide_tower_5":{"who":"nuan","say":["再往上，拿那个",{"w":"heart"},"，爱心！"]},"guide_tower_6":{"who":"nuan","say":[{"w":"door"},"，门在那里，我们一起走！"]},"guide_spring_1":{"who":"nuan","say":["踩上蘑菇，",{"w":"jump"},"，往",{"w":"up"},"弹！"]},"guide_spring_2":{"who":"nuan","say":["弹到左边的小台阶上，那儿有",{"w":"snowflake"},"，雪花！"]},"guide_spring_3":{"who":"nuan","say":["墙上还有一个蘑菇，",{"w":"jump"},"上去！"]},"guide_spring_4":{"who":"nuan","say":["弹得再",{"w":"high"},"一点，拿那个",{"w":"heart"},"，爱心！"]},"guide_spring_5":{"who":"nuan","say":["右边还有一个蘑菇，踩上去，",{"w":"up"},"，向上飞！"]},"guide_spring_6":{"who":"nuan","say":["从蘑菇弹到右边，那儿有一片",{"w":"snowflake"},"，雪花！"]},"guide_spring_7":{"who":"nuan","say":[{"w":"door"},"，门在右下角，我们一起走过去！"]},"guide_bunny_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心，在左边的台阶上！"]},"guide_bunny_2":{"who":"nuan","say":["地上有只迷路的",{"w":"bunny"},"，小雪兔，走过去！"]},"guide_bunny_3":{"who":"nuan","say":["小土坡上还有一只",{"w":"bunny"},"，小雪兔！"]},"guide_bunny_4":{"who":"nuan","say":["坑那边也有一只",{"w":"bunny"},"，用",{"w":"ice"},"搭座桥吧！"]},"guide_bunny_5":{"who":"nuan","say":["右边的台阶上有",{"w":"snowflake"},"，雪花！"]},"guide_bunny_6":{"who":"nuan","say":["带它们回",{"w":"home"},"，兔窝在那边，还有",{"w":"carrot"}]},"guide_bunny_7":{"who":"nuan","say":[{"w":"door"},"，门在那边，我们走！"]},"guide_floe_1":{"who":"nuan","say":["我们在",{"w":"left"},"边的河岸，",{"w":"wait"},"，等一等，浮冰就来啦。"]},"guide_floe_2":{"who":"nuan","say":["坐上浮冰，去拿河上的",{"w":"heart"},"，爱心！"]},"guide_floe_3":{"who":"nuan","say":["小岛上歇一歇，再",{"w":"wait"},"下一块浮冰。"]},"guide_floe_4":{"who":"nuan","say":["坐上浮冰，河上有一片",{"w":"snowflake"},"，雪花！"]},"guide_floe_5":{"who":"nuan","say":["过河啦，往",{"w":"right"},"走，上岸！"]},"guide_floe_6":{"who":"nuan","say":[{"w":"door"},"，门就在",{"w":"right"},"边，走吧！"]},"guide_music_1":{"who":"nuan","say":["先踩",{"w":"red"},"，红色的台阶！"]},"guide_music_2":{"who":"nuan","say":["接着踩",{"w":"yellow"},"，黄色的台阶，在左边。"]},"guide_music_3":{"who":"nuan","say":["再踩",{"w":"blue"},"，蓝色的台阶！"]},"guide_music_4":{"who":"nuan","say":["叮叮咚咚，",{"w":"door"},"，门开啦，走过去！"]},"guide_ballroom_1":{"who":"nuan","say":["先去拿那个",{"w":"heart"},"，爱心！"]},"guide_ballroom_2":{"who":"nuan","say":["左上角有个大",{"w":"ball"},"，雪球！"]},"guide_ballroom_3":{"who":"nuan","say":["中间也有一个",{"w":"ball"},"，跳上去拿！"]},"guide_ballroom_4":{"who":"nuan","say":["右上角还有一个",{"w":"ball"},"，雪球，跳高一点！"]},"guide_ballroom_5":{"who":"nuan","say":["那边有",{"w":"snowflake"},"，雪花，亮晶晶的！"]},"guide_ballroom_6":{"who":"nuan","say":["快去堆",{"w":"snowman"},{"w":"hat"},"也要戴上哦。"]},"guide_garden_1":{"who":"nuan","say":["左边的小塔上有一朵",{"w":"flower"},"，冰花，跳上去！"]},"guide_garden_2":{"who":"nuan","say":["地上有一朵",{"w":"flower"},"，花，走过去碰一碰！"]},"guide_garden_3":{"who":"nuan","say":["把水塘冻上，走过去，那边有一朵",{"w":"flower"},"，花！"]},"guide_garden_4":{"who":"nuan","say":["台阶上也有一朵",{"w":"flower"},"，跳上去叫醒它！"]},"guide_garden_5":{"who":"nuan","say":["那边又有一朵",{"w":"flower"},"，用",{"w":"warm"},"的光照一照它！"]},"guide_garden_6":{"who":"nuan","say":["右边的高台上，还有一朵",{"w":"flower"}]},"guide_garden_7":{"who":"nuan","say":["最高的台阶上也有一朵",{"w":"flower"},"，加油！"]},"guide_garden_8":{"who":"nuan","say":["右下角还有一朵",{"w":"flower"},"，叫醒它，",{"w":"spring"},"就来啦！"]},"pick_heart_1":{"who":"nuan","say":["看，是",{"w":"heart"},"，爱心！"]},"pick_heart_2":{"who":"nuan","say":["又一个",{"w":"heart"},"！真好看。"]},"pick_heart_3":{"who":"nuan","say":["哇，红红的",{"w":"heart"},"，热乎乎的。"]},"pick_snowflake_1":{"who":"nuan","say":["是",{"w":"snowflake"},"，雪花！亮晶晶的。"]},"pick_snowflake_2":{"who":"nuan","say":["又捡到一片",{"w":"snowflake"}]},"pick_snowflake_3":{"who":"nuan","say":["好漂亮的",{"w":"snowflake"},"，凉凉的。"]},"pick_ball_1":{"who":"nuan","say":["好大的",{"w":"ball"},"，雪球！"]},"pick_ball_2":{"who":"nuan","say":["又一个",{"w":"ball"},"，滚过来啦！"]},"pick_ball_3":{"who":"nuan","say":["第三个",{"w":"ball"},"，雪人有救啦！"]},"toy_slide_1":{"who":"nuan","say":["呼——",{"w":"slide"}]},"toy_slide_2":{"who":"nuan","say":[{"w":"fast"},{"w":"fast"},"！好快呀！"]},"toy_slide_3":{"who":"nuan","say":["往",{"w":"down"},"滑，往",{"w":"down"},"滑！"]},"toy_slide_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"滑得真",{"w":"fast"}]},"toy_bounce_1":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"up"}]},"toy_bounce_2":{"who":"nuan","say":["飞得好",{"w":"high"},"呀！"]},"toy_bounce_3":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"好",{"w":"high"}]},"toy_bounce_4":{"who":"nuan","say":[{"w":"jump"},"一下，再",{"w":"up"},"一点点！"]},"toy_bunny_1":{"who":"nuan","say":[{"w":"bunny"},{"w":"one"},"！第一只小雪兔，跟上来啦。"]},"toy_bunny_2":{"who":"nuan","say":[{"w":"bunny"},{"w":"two"},"！又找到一只！"]},"toy_bunny_3":{"who":"nuan","say":[{"w":"bunny"},{"w":"three"},"！三只都找到啦！"]},"toy_bunny_home_1":{"who":"nuan","say":[{"w":"bunny"},"回",{"w":"home"},"啦！"]},"toy_bunny_home_2":{"who":"nuan","say":["又一只回",{"w":"home"},"啦，它吃着",{"w":"carrot"},"呢。"]},"toy_bunny_home_3":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"最后一只也到",{"w":"home"},"啦！"]},"toy_floe_1":{"who":"nuan","say":[{"w":"wait"},"，浮冰停下来啦！"]},"toy_floe_2":{"who":"nuan","say":["浮冰在",{"w":"wait"},"我们呢，快上去！"]},"toy_floe_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"它停住啦，快过去。"]},"toy_note_ok_1":{"who":"nuan","say":[{"w":"red"},"，红色！"]},"toy_note_ok_2":{"who":"nuan","say":["橙色，叮！"]},"toy_note_ok_3":{"who":"nuan","say":[{"w":"yellow"},"，黄色！"]},"toy_note_ok_4":{"who":"nuan","say":["绿色，叮！"]},"toy_note_ok_5":{"who":"nuan","say":[{"w":"blue"},"，蓝色！"]},"toy_note_wrong_1":{"who":"nuan","say":["没关系，再来一次。"]},"toy_note_wrong_2":{"who":"nuan","say":["咦，这个不是，换一个试试。"]},"toy_note_wrong_3":{"who":"nuan","say":["嘿嘿，走错啦，再听一遍。"]},"toy_melody_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们弹完啦！"]},"toy_melody_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"真好听！"]},"toy_bloom_1":{"who":"nuan","say":["叮——一朵",{"w":"flower"},"醒啦！"]},"toy_bloom_2":{"who":"nuan","say":[{"w":"warm"},"的光，",{"w":"flower"},"开花啦！"]},"toy_bloom_3":{"who":"nuan","say":["又一朵！是",{"w":"flower"},"，彩色的。"]},"toy_bloom_4":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里的",{"w":"flower"},"都开啦，",{"w":"spring"},"来啦！"]},"star_1":{"who":"nuan","say":[{"w":"star"},{"w":"one"}]},"star_2":{"who":"nuan","say":[{"w":"star"},{"w":"two"}]},"star_3":{"who":"nuan","say":[{"w":"star"},{"w":"three"}]},"star_4":{"who":"nuan","say":[{"w":"star"},"，第四颗！"]},"star_5":{"who":"nuan","say":[{"w":"star"},"，第五颗，全找到啦！"]},"open_hall":{"who":"nuan","say":["看，",{"w":"door"},"开啦！走吧，姐姐！",{"en":"Let's go!","zh":"出发！"}]},"open_lake":{"who":"nuan","say":["有了",{"w":"ice"},"，我们走过",{"w":"water"},"啦！",{"w":"fish"},"也在拍手。"]},"open_slope":{"who":"nuan","say":["门开啦！这个",{"w":"slide"},"又",{"w":"fast"},"又好玩，我们再往",{"w":"down"},"走吧！"]},"open_tower":{"who":"nuan","say":["踏板被",{"w":"push"},"住啦，",{"w":"gate"},"也",{"w":"open"},"啦！门开啦，姐姐，我们走吧！"]},"open_spring":{"who":"nuan","say":["门开啦！我们",{"w":"jump"},"一下，",{"w":"up"},"，到最",{"w":"high"},"的地方去！"]},"open_bunny":{"who":"nuan","say":["谢谢你们，",{"w":"bunny"},"！回",{"w":"home"},"啦，吃",{"w":"carrot"},"吧，门开啦。"]},"open_floe":{"who":"nuan","say":["我们过河啦！先",{"w":"wait"},"，再往",{"w":"right"},"走，门也开啦。姐姐，快过去！"]},"open_music":{"who":"nuan","say":["叮叮咚咚，唱完啦！",{"w":"red"},{"w":"yellow"},{"w":"blue"},"，门也开啦！"]},"open_ballroom":{"who":"nuan","say":[{"w":"ball"},"都找到啦！快来堆",{"w":"snowman"},{"w":"hat"},"也准备好啦！"]},"open_garden":{"who":"nuan","say":["所有的",{"w":"flower"},"都开啦！好",{"w":"warm"},"呀，",{"w":"spring"},"来啦！"]},"clear_hall":{"who":"nuan","say":[{"w":"heart"},{"w":"star"},"都找到啦，",{"w":"door"},"也开了。真棒！"]},"clear_lake":{"who":"nuan","say":["冰路搭好了。",{"w":"fish"},"在",{"w":"water"},"里游，",{"w":"ice"},"亮晶晶。"]},"clear_slope":{"who":"nuan","say":["我们玩了",{"w":"slide"},"，滑得好",{"w":"fast"},"，一路",{"w":"down"},"到了坡底。真开心！"]},"clear_tower":{"who":"nuan","say":["一个",{"w":"push"},"，一个往前走，",{"w":"gate"},"就",{"w":"open"},"了。两个人一起，真棒！"]},"clear_spring":{"who":"nuan","say":[{"w":"jump"},{"w":"up"},{"w":"high"},"！蘑菇把我们弹到了云边。真棒！"]},"clear_bunny":{"who":"nuan","say":[{"w":"bunny"},"们回到",{"w":"home"},"，吃着",{"w":"carrot"},"，开心地晃耳朵。灯笼的光，让大家都不怕了。"]},"clear_floe":{"who":"nuan","say":["浮冰往",{"w":"left"},"，往",{"w":"right"},{"w":"wait"},"一等，我们就过了河。真棒！"]},"clear_music":{"who":"nuan","say":[{"w":"red"},{"w":"yellow"},{"w":"blue"},"，彩色的台阶唱起了歌。姐姐，我们去下一个房间看看吧！"]},"clear_ballroom":{"who":"nuan","say":["圆圆的",{"w":"ball"},"变成了",{"w":"snowman"},{"w":"hat"},"轻轻落下来啦！门外吹来一阵暖和的风，我们去看看吧。"]},"clear_garden":{"who":"nuan","say":[{"w":"flower"},"开满了花园，",{"w":"warm"},"的风吹过来，",{"w":"spring"},"回来了。"]},"quiz_heart":{"who":"nuan","say":["哪个是",{"w":"heart"},"？点一点！"]},"quiz_star":{"who":"nuan","say":["哪个是",{"w":"star"},"？点一点！"]},"quiz_door":{"who":"nuan","say":["哪个是",{"w":"door"},"？点一点！"]},"quiz_water":{"who":"nuan","say":["哪个是",{"w":"water"},"？点一点！"]},"quiz_ice":{"who":"nuan","say":["哪个是",{"w":"ice"},"？点一点！"]},"quiz_fish":{"who":"nuan","say":["哪个是",{"w":"fish"},"？点一点！"]},"quiz_slide":{"who":"nuan","say":["哪个是",{"w":"slide"},"？点一点！"]},"quiz_fast":{"who":"nuan","say":["哪个是",{"w":"fast"},"？点一点！"]},"quiz_down":{"who":"nuan","say":["哪个是",{"w":"down"},"？点一点！"]},"quiz_push":{"who":"nuan","say":["哪个是",{"w":"push"},"？点一点！"]},"quiz_open":{"who":"nuan","say":["哪个是",{"w":"open"},"？点一点！"]},"quiz_gate":{"who":"nuan","say":["哪个是",{"w":"gate"},"？点一点！"]},"quiz_jump":{"who":"nuan","say":["哪个是",{"w":"jump"},"？点一点！"]},"quiz_up":{"who":"nuan","say":["哪个是",{"w":"up"},"？点一点！"]},"quiz_high":{"who":"nuan","say":["哪个是",{"w":"high"},"？点一点！"]},"quiz_bunny":{"who":"nuan","say":["哪个是",{"w":"bunny"},"？点一点！"]},"quiz_home":{"who":"nuan","say":["哪个是",{"w":"home"},"？点一点！"]},"quiz_carrot":{"who":"nuan","say":["哪个是",{"w":"carrot"},"？点一点！"]},"quiz_left":{"who":"nuan","say":["哪个是",{"w":"left"},"？点一点！"]},"quiz_right":{"who":"nuan","say":["哪个是",{"w":"right"},"？点一点！"]},"quiz_wait":{"who":"nuan","say":["哪个是",{"w":"wait"},"？点一点！"]},"quiz_red":{"who":"nuan","say":["哪个是",{"w":"red"},"？点一点！"]},"quiz_yellow":{"who":"nuan","say":["哪个是",{"w":"yellow"},"？点一点！"]},"quiz_blue":{"who":"nuan","say":["哪个是",{"w":"blue"},"？点一点！"]},"quiz_snowman":{"who":"nuan","say":["哪个是",{"w":"snowman"},"？点一点！"]},"quiz_ball":{"who":"nuan","say":["哪个是",{"w":"ball"},"？点一点！"]},"quiz_hat":{"who":"nuan","say":["哪个是",{"w":"hat"},"？点一点！"]},"quiz_flower":{"who":"nuan","say":["哪个是",{"w":"flower"},"？点一点！"]},"quiz_warm":{"who":"nuan","say":["哪个是",{"w":"warm"},"？点一点！"]},"quiz_spring":{"who":"nuan","say":["哪个是",{"w":"spring"},"？点一点！"]},"quiz_right_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},{"en":"Good job!","zh":"做得好！"}]},"quiz_right_2":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"},"对啦，就是它！"]},"quiz_right_3":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"},"你真聪明！"]},"quiz_wrong_1":{"who":"nuan","say":["再找找看～"]},"quiz_wrong_2":{"who":"nuan","say":["嗯，再看一看。它在发光哦。"]},"quiz_wrong_3":{"who":"nuan","say":["没关系，我们再试一次。"]},"tutor_move":{"who":"nuan","say":["按左右方向键，就能走路啦。"]},"tutor_jump":{"who":"nuan","say":["按上面的方向键，跳一跳！"]},"tutor_magic":{"who":"nuan","say":["按一下长长的空格键，魔法就出来啦！",{"en":"One, two, three!","zh":"一、二、三！"}]},"tutor_fullscreen":{"who":"nuan","say":["给大人的小提示：点右上角的全屏按钮，画面会更大哦。"]},"splash_1":{"who":"nuan","say":["哎呀，扑通！没关系，再来一次！"]},"splash_2":{"who":"nuan","say":["哇，",{"w":"water"},"好凉呀！我们回到岸边吧。"]},"splash_3":{"who":"nuan","say":["扑通！没事没事，你已经很棒啦！"]},"splash_4":{"who":"nuan","say":["掉进",{"w":"water"},"也没关系，再试一次吧。"]},"idle_1":{"who":"nuan","say":["你在看什么呀？"]},"idle_2":{"who":"nuan","say":["要不要去那边看看？"]},"idle_3":{"who":"nuan","say":["点一点右上角的小灯泡，我就告诉你。"]},"idle_4":{"who":"nuan","say":["慢慢来，不着急。"]},"miss_frost":{"who":"nuan","say":["姐姐，你在哪儿呀？"]},"together_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"我们在一起啦！"]},"together_2":{"who":"frost","say":["和你在一起，真暖和。"]},"mem_m1":{"who":"nuan","say":["姐姐，还记得吗？我每天画一幅画，从门缝里塞给你。画里是我们俩，还有红围巾雪人。原来你都悄悄收好了呀。"],"art":"mem_door"},"mem_m3":{"who":"nuan","say":["姐姐，还记得那面冰镜子吗？你把湖面冻得亮亮的，我们手拉手，一直滑到星星出来。"],"art":"mem_lake"},"mem_m5":{"who":"nuan","say":["那条冰滑梯是你给我变出来的！我坐着小木盆，一路滑到山脚，开心得停不下来。"],"art":"mem_m5"},"mem_m2":{"who":"nuan","say":["姐姐，原来那条红围巾是你偷偷织给我的呀。软软的，暖暖的，我一直很喜欢。"],"art":"mem_gloves"},"mem_m6":{"who":"nuan","say":["我小时候总想摸到星星。你给我堆了一张软软的雪床，我一跳，好像真的碰到了星星！"],"art":"mem_m6"},"mem_m7":{"who":"nuan","say":["姐姐，我们捡到过一只小雪兔。我的灯笼给它暖身子，你给它做了个小冰窝，它很快就睡着啦。"],"art":"mem_m7"},"mem_m8":{"who":"nuan","say":["还记得那次坐浮冰吗？你让它停在岸边，我们一起坐上去，慢慢漂，一边数水里的小鱼。"],"art":"mem_m8"},"mem_m9":{"who":"nuan","say":["你做的冰风铃真好听！我轻轻一碰，叮叮咚咚，就忍不住跟着哼起歌来。"],"art":"mem_m9"},"mem_m4":{"who":"nuan","say":["哈哈，姐姐！那次打雪仗，雪球越滚越大，我们两个都摔进了软软的雪堆里，笑了好久。"],"art":"mem_fall"},"mem_m10":{"who":"nuan","say":["姐姐，我们小时候一起堆过一个雪人，还给它戴了一朵小花。我记得，我们说好下一年还要一起堆。"],"art":"mem_m10"},"me_frost":{"who":"frost","say":["你好，我是艾莎。我会变出冰和雪，铺成小路。跟我一起出发吧，安娜会在旁边帮我们。"]},"me_nuan":{"who":"nuan","say":["你好，我是安娜！艾莎姐姐带我们探险，我会跟着她，照亮小路，还会陪你一起念英文单词。"]},"win":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"},"花园里开满了花！姐姐，拉着我的手，我们一起转个圈吧！"]},"end":{"who":"nuan","say":[{"w":"sun"},"出来啦！冰花都开成了真正的小花，",{"w":"spring"},"回来了。小时候的雪人戴着帽子，笑眯眯地站在花丛里。姐姐，牵着我的手，我们一起和大家说",{"en":"Hello!","zh":"你好！"}],"art":"story_thaw"},"ui_start":{"who":"nuan","say":["开始玩"]},"ui_continue":{"who":"nuan","say":["继续玩"]},"ui_next":{"who":"nuan","say":["下一个"]},"ui_replay":{"who":"nuan","say":["再玩一次"]},"ui_back":{"who":"nuan","say":["回去"]},"ui_words":{"who":"nuan","say":["单词本"]},"ui_stickers":{"who":"nuan","say":["贴纸本"]},"ui_wardrobe":{"who":"nuan","say":["换衣服"]},"ui_settings":{"who":"nuan","say":["家长设置"]},"ui_hint":{"who":"nuan","say":["小提示"]},"ui_fullscreen":{"who":"nuan","say":["全屏"]},"ui_solo":{"who":"nuan","say":["一个人玩"]},"ui_duo":{"who":"nuan","say":["两个人玩"]},"ui_sound":{"who":"nuan","say":["声音"]},"ui_quiz_skip":{"who":"nuan","say":["跳过"]},"ui_meet":{"who":"nuan","say":["认识她们"]},"ui_rooms":{"who":"nuan","say":["房间"]},"ui_room_hall":{"who":"nuan","say":["冰堡大厅"]},"ui_room_lake":{"who":"nuan","say":["冰湖长廊"]},"ui_room_slope":{"who":"nuan","say":["雪坡滑梯"]},"ui_room_tower":{"who":"nuan","say":["机关塔楼"]},"ui_room_spring":{"who":"nuan","say":["弹弹雪床"]},"ui_room_bunny":{"who":"nuan","say":["雪兔窝"]},"ui_room_floe":{"who":"nuan","say":["浮冰河"]},"ui_room_music":{"who":"nuan","say":["音乐楼梯"]},"ui_room_ballroom":{"who":"nuan","say":["星光舞厅"]},"ui_room_garden":{"who":"nuan","say":["春天花园"]},"cheer_1":{"who":"nuan","say":[{"en":"Yay!","zh":"耶！"}]},"cheer_2":{"who":"nuan","say":[{"en":"Good job!","zh":"做得好！"}]},"cheer_3":{"who":"nuan","say":[{"en":"Let's go!","zh":"出发！"}]},"cheer_4":{"who":"nuan","say":[{"en":"Wow!","zh":"哇！"}]}}};
   const WORDS = [{"id":"heart","en":"heart","zh":"爱心","icon":"word_heart","room":"hall"},{"id":"star","en":"star","zh":"星星","icon":"word_star","room":"hall"},{"id":"door","en":"door","zh":"门","icon":"word_door","room":"hall"},{"id":"water","en":"water","zh":"水","icon":"word_water","room":"lake"},{"id":"ice","en":"ice","zh":"冰","icon":"word_ice","room":"lake"},{"id":"fish","en":"fish","zh":"小鱼","icon":"word_fish","room":"lake"},{"id":"slide","en":"slide","zh":"滑滑梯","icon":"word_slide","room":"slope"},{"id":"fast","en":"fast","zh":"快","icon":"word_fast","room":"slope"},{"id":"down","en":"down","zh":"向下","icon":"word_down","room":"slope"},{"id":"push","en":"push","zh":"推","icon":"word_push","room":"tower"},{"id":"open","en":"open","zh":"打开","icon":"word_open","room":"tower"},{"id":"gate","en":"gate","zh":"铁闸门","icon":"word_gate","room":"tower"},{"id":"jump","en":"jump","zh":"跳","icon":"word_jump","room":"spring"},{"id":"up","en":"up","zh":"向上","icon":"word_up","room":"spring"},{"id":"high","en":"high","zh":"高","icon":"word_high","room":"spring"},{"id":"bunny","en":"bunny","zh":"小雪兔","icon":"word_bunny","room":"bunny"},{"id":"home","en":"home","zh":"家","icon":"word_home","room":"bunny"},{"id":"carrot","en":"carrot","zh":"胡萝卜","icon":"word_carrot","room":"bunny"},{"id":"left","en":"left","zh":"左","icon":"word_left","room":"floe"},{"id":"right","en":"right","zh":"右","icon":"word_right","room":"floe"},{"id":"wait","en":"wait","zh":"等一等","icon":"word_wait","room":"floe"},{"id":"red","en":"red","zh":"红色","icon":"word_red","room":"music"},{"id":"yellow","en":"yellow","zh":"黄色","icon":"word_yellow","room":"music"},{"id":"blue","en":"blue","zh":"蓝色","icon":"word_blue","room":"music"},{"id":"snowman","en":"snowman","zh":"雪人","icon":"word_snowman","room":"ballroom"},{"id":"ball","en":"ball","zh":"球","icon":"word_ball","room":"ballroom"},{"id":"hat","en":"hat","zh":"帽子","icon":"word_hat","room":"ballroom"},{"id":"flower","en":"flower","zh":"花","icon":"word_flower","room":"garden"},{"id":"warm","en":"warm","zh":"温暖","icon":"word_warm","room":"garden"},{"id":"spring","en":"spring","zh":"春天","icon":"word_spring","room":"garden"},{"id":"one","en":"one","zh":"一","icon":"word_one","room":null},{"id":"two","en":"two","zh":"二","icon":"word_two","room":null},{"id":"three","en":"three","zh":"三","icon":"word_three","room":null},{"id":"snowflake","en":"snowflake","zh":"雪花","icon":"word_snowflake","room":null},{"id":"hello","en":"hello","zh":"你好","icon":"word_hello","room":null},{"id":"yay","en":"yay","zh":"耶","icon":"word_yay","room":null},{"id":"music","en":"music","zh":"音乐","icon":"word_music","room":null},{"id":"sun","en":"sun","zh":"太阳","icon":"word_sun","room":null}];
   const lineOf = key => (LINES.lines && LINES.lines[key]) || null;
   const hasLineKey = key => !!lineOf(key);
@@ -2534,15 +2919,19 @@ function createGame() {
     im.src = SRC(name);
   }
   const tyHas = name => tyImgState[name] === 'ok';
-  /* 90-main decodes the toy pictures before the first frame; remember that, so the first room does not flash the vector stand-ins. */
+  /* The room's pictures decode while its cards are up (00-core loadArt); remember that, so the room does not flash the vector stand-ins. */
   function toyImageReady(name) { if (!tyImgState[name]) tyImgState[name] = 'ok'; }
+  /* A picture that is known or on its way (loadArt) is placed at once: the browser paints it when it arrives, no stand-in is drawn. */
+  const tyComing = name => tyImgState[name] === 'ok' || (tyImgState[name] !== 'bad' && typeof artPending === 'function' && artPending(name));
+  /* DEV: stand-ins that were drawn and later replaced by the picture. The lazy room loading (PLAN-2 D4) keeps this at 0. */
+  const tyStats = { replaced: 0 };
   /* A <g> that holds the picture `name` in the box, or fallback(g) until the picture exists. */
   function tyPic(parent, name, x, y, w, h, fallback, extra) {
     const g = el('g', {}, parent);
     const put = () => { g.textContent = ''; img(name, x, y, w, h, g, Object.assign({ preserveAspectRatio: 'xMidYMax meet' }, extra)); };
-    if (tyImgState[name] === 'ok') { put(); return g; }
+    if (tyComing(name)) { put(); return g; }
     if (fallback) fallback(g);
-    if (tyImgState[name] !== 'bad') tyProbe(name, ok => { if (ok) put(); });
+    if (tyImgState[name] !== 'bad') tyProbe(name, ok => { if (ok) { tyStats.replaced++; put(); } });
     return g;
   }
   const tyShow = (node, on) => { if (node) node.setAttribute('visibility', on ? 'visible' : 'hidden'); };
@@ -2885,17 +3274,22 @@ function createGame() {
   /* A floe is painted in three pieces (floe_l, floe_m, floe_r: one tile each); a one-tile floe is the middle piece.
      Until all three load (or if they never do) the vector slab stands in. */
   function tyFloeArt(art, w) {
-    el('g', {}, art).appendChild(tyVector(w));
     const cells = Math.max(1, Math.round(w / T)), names = ['floe_l', 'floe_m', 'floe_r'];
-    let left = names.length, dead = false;
-    for (const nm of names) tyProbe(nm, ok => {
-      if (!ok) dead = true;
-      if (--left || dead) return;
+    const paint = () => {
       art.textContent = '';
       for (let i = 0; i < cells; i++) {
         const nm2 = cells === 1 ? 'floe_m' : i === 0 ? 'floe_l' : i === cells - 1 ? 'floe_r' : 'floe_m';
         img(nm2, i * T - 1, -2, T + 2, T + 2, art, { preserveAspectRatio: 'none' });
       }
+    };
+    if (names.every(tyComing)) { paint(); return; }
+    el('g', {}, art).appendChild(tyVector(w));
+    let left = names.length, dead = false;
+    for (const nm of names) tyProbe(nm, ok => {
+      if (!ok) dead = true;
+      if (--left || dead) return;
+      tyStats.replaced++;
+      paint();
     });
   }
   function tyVector(w) {
@@ -3331,11 +3725,27 @@ function createGame() {
     return buf;
   }
   let noiseBuf = null;
+  /* PLAN-2 D6. A hidden tab, a locked tablet or a phone call puts the audio context to sleep ('suspended', and 'interrupted' on iOS). A voice clip
+     in flight can then never end: its job would hang with the music ducked for good. So when the context sleeps or the page is hidden the
+     voice queue ends its current job ('interrupted', nothing counted) and the music level comes back; when the page returns, the context
+     is resumed. Hiding the page also puts the context to sleep, so the music stops while the child is in another app. */
+  const audioAsleep = () => !!audio && (audio.state === 'suspended' || audio.state === 'interrupted');
+  const resumeAudio = () => { try { Promise.resolve(audio.resume()).catch(() => {}); } catch (e) {} };
+  function onAudioState() { if (audioAsleep()) voice.suspend(); }
+  function onVisibility() {
+    if (document.hidden) {
+      voice.suspend();
+      if (audio && audio.state === 'running') { try { Promise.resolve(audio.suspend()).catch(() => {}); } catch (e) {} }
+    } else if (audioAsleep()) resumeAudio();
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', onVisibility);
+
   function wakeAudio() {
-    if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+    if (audio) { if (audioAsleep()) resumeAudio(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     audio = new AC();
+    audio.onstatechange = onAudioState;
     const master = audio.createGain(); master.gain.value = soundWanted() ? 1 : 0; masterOn = soundWanted();
     const comp = audio.createDynamicsCompressor();
     master.connect(comp).connect(audio.destination);
@@ -3546,7 +3956,7 @@ function createGame() {
     function logRoomWords(lv) {
       if (!isDev() || !lv || !lv.words) return;
       const stats = wordStats();
-      const rows = lv.words.map(w => ({ word: w, heard: (stats[w] || {})[lv.id] || 0, target: 8, ok: ((stats[w] || {})[lv.id] || 0) >= 8 }));
+      const rows = lv.words.map(w => ({ word: w, heard: (stats[w] || {})[lv.id] || 0, target: 6, ok: ((stats[w] || {})[lv.id] || 0) >= 6 }));
       try { console.log('word exposure, room ' + lv.id); console.table(rows); } catch (e) {}
     }
 
@@ -3827,6 +4237,10 @@ function createGame() {
   }
   /* A scene that only the on-screen buttons and Enter may move. */
   function storyStrict(s) { s.strict = true; s.openedAt = performance.now(); return s; }
+  /* The gamepad (80-input) moves a focus ring over the on-screen buttons and A presses the focused one, which is a button press
+     like a click. A learning scene still ignores the pad in its quiet first second, and a pad press with no ring on screen only
+     places the ring, so mashing A never skips a lesson. */
+  function storyAcceptsPad(now) { return !story || !story.strict || now - story.openedAt >= STORY_QUIET_MS; }
 
   addEventListener('keydown', e => {
     const modal = uxState.modal;
@@ -3939,13 +4353,20 @@ function createGame() {
   }
 
   /* ---------- recall (start of the next room) ---------- */
-  function showRecall(prevLevel, done) {
-    const lv = prevLevel == null ? null : uxLevel(prevLevel), words = lv ? uxRoomWords(lv) : [];
+  /* The words of the room just left, then up to two older ones that are due for review (90-main builds `ids` with recallWordsFor;
+     without `ids` it is just that room's words). An older word counts as reviewed once its line has been said, which keeps it
+     out of the next recall. The room's own words are not marked: their recap is not a spaced review (src/lib/review.js). */
+  function showRecall(prevLevel, done, ids) {
+    const lv = prevLevel == null ? null : uxLevel(prevLevel), own = lv ? lv.words || [] : [];
+    const words = uxWordList(Array.isArray(ids) ? ids : own);
     if (!lv || !words.length) { if (done) done(); return; }
     const s = storyStrict(uxScreen('recall', true));
     uxInputReset();
+    const older = recallOlderIds(own, words.map(w => w.id));
+    uxPreload(words.map(w => uxKey('recall', w.id)));
+    const wide = words.length > 3;   // up to five cards: smaller, so the row still fits the page
     const root = uxPaint(`<g class="page"><image href="${SRC(lv.bg)}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".5"/>
-      ${uxCardRow(words, 140, 200, 230, 30)}
+      ${wide ? uxCardRow(words, 150, 156, 196, 16) : uxCardRow(words, 140, 200, 230, 30)}
       ${uxButton({ act: 'skip', ui: 'next', icon: 'next', x: 886, y: 452, r: 34 })}</g>`);
     const finish = () => uxEnd(s, done);
     s.onKey = finish;
@@ -3955,6 +4376,8 @@ function createGame() {
         if (!uxAlive(s)) return;
         uxPopSlot(root, k); uxSfx('page');
         await uxLine('recall_' + words[k].id);
+        if (!uxAlive(s)) return;
+        if (older.includes(words[k].id)) uxNoteReviewed(words[k].id);
         await uxWait(200);
       }
       await uxWait(500);
@@ -4016,92 +4439,45 @@ function createGame() {
       })();
     };
 
-    /* B: word cards, each said once; sparkle badge (no text) the first time. The next button shows as soon as all three
-       have been said once; after that at most ONE extra round tops the room's hearings up towards eight, in the background. */
+    /* B: word cards, each said once; sparkle badge (no text) the first time. The next button shows as soon as all three have
+       been said. Nothing is repeated to pad a count: the words come back in later recalls, quizzes and the review game. */
     const phaseWords = () => {
       s.phase = 2; const ok = mark();
-      let ready = false, tappedAt = -1;
+      let ready = false;
       stars.style.transform = 'translate(480px,52px) scale(.42)';
       s.onKey = () => { if (ok() && ready) { uxStopVoice(); phaseQuiz(); } };
       const rec = words.map(w => uxWordRec(w.id));
       const isNew = rec.map(r => !r.seen);
       body.innerHTML = uxCardRow(words, 128, 200, 238, 30, (wd, k) => ({ isNew: isNew[k] }));
-      uxBind(body, { word: el => { tappedAt = performance.now(); word(el); } });
+      uxBind(body, { word });
       setCtl('');
-      /* say a card's word and report what happened to it: 'heard' | 'interrupted' | 'muted' | 'missing' */
-      const say = async id => {
-        const t0 = performance.now();
-        const result = await uxWordVoice(id);
-        return wordOutcome(result === true ? true : uxVoiceReason(uxKey('word', id)) || result, { muted: !uxSetting('sound'), interrupted: tappedAt >= t0 || uxVoiceBusy() });
-      };
       (async () => {
         await uxWait(300);
         for (let k = 0; k < words.length; k++) {
           if (!ok()) return;
           uxPopSlot(root, k); uxSfx('page');
           rec[k].seen = true;
-          await say(words[k].id);
+          await uxWordVoice(words[k].id);
           await uxWait(200);
         }
         if (!ok()) return;
         uxSaveNow();
         ready = true; setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse');
-        // The child may have skipped the chapter card or interrupted pickup speech: one more round for words short of
-        // eight audible hearings. Only a clip that is missing ends it; a tap that cut a clip off or a muted clip does not.
-        if (!uxSetting('sound')) return;
-        const baseline = (typeof playFlow === 'object' && playFlow.wordBaseline) || {};
-        for (const wd of words) {
-          if (!ok()) return;
-          if ((uxWordRec(wd.id).heard || 0) - (baseline[wd.id] || 0) >= 8) continue;
-          const card = body.querySelector(`[data-word="${wd.id}"]`);
-          if (card) card.classList.add('ux-pulse');
-          const outcome = await say(wd.id);
-          if (card) card.classList.remove('ux-pulse');
-          if (!ok()) return;
-          if (outcome === 'missing') break;
-          await uxWait(200);
-        }
-        uxSaveNow();
       })();
     };
 
-    /* C: quiz, 3 big picture cards, spoken question, skippable */
+    /* C: quiz, 3 big picture cards, spoken question, skippable. The wrong answers come from rooms already cleared, and every
+       answer is stored as it is given (storyQuestion), so skipping or leaving half way loses nothing. */
     const phaseQuiz = () => {
       s.phase = 3; const ok = mark();
       s.onKey = null;   // the quiz has no keyboard way out: skip is the on-screen button only
       if (!words.length) { finishPage(); return; }
-      const order = words.map((_, k) => k).sort(() => Math.random() - .5);
+      const ids = words.map(w => w.id), rng = storyRng(), order = storyShuffle(words, rng), pool = uxQuizPool(lv);
       (async () => {
         for (let q = 0; q < order.length; q++) {
           if (!ok()) return;
-          const target = words[order[q]];
-          const shown = words.slice().sort(() => Math.random() - .5);
-          const dots = order.map((_, k) => `<circle cx="${480 + (k - (order.length - 1) / 2) * 22}" cy="${112}" r="7" fill="${k < q ? '#ffd27a' : k === q ? '#fff' : '#5a6fca'}"/>`).join('');
-          body.innerHTML = dots + uxCardRow(shown, 150, 210, 210, 28, () => ({ label: false, act: 'pick', show: false }));
           setCtl(uxButton({ act: 'skip', ui: 'quiz_skip', icon: 'next', x: 886, y: 452, r: 34 }));
-          let wrong = 0, solved = false, resolve = null;
-          const result = new Promise(r => { resolve = r; });
-          uxBind(body, {
-            pick: el => {
-              if (!ok() || solved) return;
-              if (el.dataset.word === target.id) {
-                solved = true;
-                uxSfx('quiz_right'); uxConfetti(body, 480, 250, 36);
-                uxWordRec(target.id).quiz = (uxWordRec(target.id).quiz || 0) + (wrong ? 0 : 1);
-                body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', '0'); });
-                uxLine('quiz_right_' + (1 + q % 3), { interrupt: true }).then(() => resolve());
-              } else {
-                wrong++; uxSfx('quiz_wrong');
-                el.classList.remove('ux-shake'); void el.getBoundingClientRect(); el.classList.add('ux-shake');
-                const right = body.querySelector(`[data-word="${target.id}"] .ux-glowrect`);
-                if (right) right.classList.add('ux-glow');
-                uxLine('quiz_wrong_' + (1 + (wrong - 1) % 3), { interrupt: true });
-              }
-            },
-          });
-          [0, 1, 2].forEach(k => { const n = body.querySelectorAll('[data-pop]')[k]; if (n) setTimeout(() => n.classList.add('show'), 80 * k); });
-          uxLine('quiz_' + target.id);
-          await result;
+          await storyQuestion(ok, body, order[q], quizOptions(order[q].id, ids, pool, save.words, rng), q, order.length);
           await uxWait(600);
         }
         if (ok()) { uxSaveNow(); finishPage(); }
@@ -4123,22 +4499,88 @@ function createGame() {
     phaseStars();
   }
 
-  /* What became of one spoken word. voice.word() answers true when the clip was heard to the end and false otherwise; the
-     audio side says why through voice.lastReason (passed in here as a string; 'expired' = never got its turn, which is an
-     interruption, not a missing file). Without a reason a plain false is told apart from the context: sound off -> muted;
-     something else started speaking over it -> interrupted; else the file never played -> missing. */
-  function wordOutcome(result, ctx) {
-    const kinds = ['heard', 'interrupted', 'muted', 'missing'];
-    if (result === true) return 'heard';
-    if (result === 'expired') return 'interrupted';
-    if (typeof result === 'string' && kinds.includes(result)) return result;
-    if (result && typeof result === 'object') {
-      if (result.heard) return 'heard';
-      if (kinds.includes(result.reason)) return result.reason;
+  /* ---------- questions: "which picture is it?", for the clear-page quiz and the wordbook's review game ---------- */
+  /* Randomness comes from a seeded generator (src/lib/review.js), seeded from the save's room clock and a counter, never from the
+     time of day: the same save asked the same way gives the same questions. */
+  let storyDraws = 0;
+  function storyRng() { return makeReviewRng(((save.roomClock || 0) * 7919 + ++storyDraws * 104729) >>> 0); }
+  /* Fisher-Yates on a copy. */
+  function storyShuffle(list, rng) {
+    const out = list.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.min(i, Math.floor(rng() * (i + 1)));
+      const t = out[i]; out[i] = out[j]; out[j] = t;
     }
-    if (ctx && ctx.muted) return 'muted';
-    if (ctx && ctx.interrupted) return 'interrupted';
-    return 'missing';
+    return out;
+  }
+
+  /* One question: the picture cards pop up, Anna asks for `target` (quiz_<word>), and it ends when the child taps that card and
+     the cheer has been said. A first wrong tap is stored at once as a miss; a right tap with no miss before it is stored at once
+     as a first-try answer. Either way one answer per question, saved before the next question starts (uxNoteQuiz).
+     target: the word asked for; ids: the word ids shown (3). q / total: the question number, for the dots and the cheer. */
+  function storyQuestion(ok, body, target, ids, q, total) {
+    const dots = Array.from({ length: total }, (_, k) => `<circle cx="${480 + (k - (total - 1) / 2) * 22}" cy="${112}" r="7" fill="${k < q ? '#ffd27a' : k === q ? '#fff' : '#5a6fca'}"/>`).join('');
+    body.innerHTML = dots + uxCardRow(uxWordList(ids), 150, 210, 210, 28, () => ({ label: false, act: 'pick', show: false }));
+    let wrong = 0, solved = false;
+    /** @type {(value?: any) => void} */ let resolve = () => {};
+    const result = new Promise(r => { resolve = r; });
+    uxBind(body, {
+      pick: el => {
+        if (!ok() || solved) return;
+        if (el.dataset.word === target.id) {
+          solved = true;
+          uxSfx('quiz_right'); uxConfetti(body, 480, 250, 36);
+          if (!wrong) uxNoteQuiz(target.id, true);
+          body.querySelectorAll('.ux-glowrect').forEach(n => { n.classList.remove('ux-glow'); n.setAttribute('opacity', '0'); });
+          uxLine('quiz_right_' + (1 + q % 3), { interrupt: true }).then(() => resolve());
+        } else {
+          if (!wrong) uxNoteQuiz(target.id, false);
+          wrong++; uxSfx('quiz_wrong');
+          el.classList.remove('ux-shake'); void el.getBoundingClientRect(); el.classList.add('ux-shake');
+          const right = body.querySelector(`[data-word="${target.id}"] .ux-glowrect`);
+          if (right) right.classList.add('ux-glow');
+          uxLine('quiz_wrong_' + (1 + (wrong - 1) % 3), { interrupt: true });
+        }
+      },
+    });
+    [0, 1, 2].forEach(k => { const n = body.querySelectorAll('[data-pop]')[k]; if (n) setTimeout(() => n.classList.add('show'), 80 * k); });
+    uxLine('quiz_' + target.id);
+    return result;
+  }
+
+  /* ---------- review game (wordbook): Anna says a word, the child taps its picture; 5 questions ---------- */
+  const REVIEW_QUESTIONS = 5;
+  /* done() runs when the child leaves. The questions are the words most in need of review (uxReviewQueue); the cards are the same
+     as in the quiz, and each answer is stored the same way, so a missed word comes back sooner. */
+  function showReview(done) {
+    const queue = uxReviewQueue(REVIEW_QUESTIONS), pool = uxReviewPool();
+    if (pool.length < 3 || !queue.length) { if (done) done(); return; }
+    const s = storyStrict(uxScreen('review', true));
+    uxInputReset();
+    uxPreload([...queue.map(id => uxKey('quiz', id)), 'quiz_right_1', 'quiz_right_2', 'quiz_right_3', 'quiz_wrong_1', 'quiz_wrong_2', 'quiz_wrong_3']);
+    uxPaint(`<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".6"/>
+      <g id="uxBody"></g><g id="uxCtl"></g></g>`);
+    const root = $('overlay'), body = root.querySelector('#uxBody'), ctl = root.querySelector('#uxCtl');
+    const setCtl = html => { ctl.innerHTML = html; uxBind(ctl, { back: () => uxEnd(s, done), done: () => uxEnd(s, done), replay: () => { if (uxAlive(s)) { uxEnd(s, null); showReview(done); } } }); };
+    const rng = storyRng(), ok = () => uxAlive(s);
+    (async () => {
+      for (let q = 0; q < queue.length; q++) {
+        if (!ok()) return;
+        const target = uxWord(queue[q]), room = LEVELS.find(lv => (lv.words || []).includes(target.id)), roomIds = room ? room.words || [] : [];
+        setCtl(uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 34 }));
+        const shown = quizOptions(target.id, reviewLearned(save.words, roomIds), pool.filter(id => !roomIds.includes(id)), save.words, rng);
+        await storyQuestion(ok, body, target, shown, q, queue.length);
+        await uxWait(600);
+      }
+      if (!uxAlive(s)) return;
+      uxSaveNow();
+      uxStopVoice();
+      s.onKey = () => uxEnd(s, done);
+      body.innerHTML = '';
+      setCtl(uxButton({ act: 'done', ui: 'next', icon: 'next', x: 600, y: 300, r: 56, plate: 'gold', cls: 'ux-pulse' }) + uxButton({ act: 'replay', ui: 'replay', x: 360, y: 300, r: 42 }));
+      uxLine('cheer_' + (1 + (storyDraws % 4)));
+      uxConfetti(root.querySelector('.page'), 480, 200, 24);
+    })();
   }
   /* ===== d1 / view-ui: picture-button helpers, HUD, title, rooms, wordbook, meet-them, parent settings, subtitles =====
      Everything here is drawn as SVG strings into #hud / #overlay / #modal / #subs of the 960x520 stage.
@@ -4175,9 +4617,6 @@ function createGame() {
     if (!p || typeof p.then !== 'function') return uxWait(900);
     return Promise.race([p.catch(() => false), uxWait(8000).then(() => false)]);
   }
-  function uxVoiceBusy() { try { return typeof voice !== 'undefined' && !!voice && !!voice.busy; } catch (e) { return false; } }
-  /* Why the latest call for `key` did not complete ('missing' | 'interrupted' | 'muted' | 'expired'), or null when unknown. */
-  function uxVoiceReason(key) { try { return typeof voice !== 'undefined' && voice && typeof voice.lastReason === 'function' ? voice.lastReason(key) : null; } catch (e) { return null; } }
   const uxKey = (stem, id) => stem + '_' + id;   // line keys built from a stem, e.g. uxKey('learn', 'heart')
   /* Warm the voice cache for lines that will play soon; unknown keys and a missing voice are ignored. */
   function uxPreload(keys) {
@@ -4188,6 +4627,13 @@ function createGame() {
     } catch (e) {}
   }
   function uxUiVoice(name) { try { if (typeof voice !== 'undefined' && voice && typeof voice.ui === 'function') voice.ui(name); } catch (e) {} }
+  /* The name of the button the gamepad focus just landed on: the pad's way of hovering it (PLAN-2 D7). voice.ui is silent while a
+     scene is open, so this asks for the same quiet clip itself (priority 0, tag 'ui'): it is said only when nothing else is being
+     said, cuts only another button name, and so never talks over a lesson or a quiz question. */
+  function uxPadName(name) {
+    if (!name || !hasLineKey('ui_' + name)) return;
+    try { if (typeof voice !== 'undefined' && voice && typeof voice.line === 'function') voice.line('ui_' + name, { interrupt: true, priority: 0, tag: 'ui', maxWait: 600, subtitle: false }); } catch (e) {}
+  }
   function uxStopVoice() { try { if (typeof voice !== 'undefined' && voice && typeof voice.stop === 'function') voice.stop(); } catch (e) {} }
   function uxSfx(name) { try { if (typeof sfx === 'function') sfx(name); } catch (e) {} }
 
@@ -4210,19 +4656,55 @@ function createGame() {
     return list;
   }
   function uxWord(id) { return uxAllWords().find(w => w.id === id) || { id, en: id, zh: '', icon: 'word_' + id, room: null }; }
-  function uxRoomWords(lv) { return ((lv && lv.words) || []).map(uxWord); }
+  function uxWordList(ids) { return ids.map(uxWord); }
+  function uxRoomWords(lv) { return uxWordList((lv && lv.words) || []); }
   function uxWordRec(id) {
     try { if (typeof save !== 'undefined' && save) { save.words = save.words || {}; return (save.words[id] = save.words[id] || { heard: 0, quiz: 0 }); } } catch (e) {}
     return (uxState.seen[id] = uxState.seen[id] || { heard: 0, quiz: 0 });
   }
-  function uxWordKnown(id) { const r = uxWordRec(id); return !!(r.heard > 0 || r.seen); }
+  function uxWordKnown(id) { const r = (save.words || {})[id]; return !!(r && (r.heard > 0 || r.seen)); }   // reads only: looking at a card must not write a record
   function uxSaveNow() { try { if (typeof saveWrite === 'function') saveWrite(); } catch (e) {} }
+  /* One quiz question was answered (firstTry: right at the first tap). Stored at once: leaving half way loses nothing. */
+  function uxNoteQuiz(id, firstTry) { noteQuizAnswer(save.words, id, firstTry, reviewContext(save)); uxSaveNow(); }
+  /* An older word came back in a recall. */
+  function uxNoteReviewed(id) { noteReviewed(save.words, id, reviewContext(save)); uxSaveNow(); }
   function uxRoomSave(id) { try { return (save.rooms && save.rooms[id]) || {}; } catch (e) { return {}; } }
   function uxCleared(i) { return !!uxRoomSave((LEVELS[i] || {}).id).cleared; }
   function uxUnlocked(i) {
     if (i === 0) return true;
     try { if (save.unlocked && save.unlocked.rooms > i) return true; } catch (e) {}
     return uxCleared(i - 1);
+  }
+  /* The room a core word is taught in (index into LEVELS), or -1 for the general words that belong to no room. */
+  function uxWordRoom(id) { return LEVELS.findIndex(lv => (lv.words || []).includes(id)); }
+  /* True unless the word's room is still locked. A silhouette of a locked room stays silent (hearing it would count as learned)
+     and its word never comes up in a review. */
+  function uxWordOpen(id) { const i = uxWordRoom(id); return i < 0 || uxUnlocked(i); }
+  /* Where a quiz takes its wrong answers from: the words met in the OTHER rooms the child has cleared. */
+  function uxQuizPool(lv) {
+    const ids = [];
+    LEVELS.forEach((other, i) => { if (other.id !== lv.id && uxCleared(i)) ids.push(...(other.words || [])); });
+    return reviewLearned(save.words, ids);
+  }
+  /* Core words the review game may ask: met at least once, and from a room the child can open. */
+  function uxReviewPool() {
+    const ids = [];
+    LEVELS.forEach((lv, i) => { if (uxUnlocked(i)) ids.push(...(lv.words || [])); });
+    return reviewLearned(save.words, ids);
+  }
+  /* The words of a recall: the room just left, then up to two older words that are due. Only core words of rooms the child can open
+     are eligible: the general words (hello, one ...) have no recall line, and a word of a locked room must not show up early. */
+  function uxRecallWords(prevWords, exclude) {
+    const eligible = {};
+    for (const id of uxReviewPool()) eligible[id] = save.words[id];
+    return recallWordsFor(prevWords, eligible, Object.assign(reviewContext(save), { exclude }));
+  }
+  /* The next `n` review questions: what reviewDue wants first (missed words at the head), then the rest of the pool, least recently met first. */
+  function uxReviewQueue(n) {
+    const pool = uxReviewPool(), at = id => (save.words[id] || {}).lastSeen || 0, quiz = id => (save.words[id] || {}).quiz || 0;
+    const due = reviewDue(save.words, reviewContext(save)).filter(id => pool.includes(id));
+    const rest = pool.filter(id => !due.includes(id)).sort((a, b) => at(a) - at(b) || quiz(a) - quiz(b) || (a < b ? -1 : a > b ? 1 : 0));
+    return due.concat(rest).slice(0, n);
   }
   function uxLineArt(key, fallback) {
     const l = LINES && LINES.lines && LINES.lines[key];
@@ -4307,7 +4789,12 @@ function createGame() {
     const t = ui ? lineText('ui_' + ui)[0] : '';
     return String(t || fallback || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   }
-  /* o: { act, ui, icon, x, y, r, plate: 'light'|'gold'|'dark', cls, keep (tabbable: default true), ring } */
+  /* layoutHitRadius lives in src/lib/layout.js; a page or test that loads 70-ui without that lib still gets the same floor (30 = 64 CSS px). */
+  const uxHitRadius = (r, ring) => (typeof layoutHitRadius === 'function' ? layoutHitRadius(r, ring) : Math.max(r + (ring ? 8 : 0), 30));
+  /* o: { act, ui, icon, x, y, r, plate: 'light'|'gold'|'dark', cls, keep (tabbable: default true), ring }
+     The picture is r big, but the part that takes a tap is never smaller than 64 CSS px on the reference tablet (layoutHitRadius):
+     a small plate (the parent gear, the back arrows) keeps its looks and gets an invisible, larger touch area. cls 'ux-minor' marks
+     a button that is not one of the screen's few main buttons. */
   function uxButton(o) {
     const r = o.r || 36, plate = o.plate || 'light';
     const fill = plate === 'gold' ? 'url(#goldGrad)' : plate === 'dark' ? '#141c52' : 'url(#plateGrad)';
@@ -4315,7 +4802,7 @@ function createGame() {
     const ink = plate === 'dark' ? '#f6f7ff' : uxInk;
     const ring = o.ring ? `<circle class="ux-ring" r="${r + 5}" fill="none" stroke="#ffd27a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * (r + 5)).toFixed(1)}" style="--len:${(2 * Math.PI * (r + 5)).toFixed(1)}"/>` : '';
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${uxLabel(o.ui, o.act)}">
-      <circle r="${r + (o.ring ? 8 : 0)}" fill="#000" fill-opacity="0" pointer-events="all"/>
+      <circle r="${uxHitRadius(r, o.ring)}" fill="#000" fill-opacity="0" pointer-events="all"/>
       <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .78 : 1}" stroke="${stroke}" stroke-width="3" filter="url(#softShadow)"/>${ring}
       ${uxIcon(o.icon || o.act, r, ink)}</g></g>`;
   }
@@ -4453,6 +4940,8 @@ function createGame() {
   };
 
   /* ---------- title ---------- */
+  /* Four main buttons (start, rooms, wordbook, sticker book; PLAN D3). The two small corner buttons are not main buttons: "meet the
+     sisters" (the wardrobe is a button inside that page) and the parent gear (a 2 s hold). */
   function showTitle() {
     const tok = uxScreen('title', false);
     uxClearOverlay();
@@ -4465,10 +4954,9 @@ function createGame() {
       ${uxButton({ act: 'play', ui: cont ? 'continue' : 'start', icon: 'play', x: 480, y: 318, r: 66, plate: 'gold', cls: 'ux-pulse' })}
       ${uxButton({ act: 'rooms', ui: 'rooms', x: 372, y: 448, r: 36 })}
       ${uxButton({ act: 'words', ui: 'words', x: 480, y: 448, r: 36 })}
-      ${uxButton({ act: 'meet', ui: 'meet', x: 588, y: 448, r: 36 })}
-      ${uxButton({ act: 'stickers', ui: 'stickers', x: 48, y: 474, r: 30 })}
-      ${uxButton({ act: 'wardrobe', ui: 'wardrobe', x: 118, y: 474, r: 30 })}
-      ${uxButton({ act: 'gear', ui: 'settings', icon: 'gear', x: 912, y: 474, r: 28, plate: 'dark', ring: true })}
+      ${uxButton({ act: 'stickers', ui: 'stickers', x: 588, y: 448, r: 36 })}
+      ${uxButton({ act: 'meet', ui: 'meet', x: 42, y: 482, r: 24, cls: 'ux-minor' })}
+      ${uxButton({ act: 'gear', ui: 'settings', icon: 'gear', x: 920, y: 484, r: 20, plate: 'dark', ring: true, cls: 'ux-minor' })}
     </g>`;
     const root = uxPaint(html);
     uxBind(root, {
@@ -4477,7 +4965,6 @@ function createGame() {
       words: () => showWordbook(),
       meet: () => showMeet(),
       stickers: el => { if (typeof showStickers === 'function') showStickers(); else uxNudge(el); },
-      wardrobe: el => { if (typeof showWardrobe === 'function') showWardrobe(); else uxNudge(el); },
       gear: null,
     });
     const gear = root.querySelector('[data-act="gear"]');
@@ -4529,9 +5016,12 @@ function createGame() {
         <rect x="-135" y="76" width="270" height="360" rx="22" fill="none" stroke="${p.hue}" stroke-width="6"/>
       </g></g></g>`).join('');
     const html = `<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".55"/>
-      ${cards}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
+      ${cards}${uxButton({ act: 'wardrobe', ui: 'wardrobe', x: 480, y: 290, r: 42 })}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
     const root = uxPaint(html);
-    uxBind(root, { back: () => { uxStopVoice(); showTitle(); } });
+    uxBind(root, {
+      back: () => { uxStopVoice(); showTitle(); },
+      wardrobe: el => { uxStopVoice(); if (typeof showWardrobe === 'function') showWardrobe(); else uxNudge(el); },
+    });
     root.querySelectorAll('.ux-person').forEach(/** @param {HTMLElement} n */ n => {
       n.addEventListener('click', ev => {
         ev.stopPropagation(); uxWake();
@@ -4567,9 +5057,11 @@ function createGame() {
       const head = pg.lv ? `<image href="${SRC(pg.lv.bg)}" x="400" y="26" width="160" height="90" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round 12px)"/><rect x="400" y="26" width="160" height="90" rx="12" fill="none" stroke="#ffd27a" stroke-width="3"/>`
         : `<g transform="translate(480 70) scale(34)">${uxGlyph('star')}</g>`;
       const dots = pages.map((_, k) => `<circle cx="${480 + (k - (pages.length - 1) / 2) * 16}" cy="478" r="${k === cur ? 6 : 4}" fill="${k === cur ? '#ffd27a' : '#8090d6'}"/>`).join('');
+      const playable = uxReviewPool().length >= 3;   // the review game needs three words to choose between
       const html = `<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".6"/>
         ${head}${cards}${dots}
         ${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}
+        ${uxButton({ act: 'review', ui: 'start', icon: 'ear', x: 906, y: 50, r: 34, plate: 'gold', cls: playable ? '' : 'dim' })}
         ${cur > 0 ? `<g transform="translate(54 270) scale(-1 1)">${uxButton({ act: 'prev', ui: 'back', icon: 'next', x: 0, y: 0, r: 34 })}</g>` : ''}
         ${cur < pages.length - 1 ? uxButton({ act: 'nextpage', ui: 'next', icon: 'next', x: 906, y: 270, r: 34 }) : ''}</g>`;
       const root = uxPaint(html);
@@ -4577,10 +5069,16 @@ function createGame() {
         back: () => { uxStopVoice(); showTitle(); },
         prev: () => { cur--; draw(); },
         nextpage: () => { cur++; draw(); },
+        review: el => {
+          if (!playable) { uxNudge(el); return; }
+          uxStopVoice();
+          showReview(() => showWordbook(cur));
+        },
         word: el => {
           const id = el.dataset.word;
           const was = uxWordKnown(id);
           uxNudge(el);
+          if (!was && !uxWordOpen(id)) return;   // a silhouette of a room not opened yet: hearing it would count as learned
           uxWordVoice(id).then(() => {
             if (!uxAlive(tok) || was) return;
             draw();
@@ -4592,30 +5090,85 @@ function createGame() {
   }
 
   /* ---------- parent settings ---------- */
-  function showSettings() {
+  /* Learning progress for the parent page (PLAN-2 C5): per core word, how often it was heard, the share of quiz questions
+     answered right at the first tap (null before the first question) and how many rooms ago it was last met (null: never
+     stamped). `lastSeen` is the room clock, not a date: the save has no wall clock. */
+  function uxProgressRows() {
+    const now = save.roomClock || 0;
+    return LEVELS.map(lv => ({
+      room: lv.id,
+      words: (lv.words || []).map(id => {
+        const w = save.words[id] || {}, tries = (w.quiz || 0) + (w.wrong || 0);
+        return {
+          id, en: uxWord(id).en, heard: w.heard || 0,
+          accuracy: tries ? Math.round(100 * (w.quiz || 0) / tries) : null,
+          ago: w.lastSeen > 0 ? Math.max(0, now - w.lastSeen) : null,
+        };
+      }),
+    }));
+  }
+  function uxPlayTimeText(sec) {
+    const total = Math.max(0, Math.floor(sec || 0)), m = Math.floor(total / 60);
+    if (m >= 60) return `${Math.floor(m / 60)} 小时 ${m % 60} 分`;
+    return m >= 1 ? `${m} 分 ${total % 60} 秒` : `${total} 秒`;
+  }
+  function uxProgressHtml() {
+    const rows = uxProgressRows(), colW = 288, x0 = 62;
+    const head = [0, 1, 2].map(c => `<text x="${x0 + c * colW + 130}" y="112" font-size="15" fill="#a9b6e2" text-anchor="middle">听过</text><text x="${x0 + c * colW + 190}" y="112" font-size="15" fill="#a9b6e2" text-anchor="middle">首答对</text><text x="${x0 + c * colW + 250}" y="112" font-size="15" fill="#a9b6e2" text-anchor="middle">最近</text>`).join('');
+    const body = rows.map((r, i) => {
+      const y = 126 + i * 34;
+      const cells = r.words.map((w, c) => {
+        const x = x0 + c * colW, low = w.accuracy !== null && w.accuracy < 60;
+        return `<text class="latin" x="${x}" y="${y + 22}" font-size="18" fill="${w.heard ? '#f6f7ff' : '#8d96bd'}">${w.en}</text>
+          <text x="${x + 130}" y="${y + 22}" font-size="17" fill="${w.heard ? '#f6f7ff' : '#8d96bd'}" text-anchor="middle">${w.heard}</text>
+          <text x="${x + 190}" y="${y + 22}" font-size="17" fill="${low ? '#ffb1c9' : '#f6f7ff'}" text-anchor="middle">${w.accuracy === null ? '—' : w.accuracy + '%'}</text>
+          <text x="${x + 250}" y="${y + 22}" font-size="15" fill="#c9d3f5" text-anchor="middle">${w.ago === null ? '—' : w.ago === 0 ? '刚刚' : w.ago + ' 间前'}</text>`;
+      }).join('');
+      return `<rect x="50" y="${y}" width="860" height="32" rx="10" fill="#1b2563" opacity="${i % 2 ? 0 : .7}"/>${cells}`;
+    }).join('');
+    return `<g class="page"><rect width="960" height="520" fill="#0d1438" opacity=".7"/>
+      <rect x="30" y="20" width="900" height="480" rx="24" fill="#141c52" stroke="#4a5aa6" stroke-width="2"/>
+      <text x="480" y="70" text-anchor="middle" font-size="30" fill="#f6f7ff">学习进度</text>
+      <text x="880" y="70" text-anchor="end" font-size="20" fill="#ffd27a">累计游玩 ${uxPlayTimeText(save.totalPlaySeconds)}</text>
+      ${head}${body}
+      ${uxButton({ act: 'back', ui: 'back', icon: 'back', x: 78, y: 50, r: 28, plate: 'dark' })}</g>`;
+  }
+
+  const UX_OPT_H = 62;   // a settings option is a button too: 62 stage units are 66 CSS px on the reference tablet
+  function showSettings(view) {
     uxInit();
     uxInputReset();
+    let page = view === 'progress' ? 'progress' : 'main';
     const render = () => {
+      const root = $('modal');
+      if (page === 'progress') {
+        root.innerHTML = uxProgressHtml();
+        uxBind(root, { back: () => { page = 'main'; render(); } });
+        return;
+      }
       const opt = (key, val, x, y, w, label, icon) => {
         const cur = uxSetting(key), on = (cur === val) || (typeof val === 'boolean' && !!cur === val);
-        return `<g class="ux-opt ux-btn" data-act="set" data-key="${key}" data-val="${val}" data-ui="" tabindex="0" role="button" aria-label="${label}" transform="translate(${x} ${y})">
-          <rect class="ux-bg" width="${w}" height="56" rx="14" fill="${on ? '#ffd27a' : '#27357f'}" stroke="${on ? '#fff3c9' : '#4a5aa6'}" stroke-width="2"/>
-          ${icon ? `<g transform="translate(26 28) scale(17)">${uxGlyph(icon, on ? '#4a2c05' : '#f6f7ff')}</g>` : ''}
-          <text x="${icon ? w / 2 + 14 : w / 2}" y="36" text-anchor="middle" font-size="20" fill="${on ? '#4a2c05' : '#f6f7ff'}">${label}</text></g>`;
+        return `<g transform="translate(${x} ${y})"><g class="ux-opt ux-btn" data-act="set" data-key="${key}" data-val="${val}" data-ui="" tabindex="0" role="button" aria-label="${label}">
+          <rect class="ux-bg" width="${w}" height="${UX_OPT_H}" rx="14" fill="${on ? '#ffd27a' : '#27357f'}" stroke="${on ? '#fff3c9' : '#4a5aa6'}" stroke-width="2"/>
+          ${icon ? `<g transform="translate(26 ${UX_OPT_H / 2}) scale(17)">${uxGlyph(icon, on ? '#4a2c05' : '#f6f7ff')}</g>` : ''}
+          <text x="${icon ? w / 2 + 14 : w / 2}" y="${UX_OPT_H / 2 + 8}" text-anchor="middle" font-size="20" fill="${on ? '#4a2c05' : '#f6f7ff'}">${label}</text></g></g>`;
       };
-      const row = (y, label, opts) => `<text x="206" y="${y + 36}" font-size="23" fill="#ffd27a">${label}</text>${opts}`;
-      const html = `<g class="page"><rect width="960" height="520" fill="#0d1438" opacity=".7"/>
-        <rect x="150" y="40" width="660" height="396" rx="24" fill="#141c52" stroke="#4a5aa6" stroke-width="2"/>
-        <text x="480" y="98" text-anchor="middle" font-size="30" fill="#f6f7ff">家长设置</text>
-        ${row(124, '字幕', opt('subtitles', false, 336, 124, 216, '关') + opt('subtitles', true, 566, 124, 216, '开'))}
-        ${row(200, '英文', opt('english', 'words', 336, 200, 216, '只念单词') + opt('english', 'words+phrases', 566, 200, 216, '单词 + 短语'))}
-        ${row(276, '模式', opt('mode', 'solo', 336, 276, 216, '一个人玩', 'solo') + opt('mode', 'duo', 566, 276, 216, '和大人一起玩', 'duo'))}
-        ${row(352, '声音', opt('sound', true, 336, 352, 216, '开') + opt('sound', false, 566, 352, 216, '关'))}
-        ${uxButton({ act: 'close', ui: 'back', icon: 'close', x: 806, y: 40, r: 28, plate: 'dark' })}</g>`;
-      const root = $('modal');
-      root.innerHTML = html;
+      const row = (y, label, opts) => `<text x="206" y="${y + UX_OPT_H / 2 + 8}" font-size="23" fill="#ffd27a">${label}</text>${opts}`;
+      root.innerHTML = `<g class="page"><rect width="960" height="520" fill="#0d1438" opacity=".7"/>
+        <rect x="150" y="30" width="660" height="450" rx="24" fill="#141c52" stroke="#4a5aa6" stroke-width="2"/>
+        <text x="480" y="80" text-anchor="middle" font-size="30" fill="#f6f7ff">家长设置</text>
+        ${row(100, '字幕', opt('subtitles', false, 336, 100, 216, '关') + opt('subtitles', true, 566, 100, 216, '开'))}
+        ${row(170, '英文', opt('english', 'words', 336, 170, 216, '只念单词') + opt('english', 'words+phrases', 566, 170, 216, '单词 + 短语'))}
+        ${row(240, '模式', opt('mode', 'solo', 336, 240, 216, '一个人玩', 'solo') + opt('mode', 'duo', 566, 240, 216, '和大人一起玩', 'duo'))}
+        ${row(310, '声音', opt('sound', true, 336, 310, 216, '开') + opt('sound', false, 566, 310, 216, '关'))}
+        <g transform="translate(336 394)"><g class="ux-opt ux-btn" data-act="progress" data-ui="" tabindex="0" role="button" aria-label="学习进度">
+          <rect class="ux-bg" width="446" height="${UX_OPT_H}" rx="14" fill="#27357f" stroke="#4a5aa6" stroke-width="2"/>
+          <g transform="translate(40 ${UX_OPT_H / 2}) scale(17)">${uxGlyph('words', '#f6f7ff')}</g>
+          <text x="243" y="${UX_OPT_H / 2 + 8}" text-anchor="middle" font-size="20" fill="#f6f7ff">学习进度</text></g></g>
+        ${uxButton({ act: 'close', ui: 'back', icon: 'close', x: 806, y: 30, r: 28, plate: 'dark' })}</g>`;
       uxBind(root, {
         close: () => { root.textContent = ''; uxState.modal = null; },
+        progress: () => { page = 'progress'; render(); },
         set: el => {
           const v = el.dataset.val;
           uxPutSetting(el.dataset.key, v === 'true' ? true : v === 'false' ? false : v);
@@ -4664,6 +5217,9 @@ function createGame() {
     { id: 'left', kbd: 'l', x: 836, y: 466, w: 36 }, { id: 'right', kbd: 'r', x: 916, y: 466, w: 36 },
     { id: 'up', kbd: 'up', x: 876, y: 426, w: 36 }, { id: 'space', kbd: 'space', x: 696, y: 466, w: 132 },
   ];
+  /* The four round buttons of the top bar, 68 apart: 30 stage units of plate is 64 CSS px on the reference tablet and the hold rings
+     (restart, home) widen the touch area, so they must not crowd each other. The key diagram may reach up to the first of them. */
+  const UX_HUD_X = { restart: 700, home: 768, hint: 836, fs: 904 };
   function buildHud() {
     uxInit();
     const keys = UX_KEYS.map(k => {
@@ -4684,10 +5240,10 @@ function createGame() {
           <g id="uxAvOther" transform="translate(30 20)"><circle r="14" fill="#cfe0ff" stroke="#fff" stroke-width="2" opacity=".95"/><clipPath id="uxClipB"><circle r="12"/></clipPath><image id="uxAvImg2" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMin slice" clip-path="url(#uxClipB)"/></g>
         </g></g></g>
       <g id="uxPills" transform="translate(98 19)">${pills}</g>
-      ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: 716, y: 38, r: 26, plate: 'dark', keep: false, ring: true }) : ''}
-      ${uxButton({ act: 'home', ui: 'back', icon: 'home', x: 776, y: 38, r: 26, plate: 'dark', keep: false, ring: true })}
-      ${uxButton({ act: 'hint', ui: 'hint', icon: 'bulb', x: 836, y: 38, r: 26, plate: 'dark', keep: false })}
-      ${uxButton({ act: 'fs', ui: 'fullscreen', icon: 'fullscreen', x: 896, y: 38, r: 26, plate: 'dark', keep: false })}
+      ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: UX_HUD_X.restart, y: 38, r: 30, plate: 'dark', keep: false, ring: true, cls: 'ux-minor' }) : ''}
+      ${uxButton({ act: 'home', ui: 'back', icon: 'home', x: UX_HUD_X.home, y: 38, r: 30, plate: 'dark', keep: false, ring: true, cls: 'ux-minor' })}
+      ${uxButton({ act: 'hint', ui: 'hint', icon: 'bulb', x: UX_HUD_X.hint, y: 38, r: 30, plate: 'dark', keep: false, cls: 'ux-minor' })}
+      ${uxButton({ act: 'fs', ui: 'fullscreen', icon: 'fullscreen', x: UX_HUD_X.fs, y: 38, r: 30, plate: 'dark', keep: false, cls: 'ux-minor' })}
       <g id="uxKeysPos"><g id="uxKeys">${keys}</g></g></g>`;
     const root = $('hud');
     uxBind(root, {
@@ -4748,7 +5304,7 @@ function createGame() {
     /* keyboard diagram (solo only): game.kbd is kept by 80-input, teach = the key the tutorial asks for. A tap stays lit a moment. */
     /* The diagram rides in the top bar just after the counter pills (off the floor and the door).
        UX_KEYS span x 696..952, y 426..502 in stage units; KB_S keeps even 5 pills + diagram left of the buttons at x 750. */
-    const kbX = 98 + x + 12, KB_S = Math.max(.34, Math.min(.62, (typeof restartRoomHeld === 'function' ? 684 - kbX : 744 - kbX) / 256));   // 256 = width of UX_KEYS in stage units
+    const kbX = 98 + x + 12, KB_S = Math.max(.34, Math.min(.62, (typeof restartRoomHeld === 'function' ? UX_HUD_X.restart - 44 - kbX : UX_HUD_X.home - 44 - kbX) / 256));   // 256 = width of UX_KEYS in stage units
     $('uxKeysPos').setAttribute('transform', `translate(${(kbX - 696 * KB_S).toFixed(1)} ${(14 - 426 * KB_S).toFixed(1)}) scale(${KB_S})`);
     const kroot = $('uxKeys'), kbd = g.kbd || {}, now = performance.now();
     kroot.setAttribute('visibility', solo ? 'visible' : 'hidden');
@@ -4962,11 +5518,17 @@ function createGame() {
       b.push({ id, x: +rwClamp(fx, .06, .94).toFixed(4), y: +rwClamp(fy, .08, .94).toFixed(4) });   // last = on top
     };
 
+    /* One finger (pointer) owns a drag from its pointerdown to its up / cancel; the pointer is captured by the sticker so the moves
+       and the lift arrive even outside the picture, and every other pointer (a second finger, the mouse) is ignored meanwhile. */
+    let dragPointer = null;
     const startDrag = (ev, n) => {
-      if (ev.button) return;
+      if (ev.button || dragPointer !== null) return;
       ev.preventDefault(); ev.stopPropagation(); uxWake();
       const id = n.dataset.id, from = n.dataset.from, p0 = rwPoint(ev), dragBox = $('rwDrag');
       if (!dragBox) return;
+      const pid = ev.pointerId;
+      dragPointer = pid;
+      try { if (n.setPointerCapture) n.setPointerCapture(pid); } catch (e) {}
       const proxy = el('g', { transform: `translate(${p0.x} ${p0.y}) scale(1.12)` }, dragBox);
       proxy.innerHTML = rwStickerArt(id, RW_STICKER);
       n.parentNode.setAttribute('opacity', '.28');
@@ -4974,12 +5536,16 @@ function createGame() {
       let moved = false;
       const ring = $('rwBoardRing');
       const move = e => {
+        if (e.pointerId !== pid) return;
         const p = rwPoint(e);
         if (Math.hypot(p.x - p0.x, p.y - p0.y) > 6) moved = true;
         proxy.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(1.12)`);
         if (ring) ring.setAttribute('opacity', moved && rwInBoard(p) ? '.9' : '0');
       };
       const end = (e, cancel) => {
+        if (e.pointerId !== pid || dragPointer !== pid) return;
+        dragPointer = null;
+        try { if (n.releasePointerCapture) n.releasePointerCapture(pid); } catch (e2) {}
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', cancelUp);
@@ -5000,6 +5566,7 @@ function createGame() {
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
       window.addEventListener('pointercancel', cancelUp);
+      n.addEventListener('lostpointercapture', cancelUp);   // the browser took the pointer away without a cancel: drop the sticker back (a no-op after a normal lift)
     };
     draw();
   }
@@ -5158,10 +5725,36 @@ function createGame() {
   /* What the player has done since the room started, for the tutorial. */
   const inputSeen = { move: false, jump: false, magic: false };
 
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  /* Touch mode (PLAN-2 D1) is decided by what the screen's main pointer is, never by maxTouchPoints (a laptop with a touch screen
+     reports touch points and is still used with a mouse): (pointer: coarse) at the start and whenever it changes, or the first real
+     finger that touches the page. A mouse click ends a touch mode that only a finger started. The pad (#touch) and the golden
+     marker above the steered sister show in touch mode. */
+  const coarseQuery = typeof matchMedia === 'function' ? matchMedia('(pointer: coarse)') : null;
+  const portraitQuery = typeof matchMedia === 'function' ? matchMedia('(orientation: portrait)') : null;
+  let sawTouch = false;
+  let isTouch = !!(coarseQuery && coarseQuery.matches);
   if (isTouch) document.body.classList.add('touch');
   const touchHeld = { l: 0, r: 0 };
+  /* which pointer (finger) holds the left / right touch key right now; clearInput lets go of both */
+  const touchOwner = { l: null, r: null };
   let touchDuoId = 'frost';
+  function touchWanted() { return sawTouch || !!(coarseQuery && coarseQuery.matches); }
+  function setTouchMode(on) {
+    if (on === isTouch) return;
+    isTouch = on;
+    if (on) document.body.classList.add('touch'); else { document.body.classList.remove('touch'); clearInput(); }
+    queueFit();
+  }
+  /* A media query that changes while the page is open (the screen turned, a mouse was plugged in). */
+  function watchQuery(q, fn) {
+    if (!q) return;
+    try { if (q.addEventListener) q.addEventListener('change', fn); else if (q.addListener) q.addListener(fn); } catch (e) {}
+  }
+  /* The game is landscape. In portrait the page shows only the turn-the-tablet picture (CSS hides the stage and the pad), so no held
+     key may stay down when the screen turns. Other code may read this. */
+  function isPortraitView() { return !!(portraitQuery && portraitQuery.matches); }
+  watchQuery(coarseQuery, () => setTouchMode(touchWanted()));
+  watchQuery(portraitQuery, () => { clearInput(); padFocusClear(); queueFit(); });
 
   /* canPlay() (the room is live and nothing covers it) is in src/lib/play-gate.js. */
   /* The sister the arrow keys steer right now. */
@@ -5170,19 +5763,26 @@ function createGame() {
   function clearInput() {
     heldKeys.clear();
     touchHeld.l = touchHeld.r = 0;
+    touchOwner.l = touchOwner.r = null;
     for (const id of ['frost', 'nuan']) Object.assign(game.input[id], { l: 0, r: 0, d: 0 });
     for (const k of ['l', 'r', 'up', 'space']) game.kbd[k] = 0;
     document.querySelectorAll('#touch button.on').forEach(b => b.classList.remove('on'));
   }
   addEventListener('blur', clearInput);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) clearInput(); });   // the lift of a finger is lost when the app is left
 
-  /* Gamepad: d-pad or left stick walks, A / up jumps, X / B magic; Elsa remains the solo lead. */
-  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false };
+  /* Gamepad. In a room: d-pad or left stick walks, A / up jumps, X / B magic; Elsa remains the solo lead. Everywhere else (title, rooms,
+     wordbook, story pages, quiz, review) the d-pad moves a visible focus ring between the on-screen buttons, A presses the focused one
+     and B goes back (PLAN-2 D7). Start leaves a story scene like Enter does. */
+  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false, ok: false, back: false, nav: { l: 0, r: 0, u: 0, d: 0 } };
+  function padReset() {
+    Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false, ok: false, back: false, nav: { l: 0, r: 0, u: 0, d: 0 } });
+  }
   function pollGamepad() {
     let p = null;
     try { p = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(x => x && x.connected) || null; } catch (e) { p = null; }
-    const was = { jump: padState.jump, act: padState.act, any: padState.any, start: padState.start };
-    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, any: false, start: false }); return; }
+    const was = { jump: padState.jump, act: padState.act, any: padState.any, start: padState.start, ok: padState.ok, back: padState.back, nav: Object.assign({}, padState.nav) };
+    if (!p) { padReset(); padFocusClear(); return; }
     const b = i => !!(p.buttons[i] && p.buttons[i].pressed), ax = p.axes[0] || 0, ay = p.axes[1] || 0;
     padState.l = ax < -.45 || b(14) ? 1 : 0;
     padState.r = ax > .45 || b(15) ? 1 : 0;
@@ -5190,14 +5790,90 @@ function createGame() {
     padState.jump = b(0) || b(12) || ay < -.75;
     padState.act = b(2) || b(1) || b(7);
     padState.start = b(9);
-    padState.any = padState.jump || padState.act || padState.start;
+    padState.ok = b(0);
+    padState.back = b(1);
+    padState.nav = { l: padState.l, r: padState.r, u: ay < -.75 || b(12) ? 1 : 0, d: padState.d };
+    padState.any = padState.jump || padState.act || padState.start || padState.l + padState.r + padState.nav.u + padState.d > 0;
     if (padState.any && !was.any) wakeOnce();
     /* a scene (chapter card, recall, clear page, quiz) is left with the Start button only, like Enter on the keyboard */
-    if (storyIsOpen()) { if (padState.start && !was.start) advanceStoryPage(true); return; }
-    if (!canPlay()) return;
+    if (storyIsOpen() && padState.start && !was.start) advanceStoryPage(true);
+    if (!canPlay()) { padMenu(was); return; }
+    padFocusClear();
     if (padState.jump && !was.jump) pressPlay(steered(), 'jump');
     if (padState.act && !was.act) pressPlay(steered(), 'act');
   }
+
+  /* ---- gamepad focus ring ---- */
+  const padFocus = { el: null, armed: false };
+  /* The buttons the pad can reach on the current screen: everything role="button" in the overlay that is on screen (a word card
+     that has not popped up yet is not), except the hold-to-open ones (the parent gear). Rects are screen pixels, only compared. */
+  function padTargets() {
+    const out = [], root = $('overlay');
+    if (!root || !root.querySelectorAll) return out;
+    for (const el of /** @type {HTMLElement[]} */ (Array.from(root.querySelectorAll('[role="button"]')))) {
+      if (/** @type {any} */ (el).__uxHold || !el.getBoundingClientRect) continue;
+      const pop = el.closest ? el.closest('.ux-pop') : null;
+      if (pop && !pop.classList.contains('show')) continue;
+      const r = el.getBoundingClientRect();
+      if (!(r.width > 0 && r.height > 0)) continue;
+      out.push({ el, x: r.left, y: r.top, w: r.width, h: r.height, pulse: el.classList.contains('ux-pulse') });
+    }
+    return out;
+  }
+  function padFocusClear() {
+    padFocus.el = null; padFocus.armed = false;
+    const ring = $('padFocus');
+    if (ring && ring.getAttribute('visibility') !== 'hidden') ring.setAttribute('visibility', 'hidden');
+  }
+  /* Put the ring round the focused button (stage units), every frame while it is shown: cards pop up and wiggle. */
+  function padFocusDraw() {
+    const el = padFocus.el, ring = $('padFocus');
+    if (!ring) return;
+    const st = /** @type {any} */ ($('stage')), m = el && st && st.getScreenCTM ? st.getScreenCTM() : null;
+    if (!el || !m || !el.getBoundingClientRect || el.isConnected === false) { if (el && el.isConnected === false) padFocus.el = null; if (ring.getAttribute('visibility') !== 'hidden') ring.setAttribute('visibility', 'hidden'); return; }
+    const r = el.getBoundingClientRect(), inv = m.inverse();
+    const a = new DOMPoint(r.left, r.top).matrixTransform(inv), c = new DOMPoint(r.right, r.bottom).matrixTransform(inv);
+    const box = ring.firstElementChild, pad = 7;
+    if (box) {
+      box.setAttribute('x', (a.x - pad).toFixed(1)); box.setAttribute('y', (a.y - pad).toFixed(1));
+      box.setAttribute('width', (c.x - a.x + 2 * pad).toFixed(1)); box.setAttribute('height', (c.y - a.y + 2 * pad).toFixed(1));
+    }
+    ring.setAttribute('visibility', 'visible');
+  }
+  /* `byDirection`: a d-pad press put the ring here. Inside a learning scene only such a ring can be pressed with A (see padMenu). */
+  function padFocusSet(t, byDirection) {
+    padFocus.el = t.el; padFocus.armed = byDirection;
+    padFocusDraw();
+    uxSfx('hover');
+    uxPadName(t.el.dataset && t.el.dataset.ui);
+  }
+  /* What the pad does on a screen that is not a live room. The first press only shows the ring (on the button the scene waits for,
+     else the first one); after that the d-pad moves it and A presses the focused button. A learning scene (chapter card, recall,
+     clear page, quiz, review) is stricter, like the keyboard: it ignores the pad in its quiet first second, and A presses only a
+     ring that a d-pad press has put there, so a child mashing A (the jump button) can never skip a lesson. */
+  function padMenu(was) {
+    if (uxState.modal) { padFocusClear(); return; }   // the parent settings are for a grown-up with a mouse
+    const targets = padTargets();
+    const cur = padFocus.el ? targets.findIndex(t => t.el === padFocus.el) : -1;
+    if (cur < 0 && padFocus.el) padFocusClear();
+    if (!targets.length) return;
+    const dir = ['l', 'r', 'u', 'd'].find(k => padState.nav[k] && !was.nav[k]);
+    const ok = padState.ok && !was.ok, back = padState.back && !was.back;
+    if (!dir && !ok && !back) { padFocusDraw(); return; }
+    if (!storyAcceptsPad(performance.now())) return;
+    if (back && !storyIsOpen()) {
+      const t = targets.find(x => x.el.dataset && x.el.dataset.act === 'back');
+      if (t) padActivate(t.el);
+      return;
+    }
+    const strict = storyIsOpen() && !!story.strict;
+    if (cur < 0) { if (dir || ok) padFocusSet(targets[layoutPadStart(targets)], !!dir || !strict); return; }
+    if (dir) {
+      const j = layoutPadPick(dir, cur, targets);
+      if (j >= 0) padFocusSet(targets[j], true); else { padFocus.armed = true; padFocusDraw(); }
+    } else if (ok && (padFocus.armed || !strict)) padActivate(targets[cur].el);
+  }
+  function padActivate(el) { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); }
 
   /* A jump / magic press from any device. */
   function pressPlay(id, what) {
@@ -5295,22 +5971,48 @@ function createGame() {
     if (kb) game.kbd[kb] = 0;
   });
   addEventListener('pointerdown', wakeOnce, { capture: true });
+  /* The first real finger switches touch mode on; a mouse click switches it off again unless the screen's main pointer is a finger.
+     Any pointer press also puts the gamepad ring away: the mouse or the finger is in charge now. */
+  addEventListener('pointerdown', e => {
+    padFocusClear();
+    if (e.pointerType === 'touch') { sawTouch = true; setTouchMode(true); }
+    else if (e.pointerType === 'mouse') { sawTouch = false; setTouchMode(touchWanted()); }
+  }, { capture: true });
 
-  /* ---- touch (basic) ---- */
+  /* ---- touch ---- */
+  /* A held key (left / right) belongs to the finger that pressed it. The key captures that pointer, so the lift or the cancel always
+     arrives here, even when the finger slid away or the system took the touch for a long-press menu; a different finger cannot let go
+     of it, and a new press simply takes it over, so a lost lift can never leave it stuck. */
   function bindHold(id, key) {
     const b = $(id);
     if (!b) return;
-    const on = e => { e.preventDefault(); wakeOnce(); b.classList.add('on'); touchHeld[key] = 1; inputSeen.move = true; };
-    const off = () => { b.classList.remove('on'); touchHeld[key] = 0; };
+    let captured = false;
+    const on = e => {
+      e.preventDefault(); wakeOnce();
+      touchOwner[key] = e.pointerId;
+      captured = false;
+      try { if (b.setPointerCapture) { b.setPointerCapture(e.pointerId); captured = true; } } catch (err) {}
+      b.classList.add('on'); touchHeld[key] = 1; inputSeen.move = true;
+    };
+    const off = e => {
+      if (e && e.pointerId !== undefined && touchOwner[key] !== null && e.pointerId !== touchOwner[key]) return;
+      touchOwner[key] = null;
+      b.classList.remove('on'); touchHeld[key] = 0;
+    };
     b.addEventListener('pointerdown', on);
-    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, off);
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, off);
+    b.addEventListener('pointerleave', e => { if (!captured) off(e); });   // without pointer capture a finger that slides off lets go
+    b.addEventListener('contextmenu', e => { e.preventDefault(); off(null); });
   }
   /* The jump / magic / duo-switch buttons are play controls: while a scene (chapter card, recall, clear page, quiz) is open they do nothing. */
   function bindTap(id, fn) {
     const b = $(id);
     if (!b) return;
     b.addEventListener('pointerdown', e => { e.preventDefault(); wakeOnce(); if (!storyIsOpen()) fn(); });
+    b.addEventListener('contextmenu', e => e.preventDefault());
   }
+  /* A long press on the stage (a held hud button) or on the pad must never open the system menu. */
+  for (const id of ['stage', 'touch']) { const n = $(id); if (n) n.addEventListener('contextmenu', e => e.preventDefault()); }
   /* The sister the touch buttons act for: Elsa in solo, the one picked with the switch button in duo. */
   const touchId = () => (game.mode === 'solo' ? steered() : touchDuoId);
   bindHold('tLeft', 'l'); bindHold('tRight', 'r');
@@ -5337,7 +6039,6 @@ function createGame() {
 
   /* The stage keeps its 960 x 520 proportions and takes whatever room the window has after the other blocks of the
      page (hint line, touch padState) and the body padding. Nothing may scroll: 1280x720, 1440x900 and 1920x1080 all fit. */
-  const STAGE_RATIO = 960 / 520;
   function fitStage() {
     const st = $('stage'), body = document.body, root = document.documentElement;
     if (!st || !body) return;
@@ -5357,9 +6058,9 @@ function createGame() {
       }
       const availW = root.clientWidth - px('paddingLeft') - px('paddingRight');
       const availH = root.clientHeight - px('paddingTop') - px('paddingBottom') - others - gap * count;
-      const w = Math.max(240, Math.floor(Math.min(availW, availH * STAGE_RATIO)));
+      const w = layoutStageWidth(availW, availH);
       st.style.width = w + 'px';
-      st.style.height = Math.round(w / STAGE_RATIO) + 'px';
+      st.style.height = layoutStageHeight(w) + 'px';
       const info = $('info');
       if (info) info.style.width = w + 'px';
     }
@@ -5464,33 +6165,45 @@ function createGame() {
     const target = Number.isInteger(index) && index >= 0 && index < LEVELS.length ? index : (save.flags.prologue ? nextRoomIndex() : 0);
     const pages = save.flags.prologue ? [] : storyPages(['p1', 'p2', 'p3']);
     if (pages.length && typeof openStory === 'function') {
-      newToken();
+      const tok = newToken();
       playFlow.phase = 'story';
-      openStory(pages, () => { save.flags.prologue = true; saveWrite(); enterRoom(target); });
+      /* the three prologue paintings are not part of the title set (PLAN-2 D4): fetch them now, the pages open as soon as they are decoded */
+      loadArt(ART.prologue, ART_PATIENCE).then(() => {
+        if (stale(tok)) return;
+        openStory(pages, () => { save.flags.prologue = true; saveWrite(); enterRoom(target); });
+      });
     } else {
       save.flags.prologue = true; saveWrite();
       enterRoom(target);
     }
   }
 
-  /* Recall of the previous room, the chapter card, then the room itself. The room is already drawn behind the cards. */
+  /* Recall of the previous room (plus up to two older words that are due, src/lib/review.js), the chapter card, then the room
+     itself. The room is already drawn behind the cards. Entering a room moves the review clock on by one. */
   async function enterRoom(i) {
     const tok = newToken();
     const lv = LEVELS[i];
-    playFlow.wordBaseline = Object.fromEntries((lv.words || []).map(id => [id, (save.words[id] || {}).heard || 0]));
+    reviewAdvanceClock(save); saveWrite();
     playFlow.phase = 'intro';
     playFlow.tutoring = false;
     game.kbd.teach = null;
     clearInput();
     applySettings();
     game.state = 'title';
+    /* The room's pictures (background, tiles, toys, memory, word icons) are asked for first and decode while the recall and chapter
+       cards are up (PLAN-2 D4); the room is drawn behind the cards already, with its pictures placed at once (artPending). */
+    const recall = i > 0 && typeof uxRecallWords === 'function' ? uxRecallWords(LEVELS[i - 1].words || [], lv.words || []) : [];
+    const art = roomArt(lv, LINES, { wear: save.outfit, extraWords: recall, last: i === LEVELS.length - 1 });
+    loadArt(art);
     game.load(i);
     handleEvents();
     /* a card that fails to open must not strand the child on a blank screen: treat it as already closed */
-    const card = (fn, level) => new Promise(/** @param {(done?: any) => void} ok */ ok => { try { fn(level, ok); } catch (e) { console.error(e); ok(); } });
-    if (i > 0 && typeof showRecall === 'function') await card(showRecall, LEVELS[i - 1]);
+    const card = (fn, level, extra) => new Promise(/** @param {(done?: any) => void} ok */ ok => { try { fn(level, ok, extra); } catch (e) { console.error(e); ok(); } });
+    if (i > 0 && typeof showRecall === 'function') await card(showRecall, LEVELS[i - 1], recall);
     if (stale(tok)) return;
     if (typeof showChapter === 'function') await card(showChapter, lv);
+    if (stale(tok)) return;
+    await loadArt(art, ART_PATIENCE);   // normally long done; on a slow network at most one patience more, never a stranded child
     if (stale(tok)) return;
     beginPlay(i, tok);
   }
@@ -5585,13 +6298,28 @@ function createGame() {
     game.state = 'win';
     cheerBurst();
     if (typeof startMusic === 'function') guarded('startMusic', () => startMusic('end'));
+    const art = loadArt(ART.ending, ART_PATIENCE);
     await sleep(2600);
+    await art;
     if (stale(tok)) return;
     const pages = storyPages(['win', 'end']);
     if (pages.length && typeof openStory === 'function') openStory(pages, goTitle); else goTitle();
   }
 
   /* ---- frame loop ---- */
+  /* Play time for the parent page (PLAN-2 C5), in whole seconds. It runs while a room or a lesson is open: not on the title screens,
+     not under the parent settings. `dt` is capped per frame, so a hidden tab adds almost nothing. */
+  let playClock = 0;
+  function countPlayTime(dt) {
+    if (playFlow.phase === 'boot' || uxState.modal || (playFlow.phase === 'title' && !storyIsOpen())) return;
+    playClock += dt;
+    if (playClock < 1) return;
+    const whole = Math.floor(playClock);
+    playClock -= whole;
+    save.totalPlaySeconds = (save.totalPlaySeconds || 0) + whole;
+    saveSoon();
+  }
+
   let last = 0, acc = 0;
   function frame(ms) {
     try {
@@ -5599,6 +6327,7 @@ function createGame() {
       last = ms;
       const now = ms / 1000;
       pollGamepad();
+      countPlayTime(dt);
       const live = canPlay();
       if (live) {
         acc += dt;
@@ -5634,17 +6363,12 @@ function createGame() {
     requestAnimationFrame(frame);
   }
 
-  /* Decode every painting first, so frames never flash in empty. */
-  const lineArts = Object.values(LINES.lines || {}).map(l => l && l.art).filter(Boolean);
-  /* the six toy families of rooms 3-10: slope, spring, floe, note steps, ice flower, bunny (and its nest) */
-  const TOY_ART = /^(tile_slope_|spring_|floe_|note_|flower_|bunny_)/;
-  const names = [...new Set(['key', 'brick', 'water', 'pinkice', 'frozen', 'iceblock', 'door_open', 'door_closed', 'ball', 'two', 'snowman', 'flake', 'heart', 'gate', 'plate_up', 'plate_down', 'shelf0', 'shelf1', 'shelf2', 'drift0', 'drift1', ...lineArts, ...LEVELS.map(lv => lv.bg), ...Object.keys(SIZES).filter(k => k.startsWith('fx_') || /^fish_/.test(k) || /^(frost|nuan)_/.test(k) || TOY_ART.test(k))])];
-  const loads = names.map(n => {
-    const i = new Image(); i.src = SRC(n);
-    return i.decode().then(() => { if (TOY_ART.test(n) && typeof toyImageReady === 'function') toyImageReady(n); }, () => {});
-  });
+  /* Decode the title set first, so frames never flash in empty (PLAN-2 D4: the title, the UI and the first room only, src/lib/assets.js;
+     the prologue, every other room and the ending load when the flow reaches them). */
+  const ART = assetPlan(LEVELS, LINES, { wear: save.outfit });
+  const titleLoad = loadArt(ART.title, ART_PATIENCE);
 
-  if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom };
+  if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom, artStats, loadArt, ART, tyStats: typeof tyStats !== 'undefined' ? tyStats : null };
 
   fitStage();
   applySettings();
@@ -5653,7 +6377,12 @@ function createGame() {
   game.state = 'title';
   playFlow.phase = 'title';
   if (typeof showTitle === 'function') showTitle();
-  const patience = new Promise(ok => setTimeout(ok, 1500));
-  Promise.race([Promise.all(loads), patience]).finally(() => { fitStage(); requestAnimationFrame(frame); });
+  titleLoad.finally(() => { fitStage(); requestAnimationFrame(frame); });
+
+  /* PLAN-2 D5: the offline worker (sw.js, generated by art/build_page.py). Not for ?dev=1, not from file://, not where the browser has none. */
+  if (offlineWorkerAllowed(location.search, location.protocol, typeof navigator !== 'undefined' && 'serviceWorker' in navigator)) {
+    const register = () => navigator.serviceWorker.register('sw.js').catch(e => console.warn('offline worker:', e && e.message));
+    if (document.readyState === 'complete') register(); else addEventListener('load', register);
+  }
 })();
 </script>

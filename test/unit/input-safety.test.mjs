@@ -81,9 +81,26 @@ function makeClock() {
   return clock;
 }
 
+/** matchMedia stand-in: the page asks (pointer: coarse) and (orientation: portrait); the test flips them with media.set(name, bool). */
+function makeMedia({ coarse = false, portrait = false } = {}) {
+  const state = { coarse, portrait };
+  const watchers = [];
+  const nameOf = q => (/pointer:\s*coarse/.test(q) ? 'coarse' : /orientation:\s*portrait/.test(q) ? 'portrait' : null);
+  return {
+    state,
+    matchMedia: q => {
+      const name = nameOf(q), listeners = [];
+      watchers.push({ name, listeners });
+      return { media: q, get matches() { return name ? state[name] : false; }, addEventListener: (t, f) => { if (t === 'change') listeners.push(f); }, removeEventListener() {} };
+    },
+    set(name, value) { state[name] = value; for (const w of watchers) if (w.name === name) for (const f of w.listeners) f({ matches: value }); },
+  };
+}
+
 /**
  * Load the real logic and the named src/view files (without .js) into one fake page.
- *   opts.touch       the device has a touch screen
+ *   opts.touch       the main pointer is a finger ((pointer: coarse) matches); opts.maxTouchPoints / opts.ontouchstart only decorate the device
+ *   opts.portrait    the screen starts in portrait
  *   opts.globals     extra globals (stand-ins for the view files that are not loaded)
  *   opts.localStorage  the storage object the page sees (default: a plain Map-backed one, readable as `env.store`)
  *   opts.exports     names from the view scope to hand back
@@ -114,6 +131,7 @@ function load(files, opts = {}) {
     get src() { return this._src; }
     decode() { return Promise.resolve(); }
   }
+  const media = makeMedia({ coarse: !!opts.touch, portrait: !!opts.portrait });
   const sizes = JSON.parse(fs.readFileSync(path.join(ROOT, 'art', 'sizes.json'), 'utf8'));
   const lines = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'content', 'lines.json'), 'utf8'));
   const words = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'content', 'words.json'), 'utf8'));
@@ -121,21 +139,26 @@ function load(files, opts = {}) {
   const ctx = {
     document, console, Math, JSON, Promise, Object, Array, Set, Map, Number, String, Boolean, Date, Infinity, NaN, Error,
     location: { search: '' },
-    navigator: { maxTouchPoints: opts.touch ? 5 : 0, getGamepads: () => pads.list },
+    navigator: { maxTouchPoints: opts.maxTouchPoints !== undefined ? opts.maxTouchPoints : opts.touch ? 5 : 0, getGamepads: () => pads.list },
+    matchMedia: media.matchMedia,
     getComputedStyle: () => ({}),
     requestAnimationFrame: () => 0,
-    MouseEvent: class {},
+    MouseEvent: class { constructor(type, init) { this.type = type; Object.assign(this, init); } },
+    Event: class { constructor(type) { this.type = type; } },
+    dispatchEvent: () => true,
+    DOMPoint: class { constructor(x, y) { this.x = x; this.y = y; } matrixTransform() { return new ctx.DOMPoint(this.x, this.y); } },
     Image: FakeImage,
     setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout, setInterval: clock.setInterval, clearInterval: clock.clearInterval,
     performance: { now: () => clock.now },
     addEventListener: (type, fn, capture) => windowListeners.push({ type, fn, capture: !!capture }),
+    removeEventListener: (type, fn) => { const i = windowListeners.findIndex(l => l.type === type && l.fn === fn); if (i >= 0) windowListeners.splice(i, 1); },
     // stand-ins for view files that are not loaded here
     uxState: { modal: null },
     ...(opts.globals || {}),
   };
   ctx.window = ctx;
   ctx.localStorage = opts.localStorage || { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => { store.set(k, String(v)); }, removeItem: k => { store.delete(k); } };
-  if (opts.touch) ctx.ontouchstart = null;
+  if (opts.touch || opts.ontouchstart) ctx.ontouchstart = null;
   vm.createContext(ctx);
 
   const logicDir = path.join(ROOT, 'src');
@@ -153,7 +176,7 @@ function load(files, opts = {}) {
   const exportsObj = vm.runInContext(code, ctx, { filename: 'view' });
 
   const env = {
-    ctx, clock, pads, windowListeners, requested, store, getEl, exports: exportsObj,
+    ctx, clock, pads, windowListeners, requested, store, getEl, media, exports: exportsObj,
     /** dispatch a keydown to every window listener (capture ones first), like the browser would; returns whether anyone prevented it */
     keydown(code, extra = {}) {
       const ev = { type: 'keydown', code, repeat: false, metaKey: false, ctrlKey: false, altKey: false, target: body, prevented: false, stopped: false,
@@ -163,6 +186,18 @@ function load(files, opts = {}) {
       return ev;
     },
     keyup(code) { for (const l of windowListeners.filter(l => l.type === 'keyup')) l.fn({ type: 'keyup', code }); },
+    /** a window event (pointermove, pointerdown, blur ...) to every listener of that type; returns whether anyone prevented it */
+    fire(type, init = {}) {
+      const ev = { type, prevented: false, preventDefault() { this.prevented = true; }, stopPropagation() {}, ...init };
+      for (const l of [...windowListeners.filter(l => l.type === type)]) l.fn(ev);
+      return ev;
+    },
+    /** an event on the element with this id (pointerdown, pointerup, contextmenu ...); returns it, so `.prevented` can be read */
+    on(id, type, init = {}) {
+      const ev = { type, prevented: false, preventDefault() { this.prevented = true; }, stopPropagation() {}, ...init };
+      for (const fn of getEl(id).listeners[type] || []) fn(ev);
+      return ev;
+    },
     /** a pointerdown on the element with this id */
     tap(id) {
       let prevented = false;
@@ -382,12 +417,6 @@ export function aRoomIsLoadedOnceWhenTheChildEntersIt({ assert }) {
   });
 }
 
-export function theToyPicturesAreInTheFirstPreload({ assert }) {
-  const env = playPage('solo');
-  const wanted = ['tile_slope_r', 'tile_slope_l', 'spring_0', 'spring_1', 'floe_l', 'floe_m', 'floe_r', 'note_1', 'note_5_lit', 'flower_0', 'flower_2', 'bunny_idle', 'bunny_hop4', 'bunny_home', 'bunny_nest'];
-  for (const name of wanted) assert.ok(env.requested.some(u => u.startsWith(`game/${name}.webp`)), `${name} is preloaded`);
-}
-
 export async function clearingARoomTakesANewTokenSoTheTutorialCannotTalkOverTheClearPage({ assert }) {
   const env = playPage('solo');
   const { game, playFlow, handleEvents, stale } = env.exports;
@@ -457,4 +486,354 @@ export async function theRealLearningCardsIgnoreSpaceTenTimesOver({ assert }) {
     assert.equal(env.exports.story.phase, phase, `${scene}: it did not move on to another step`);
     assert.equal(stops, stopsBefore, `${scene}: the voice task was not ended`);
   }
+}
+
+/* ---- PLAN-2 D1: touch mode, the touch keys, the sticker drag ---- */
+const isTouchMode = env => env.ctx.document.body.classList.contains('touch');
+
+export function touchModeComesFromThePointerTypeOrAFirstFingerNotFromMaxTouchPoints({ assert }) {
+  /* a laptop with a touch screen: it reports touch points and has ontouchstart, but its main pointer is the mouse */
+  const laptop = playPage('solo', { maxTouchPoints: 10, ontouchstart: true });
+  assert.equal(isTouchMode(laptop), false, 'touch points alone do not make a touch device');
+  laptop.fire('pointerdown', { pointerType: 'mouse' });
+  assert.equal(isTouchMode(laptop), false);
+  laptop.fire('pointerdown', { pointerType: 'touch' });
+  assert.equal(isTouchMode(laptop), true, 'the first real finger does');
+  laptop.fire('pointerdown', { pointerType: 'mouse' });
+  assert.equal(isTouchMode(laptop), false, 'a mouse click on a machine whose main pointer is the mouse ends it again');
+
+  /* a tablet: (pointer: coarse) from the start */
+  const tablet = playPage('solo', { touch: true });
+  assert.equal(isTouchMode(tablet), true);
+  tablet.fire('pointerdown', { pointerType: 'mouse' });
+  assert.equal(isTouchMode(tablet), true, 'a coarse main pointer stays in touch mode');
+  tablet.media.set('coarse', false);
+  assert.equal(isTouchMode(tablet), false, 'and follows the media query when it changes (a keyboard and mouse dock)');
+  tablet.media.set('coarse', true);
+  assert.equal(isTouchMode(tablet), true);
+}
+
+export function theDuoMarkFollowsTheDecidedTouchModeLiveNotAValueFixedAtLoad({ assert }) {
+  const env = playPage('duo', { maxTouchPoints: 5 });
+  const { view, drawDuoTouchMark } = env.exports;
+  view.frost.mark.setAttribute('visibility', 'hidden');
+  drawDuoTouchMark(1);
+  assert.equal(view.frost.mark.getAttribute('visibility'), 'hidden', 'no touch mode, no marker');
+  env.fire('pointerdown', { pointerType: 'touch' });
+  drawDuoTouchMark(1);
+  assert.equal(view.frost.mark.getAttribute('visibility'), 'visible', 'after the first finger the marker shows');
+}
+
+export function aTouchKeyBelongsToTheFingerThatPressedItAndNeverStaysStuck({ assert }) {
+  const env = playPage('solo', { touch: true });
+  const { game, syncInput } = env.exports;
+  const key = env.getEl('tLeft'), captured = [], released = [];
+  key.setPointerCapture = id => captured.push(id);
+  key.releasePointerCapture = id => released.push(id);
+  const held = () => { syncInput(); return game.input.frost.l; };
+
+  const down = env.on('tLeft', 'pointerdown', { pointerId: 1, pointerType: 'touch' });
+  assert.equal(down.prevented, true, 'the press is not also a click, a scroll or a text selection');
+  assert.deepEqual(captured, [1], 'the key captures that finger, so its lift and its cancel always arrive here');
+  assert.equal(held(), 1);
+  assert.ok(key.classList.contains('on'));
+
+  env.on('tLeft', 'pointerup', { pointerId: 2 });
+  assert.equal(held(), 1, 'another finger lifting does not let go');
+
+  env.on('tLeft', 'pointercancel', { pointerId: 1 });
+  assert.equal(held(), 0, 'a cancel (the system took the touch) lets go');
+  assert.equal(key.classList.contains('on'), false);
+
+  env.on('tLeft', 'pointerdown', { pointerId: 3 });
+  const menu = env.on('tLeft', 'contextmenu');
+  assert.equal(menu.prevented, true, 'a long press opens no system menu');
+  assert.equal(held(), 0, 'and cannot leave the key down');
+
+  env.on('tLeft', 'pointerdown', { pointerId: 4 });
+  env.on('tLeft', 'lostpointercapture', { pointerId: 4 });
+  assert.equal(held(), 0, 'losing the capture lets go');
+
+  env.on('tLeft', 'pointerdown', { pointerId: 5 });
+  env.on('tLeft', 'pointerdown', { pointerId: 6 });
+  env.on('tLeft', 'pointerup', { pointerId: 5 });
+  assert.equal(held(), 1, 'a second finger takes the key over; the first one lifting does not release it');
+  env.on('tLeft', 'pointerup', { pointerId: 6 });
+  assert.equal(held(), 0);
+
+  env.on('tLeft', 'pointerdown', { pointerId: 7 });
+  env.on('tLeft', 'pointerleave', { pointerId: 7 });
+  assert.equal(held(), 1, 'a captured finger that slides off still holds the key (the lift will arrive)');
+  env.fire('blur');
+  assert.equal(held(), 0, 'the window losing focus lets go');
+  env.on('tLeft', 'pointerdown', { pointerId: 8 });
+  assert.equal(held(), 1, 'and the key works again at once: no owner is left behind');
+  env.on('tLeft', 'pointerup', { pointerId: 8 });
+  assert.equal(held(), 0);
+
+  /* a browser without pointer capture: leaving the key is the only way to learn the finger moved away */
+  const bare = playPage('solo', { touch: true });
+  const g2 = bare.exports.game;
+  bare.on('tRight', 'pointerdown', { pointerId: 1 });
+  bare.exports.syncInput();
+  assert.equal(g2.input.frost.r, 1);
+  bare.on('tRight', 'pointerleave', { pointerId: 1 });
+  bare.exports.syncInput();
+  assert.equal(g2.input.frost.r, 0, 'without capture a finger that slides off lets go');
+}
+
+export function noTouchControlOpensTheSystemMenuOnALongPress({ assert }) {
+  const env = playPage('duo', { touch: true });
+  for (const id of ['tLeft', 'tRight', 'tJump', 'tAct', 'tSwitch', 'touch', 'stage']) {
+    assert.equal(env.on(id, 'contextmenu').prevented, true, `${id}: contextmenu is stopped`);
+  }
+}
+
+/* A stand-in sticker that records the listeners the book puts on it, in a book that opens with one sticker in its tray. */
+function stickerBook() {
+  const voice = { busy: false, stop() {}, line: () => Promise.resolve(true), word: () => Promise.resolve(true), wordInfo: () => null, ui() {}, preload: () => Promise.resolve() };
+  const env = load(['00-core', '10-stage', '15-toys', '20-sisters', '30-fx', '60-story', '70-ui', '75-rewards', '80-input', '90-main'],
+    { exports: ['save', 'showStickers'], globals: { voice, advanceStory() {} } });
+  const { save } = env.exports;
+  save.stickers = ['hall'];
+  save.board = [];
+  const listeners = {}, captured = [], released = [];
+  const item = {
+    dataset: { id: 'hall', from: 'tray' },
+    parentNode: { setAttribute() {} },
+    addEventListener: (type, fn) => { (listeners[type] || (listeners[type] = [])).push(fn); },
+    setPointerCapture: id => captured.push(id),
+    releasePointerCapture: id => released.push(id),
+  };
+  const overlay = env.getEl('overlay');
+  overlay.querySelectorAll = sel => (sel === '.rw-item' ? [item] : []);
+  overlay.getScreenCTM = () => ({ inverse: () => ({}) });
+  return { env, save, item, listeners, captured, released, start: () => env.exports.showStickers(0) };
+}
+const pointerEvent = (pointerId, x, y, extra = {}) => ({ button: 0, pointerId, clientX: x, clientY: y, preventDefault() {}, stopPropagation() {}, ...extra });
+const lastOf = (list, type) => list[type][list[type].length - 1];
+
+export function aStickerDragFollowsOnePointerAndCapturesIt({ assert }) {
+  const b = stickerBook();
+  b.start();
+  assert.ok(b.listeners.pointerdown && b.listeners.pointerdown.length >= 1, 'the sticker listens for a press');
+  lastOf(b.listeners, 'pointerdown')(pointerEvent(7, 100, 100));
+  assert.deepEqual(b.captured, [7], 'the sticker captures the pointer that picked it up');
+  const proxy = b.env.getEl('rwDrag').children[0];
+  assert.match(proxy.attrs.transform, /^translate\(100 100\)/);
+
+  const movesBefore = b.env.windowListeners.filter(l => l.type === 'pointermove').length;
+  lastOf(b.listeners, 'pointerdown')(pointerEvent(8, 400, 300));   // a second finger on the same sticker
+  assert.equal(b.env.windowListeners.filter(l => l.type === 'pointermove').length, movesBefore, 'a second finger does not start another drag');
+  assert.deepEqual(b.captured, [7]);
+
+  b.env.fire('pointermove', pointerEvent(9, 600, 400));
+  assert.match(proxy.attrs.transform, /^translate\(100 100\)/, 'a move of another pointer does not drag it');
+  b.env.fire('pointerup', pointerEvent(9, 600, 400));
+  assert.equal(b.save.board.length, 0, 'nor does another pointer lifting drop it');
+  assert.equal(b.env.windowListeners.some(l => l.type === 'pointerup'), true, 'the drag is still open');
+
+  b.env.fire('pointermove', pointerEvent(7, 300, 200));
+  assert.match(proxy.attrs.transform, /^translate\(300\.0 200\.0\)/, 'its own pointer moves it');
+  b.env.fire('pointerup', pointerEvent(7, 300, 200));
+  assert.equal(b.save.board.length, 1, 'its own lift drops it on the board');
+  assert.equal(b.save.board[0].id, 'hall');
+  assert.deepEqual(b.released, [7], 'the capture is let go');
+  assert.equal(b.env.windowListeners.some(l => ['pointermove', 'pointerup', 'pointercancel'].includes(l.type)), false, 'and the window listeners are removed');
+}
+
+export function aCancelledStickerDragPutsTheStickerBackAndFreesTheNextDrag({ assert }) {
+  const b = stickerBook();
+  b.start();
+  lastOf(b.listeners, 'pointerdown')(pointerEvent(3, 100, 100));
+  b.env.fire('pointermove', pointerEvent(3, 300, 200));
+  b.env.fire('pointercancel', pointerEvent(4, 300, 200));
+  assert.equal(b.env.windowListeners.some(l => l.type === 'pointercancel'), true, 'a cancel of another pointer is ignored');
+  b.env.fire('pointercancel', pointerEvent(3, 300, 200));
+  assert.equal(b.save.board.length, 0, 'a cancelled drag places nothing');
+  assert.deepEqual(b.released, [3]);
+  lastOf(b.listeners, 'pointerdown')(pointerEvent(5, 100, 100));
+  assert.deepEqual(b.captured, [3, 5], 'the next finger can pick a sticker up');
+  b.env.fire('pointermove', pointerEvent(5, 300, 200));
+  b.env.on('x', 'noop');
+  lastOf(b.listeners, 'lostpointercapture')(pointerEvent(5, 300, 200));
+  assert.equal(b.save.board.length, 0, 'a capture lost without a lift also drops it back');
+  b.env.fire('pointerup', pointerEvent(5, 300, 200));
+  assert.equal(b.save.board.length, 0, 'and a late lift does nothing');
+}
+
+/* ---- PLAN-2 D7: the gamepad moves a focus ring over the buttons of every screen that is not a live room ---- */
+const PAD = { A: 0, B: 1, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+function menuPage() {
+  const lines = [];
+  const voice = { busy: false, stop() {}, line: (key, opts) => { lines.push({ key, opts }); return Promise.resolve(true); }, word: () => Promise.resolve(true), wordInfo: () => null, ui() {}, preload: () => Promise.resolve() };
+  const env = load(['00-core', '10-stage', '20-sisters', '30-fx', '60-story', '70-ui', '80-input', '90-main'],
+    { exports: ['playFlow', 'pollGamepad', 'padState', 'save', 'uxState', 'get story() { return story; }', 'set story(v) { story = v; }'], globals: { voice } });
+  const state = { targets: [] };
+  /** a stand-in role="button" element: where it is on the screen, which class it has, and the clicks it received */
+  const button = (act, rect, { ui = '', classes = [] } = {}) => ({
+    act, dataset: { act, ui }, clicks: [], classList: { contains: c => classes.includes(c) }, closest: () => null,
+    getBoundingClientRect: () => ({ left: rect[0], top: rect[1], width: rect[2], height: rect[3], right: rect[0] + rect[2], bottom: rect[1] + rect[3] }),
+    dispatchEvent(ev) { this.clicks.push(ev.type); return true; },
+  });
+  env.getEl('overlay').querySelectorAll = sel => (sel === '[role="button"]' ? state.targets : []);
+  env.getEl('stage').getScreenCTM = () => ({ inverse: () => ({}) });
+  const ringRect = env.getEl('padRect');
+  env.getEl('padFocus').firstElementChild = ringRect;
+  const pad = down => ({ connected: true, axes: [0, 0], buttons: Array.from({ length: 16 }, (_, i) => ({ pressed: down.includes(i) })) });
+  const tap = (...buttons) => { env.pads.list = [pad(buttons)]; env.exports.pollGamepad(); env.pads.list = [pad([])]; env.exports.pollGamepad(); };
+  const ring = () => env.getEl('padFocus').getAttribute('visibility') || 'hidden';
+  return { env, lines, state, button, tap, ring, ringRect, voice, names: () => lines.map(l => l.key) };
+}
+/** the title: play (pulsing) in the middle, three below it, the small meet button in the left corner */
+function titleButtons(m) {
+  return {
+    play: m.button('play', [400, 200, 160, 160], { ui: 'start', classes: ['ux-pulse'] }),
+    rooms: m.button('rooms', [300, 380, 80, 80], { ui: 'rooms' }),
+    words: m.button('words', [440, 380, 80, 80], { ui: 'words' }),
+    stickers: m.button('stickers', [580, 380, 80, 80], { ui: 'stickers' }),
+    meet: m.button('meet', [20, 440, 50, 50], { ui: 'meet' }),
+  };
+}
+
+export function theDPadMovesTheRingBetweenTitleButtonsAndAPressesTheFocusedOne({ assert }) {
+  const m = menuPage();
+  const t = titleButtons(m);
+  m.state.targets = Object.values(t);
+  assert.equal(m.ring(), 'hidden', 'no ring before the pad is used');
+
+  m.tap(PAD.A);
+  assert.equal(m.ring(), 'visible', 'the first press shows the ring');
+  assert.equal(t.play.clicks.length, 0, 'and presses nothing');
+  assert.deepEqual(m.names(), ['ui_start'], 'it lands on the button the screen waits for and says its name');
+  assert.equal(m.lines[0].opts.priority, 0, 'quietly: the name never cuts a lesson');
+  assert.equal(m.lines[0].opts.tag, 'ui');
+
+  m.tap(PAD.DOWN);
+  assert.equal(m.names().at(-1), 'ui_words', 'down from play: the button right below');
+  m.tap(PAD.RIGHT);
+  assert.equal(m.names().at(-1), 'ui_stickers');
+  m.tap(PAD.LEFT); m.tap(PAD.LEFT);
+  assert.equal(m.names().at(-1), 'ui_rooms');
+  m.tap(PAD.LEFT);
+  assert.equal(m.names().at(-1), 'ui_meet', 'the small corner button is reachable too');
+  m.tap(PAD.LEFT);
+  assert.equal(m.names().at(-1), 'ui_meet', 'at the edge the ring stays');
+
+  m.tap(PAD.A);
+  assert.equal(t.meet.clicks.length, 1, 'A presses the focused button with a click');
+  assert.deepEqual(Object.values(t).map(b => b.clicks.length), [0, 0, 0, 0, 1]);
+  assert.deepEqual(JSON.parse(JSON.stringify(m.env.exports.padState.nav)), { l: 0, r: 0, u: 0, d: 0 });
+
+  const x = m.ringRect.attrs;
+  assert.ok(Number(x.width) > 50 && Number(x.height) > 50, 'the ring is drawn round the button');
+  m.tap(PAD.UP);
+  assert.equal(m.names().at(-1), 'ui_meet', 'nothing above the corner: stays');
+  m.tap(PAD.RIGHT);
+  assert.equal(m.names().at(-1), 'ui_rooms');
+}
+
+export function holdingADirectionMovesTheRingOnlyOnce({ assert }) {
+  const m = menuPage();
+  const t = titleButtons(m);
+  m.state.targets = [t.rooms, t.words, t.stickers];
+  m.tap(PAD.A);
+  const held = { connected: true, axes: [0, 0], buttons: Array.from({ length: 16 }, (_, i) => ({ pressed: i === PAD.RIGHT })) };
+  m.env.pads.list = [held];
+  for (let i = 0; i < 20; i++) m.env.exports.pollGamepad();
+  assert.deepEqual(m.names(), ['ui_rooms', 'ui_words'], 'one step for one press, however long it is held');
+}
+
+export function aGamepadStickMovesTheRingToo({ assert }) {
+  const m = menuPage();
+  const t = titleButtons(m);
+  m.state.targets = [t.rooms, t.words, t.stickers];
+  m.tap(PAD.A);
+  m.env.pads.list = [{ connected: true, axes: [0.9, 0], buttons: Array.from({ length: 16 }, () => ({ pressed: false })) }];
+  m.env.exports.pollGamepad();
+  assert.equal(m.names().at(-1), 'ui_words');
+}
+
+export function aMashedAKeyNeverSkipsALessonButAPressedFocusedButtonDoes({ assert }) {
+  const m = menuPage();
+  const { exports: x } = m.env;
+  const go = m.button('go', [800, 400, 100, 100], { ui: 'next', classes: ['ux-pulse'] });
+  const cards = [0, 1, 2].map(k => m.button('word', [100 + k * 230, 200, 200, 200]));
+  m.state.targets = [...cards, go];
+  x.story = { name: 'chapter', strict: true, openedAt: m.env.clock.now, onKey() { m.advanced = (m.advanced || 0) + 1; } };
+  x.playFlow.phase = 'intro';
+
+  for (let i = 0; i < 6; i++) m.tap(PAD.A, PAD.B);
+  assert.equal(m.ring(), 'hidden', 'inside the quiet first second the pad does nothing at all');
+  assert.equal([...cards, go].reduce((n, b) => n + b.clicks.length, 0), 0);
+
+  return m.env.clock.advance(1100).then(() => {
+    for (let i = 0; i < 12; i++) m.tap(PAD.A);
+    assert.equal(m.ring(), 'visible', 'then the first A shows the ring (on the pulsing next button)');
+    assert.equal([...cards, go].reduce((n, b) => n + b.clicks.length, 0), 0, 'but a lesson is never left by mashing A: a ring that A put there is not pressable');
+    m.tap(PAD.RIGHT);                                   // nothing lies to the right of the next button: the ring stays, but a d-pad press has now armed it
+    assert.equal(m.names().at(-1), 'ui_next');
+    m.tap(PAD.A);
+    assert.equal(go.clicks.length, 1, 'a d-pad press arms the ring: now A is a deliberate press of the button it shows');
+    assert.equal([...cards, go].reduce((n, b) => n + b.clicks.length, 0), 1);
+    m.state.targets = [m.button('go', [800, 400, 100, 100], { classes: ['ux-pulse'] })];   // the page is painted again
+    m.tap(PAD.A);
+    assert.equal(m.state.targets[0].clicks.length, 0, 'on a new page the old focus is gone, so A only shows the ring again');
+    assert.equal(m.ring(), 'visible');
+    for (let i = 0; i < 3; i++) m.tap(PAD.B);
+    assert.equal(m.state.targets[0].clicks.length, 0, 'B (the magic button) does not leave a lesson');
+    m.tap(PAD.START);
+    assert.equal(m.advanced, 1, 'Start still leaves a scene like Enter does');
+  });
+}
+
+export function bGoesBackOnMenuScreensOnly({ assert }) {
+  const m = menuPage();
+  const back = m.button('back', [20, 20, 70, 70], { ui: 'back' });
+  const rooms = m.button('room', [300, 200, 150, 90]);
+  m.state.targets = [back, rooms];
+  m.tap(PAD.B);
+  assert.equal(back.clicks.length, 1, 'B presses the back button of a menu screen');
+  m.env.exports.story = { name: 'review', strict: true, openedAt: -5000 };
+  m.tap(PAD.B);
+  assert.equal(back.clicks.length, 1, 'but not inside a lesson or the review game');
+}
+
+export function theRingStaysOutOfTheRoomTheParentSettingsAndMouseUse({ assert }) {
+  const m = menuPage();
+  const t = titleButtons(m);
+  m.state.targets = Object.values(t);
+  m.tap(PAD.A);
+  assert.equal(m.ring(), 'visible');
+  m.env.fire('pointerdown', { pointerType: 'mouse' });
+  assert.equal(m.ring(), 'hidden', 'a mouse press puts the ring away');
+
+  m.tap(PAD.A);
+  assert.equal(m.ring(), 'visible');
+  m.env.exports.uxState.modal = { name: 'settings' };
+  m.tap(PAD.DOWN); m.tap(PAD.A);
+  assert.equal(m.ring(), 'hidden', 'the parent settings are not driven by the pad');
+  assert.equal(Object.values(t).reduce((n, b) => n + b.clicks.length, 0), 0);
+  m.env.exports.uxState.modal = null;
+
+  /* in a live room the pad plays: no ring, no clicks */
+  const { game, playFlow } = m.env.exports;
+  game.mode = 'solo'; game.load(0); game.state = 'play'; playFlow.phase = 'play';
+  m.tap(PAD.A); m.tap(PAD.DOWN);
+  assert.equal(m.ring(), 'hidden');
+  assert.equal(Object.values(t).reduce((n, b) => n + b.clicks.length, 0), 0, 'A in a room is a jump, not a click');
+  assert.ok(game.sisters.frost.jumpBuf > 0, 'it jumped');
+}
+
+export function aButtonThatIsNotOnScreenYetCannotTakeTheRing({ assert }) {
+  const m = menuPage();
+  const hidden = m.button('word', [100, 200, 200, 200]);
+  hidden.closest = () => ({ classList: { contains: c => c === 'show' ? false : false } });
+  const shown = m.button('word', [400, 200, 200, 200]);
+  shown.closest = () => ({ classList: { contains: c => c === 'show' } });
+  const flat = m.button('word', [700, 200, 0, 0]);
+  m.state.targets = [hidden, shown, flat];
+  m.tap(PAD.A);
+  m.tap(PAD.A);
+  assert.deepEqual([hidden.clicks.length, shown.clicks.length, flat.clicks.length], [0, 1, 0], 'a card that has not popped up and a zero-size shape are skipped');
 }

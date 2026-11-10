@@ -4,10 +4,11 @@ Why per segment: a finished clip mixes Chinese and English, and one whisper lang
 narration.py keeps every distinct synthesized segment when given --segments, so the check runs on those:
 
     ~/lemo-opuscar/.venv/bin/python art/narration.py --all --segments .tools/tmp/segs      # or --only k1,k2
-    python3 art/asr_check.py .tools/tmp/segs [--python .tools/venv/bin/python] [--model small] [--max-err 0.1]
+    python3 art/asr_check.py .tools/tmp/segs [--python .tools/venv/bin/python] [--model small] [--max-err 0.1] [--report art/2c-voice-report.json]
 
-It calls ~/.claude/skills/opuscar-film/scripts/asr_check.py (needs faster-whisper, librosa, soundfile: install them into
-ROOT/.tools/venv, never into the lemo venv). That script reads LINES.json ([{"id","text"}]) and VOICES_DIR/<id>.wav, so
+It calls art/asr_whisper.py, a copy of the opuscar-film skill's asr_check.py so the check does not depend on anything outside
+the repository (needs faster-whisper, librosa, soundfile: install them into ROOT/.tools/venv, never into the lemo venv).
+--report writes the per-segment text, transcript, verdict and duration as JSON. That script reads LINES.json ([{"id","text"}]) and VOICES_DIR/<id>.wav, so
 this wrapper writes one LINES.json per language and links the wavs into a scratch directory.
 
 Judging, after the skill script has printed its own verdicts:
@@ -25,10 +26,11 @@ import re
 import subprocess
 import sys
 import tempfile
+import wave
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-SKILL = os.path.expanduser('~/.claude/skills/opuscar-film/scripts/asr_check.py')
+SKILL = os.path.join(HERE, 'asr_whisper.py')
 DIGITS = {'0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine', '10': 'ten'}
 RESULT = re.compile(r'^(OK  |NEAR|DIFF|SKIP)\s+(\S+)(?:\s+err=([\d.]+))?\s*\|\s*(.*?)\s*→\s*(.*)$')
 
@@ -68,6 +70,7 @@ def main(argv=None):
     ap.add_argument('--python', default=os.path.join(ROOT, '.tools', 'venv', 'bin', 'python'))
     ap.add_argument('--model', default='small')
     ap.add_argument('--max-err', type=float, default=0.1)
+    ap.add_argument('--report', metavar='PATH', help='write per-segment results as JSON')
     a = ap.parse_args(argv)
     manifest = json.load(open(os.path.join(a.segments, 'segments.json'), encoding='utf-8'))
     if not os.path.exists(SKILL):
@@ -79,26 +82,47 @@ def main(argv=None):
         res_zh = run_skill(a.python, zh, a.segments, 'zh', a.model, a.max_err, tmp, 'zh') if zh else {}
         res_en = run_skill(a.python, en, a.segments, 'en', a.model, a.max_err, tmp, 'en') if en else {}
     short = []
+    judged = {}   # segment id -> (verdict, transcript)
     for it in zh:
         verdict = res_zh.get(it['id'])
         if verdict is None:
             bad.append((it, 'no result', ''))
+            judged[it['id']] = ('NO_RESULT', '')
         elif verdict[0] == 'DIFF' and len(re.sub(r'[\W_]', '', it['text'])) <= 2:
             short.append((it, verdict[3]))   # whisper makes things up on 1-2 characters (it repeats its own prompt); listen instead
+            judged[it['id']] = ('SHORT', verdict[3])
         elif verdict[0] == 'DIFF':
             bad.append((it, f'err={verdict[1]:.2f}', verdict[3]))
+            judged[it['id']] = ('DIFF', verdict[3])
+        else:
+            judged[it['id']] = (verdict[0], verdict[3])
     for it in en:
         verdict = res_en.get(it['id'])
         want = words_of(it['text'])
         if verdict is None:
             bad.append((it, 'no result', ''))
+            judged[it['id']] = ('NO_RESULT', '')
         elif len(want) == 1:
             ok = want[0] in words_of(verdict[3])
             print(('OK   ' if ok else 'DIFF ') + it['id'], f'word {it["text"]!r} in {verdict[3]!r}')
             if not ok:
                 bad.append((it, 'word not heard', verdict[3]))
+            judged[it['id']] = ('OK' if ok else 'DIFF', verdict[3])
         elif verdict[0] == 'DIFF':
             bad.append((it, f'err={verdict[1]:.2f}', verdict[3]))
+            judged[it['id']] = ('DIFF', verdict[3])
+        else:
+            judged[it['id']] = (verdict[0], verdict[3])
+    if a.report:
+        rows = []
+        for it in zh + en:
+            with wave.open(os.path.join(a.segments, it['id'] + '.wav')) as w:
+                seconds = round(w.getnframes() / w.getframerate(), 2)
+            verdict, got = judged[it['id']]
+            rows.append({'id': it['id'], 'lang': it['lang'], 'text': it['text'], 'transcript': got, 'verdict': verdict,
+                         'duration_s': seconds, 'used_by': it['used_by']})
+        with open(a.report, 'w', encoding='utf-8') as f:
+            json.dump({'segments': rows}, f, ensure_ascii=False, indent=1)
     print(f'\n{len(zh)} zh + {len(en)} en segments checked, {len(bad)} DIFF, {len(short)} too short to judge')
     for it, got in short:
         print(f'  SHORT {it["id"]} [zh] {it["text"]!r} heard {got!r}; used by {", ".join(it["used_by"][:6])}: listen to it')

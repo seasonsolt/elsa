@@ -9,7 +9,10 @@
     player: v => v === 'frost',   // Elsa leads; kept in the save so an old 'nuan' choice is migrated to her instead of dropped
     sound: v => typeof v === 'boolean',
   };
-  const SAVE_VERSION = 2;   // what this build writes and understands; a stored v above it belongs to a newer build
+  const SAVE_VERSION = 3;   // what this build writes and understands; a stored v above it belongs to a newer build
+  /* v3 (PLAN-2 C2, C5): per-word review fields (see src/lib/review.js) and two top-level counters, totalPlaySeconds and roomClock.
+     v2 -> v3 needs no step of its own: sanitizeSave rebuilds every save at the current version and keeps all v2 data. */
+  const WORD_COUNTERS = ['wrong', 'lastSeen', 'lastWrong', 'lastReviewed', 'reviews'];   // optional per-word numbers, stored only when above 0
 
   function defaultSave() {
     return {
@@ -17,6 +20,8 @@
       settings: { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true },
       rooms: {},
       words: {},
+      totalPlaySeconds: 0,   // whole seconds of play, for the parent page
+      roomClock: 0,          // rooms entered so far, the clock of the spaced review
       stickers: [],
       board: [],
       outfit: { frost: { dress: 0, hat: null }, nuan: { dress: 0, hat: null } },
@@ -48,6 +53,7 @@
         if (!isObj(w)) continue;
         s.words[id] = { heard: nat(w.heard, 0), quiz: nat(w.quiz, 0) };
         if (w.seen) s.words[id].seen = true;   // "met on a card" survives a reload even when the sound was off
+        for (const k of WORD_COUNTERS) if (nat(w[k], 0) > 0) s.words[id][k] = nat(w[k], 0);
       }
     }
     if (Array.isArray(raw.stickers)) s.stickers = raw.stickers.filter(x => typeof x === 'string');
@@ -58,6 +64,9 @@
         if (isObj(o)) s.outfit[who] = { dress: nat(o.dress, 0), hat: typeof o.hat === 'string' ? o.hat : null };
       }
     }
+    s.totalPlaySeconds = nat(raw.totalPlaySeconds, 0);
+    /* a save from before v3 has no clock: the rooms already cleared stand for the rooms already entered */
+    s.roomClock = Number.isFinite(raw.roomClock) && raw.roomClock >= 0 ? nat(raw.roomClock, 0) : Object.keys(s.rooms).filter(id => s.rooms[id].cleared).length;
     if (isObj(raw.unlocked)) s.unlocked.rooms = Math.max(1, nat(raw.unlocked.rooms, 1));
     if (isObj(raw.flags)) for (const k of Object.keys(s.flags)) s.flags[k] = !!raw.flags[k];
     return s;
@@ -71,8 +80,8 @@
   }
 
   /* Fold another tab's save (already sanitized) into `mine`, in place, so objects held elsewhere stay valid.
-     Progress only ever grows: cleared rooms, stars, memories, stickers and flags are unions, counters take the larger
-     value, unlocked rooms the larger count. Settings, outfit and sticker positions stay as this tab has them.
+     Progress only ever grows: cleared rooms, stars, memories, stickers and flags are unions, counters (heard, quiz, the review
+     fields, totalPlaySeconds, roomClock) take the larger value, unlocked rooms the larger count. Settings, outfit and sticker positions stay as this tab has them.
      Merging the same save twice changes nothing. */
   function mergeSaveInto(mine, theirs) {
     if (!isObj(mine) || !isObj(theirs)) return mine;
@@ -93,10 +102,13 @@
       w.heard = Math.max(nat(w.heard, 0), nat(o.heard, 0));
       w.quiz = Math.max(nat(w.quiz, 0), nat(o.quiz, 0));
       if (o.seen) w.seen = true;
+      for (const k of WORD_COUNTERS) if (nat(o[k], 0) > nat(w[k], 0)) w[k] = nat(o[k], 0);
       for (const k of Object.keys(o)) if (!(k in w)) w[k] = o[k];
     }
     for (const id of theirs.stickers || []) if (!mine.stickers.includes(id)) mine.stickers.push(id);
     for (const b of theirs.board || []) if (!mine.board.some(x => x.id === b.id)) mine.board.push({ id: b.id, x: b.x, y: b.y });
+    mine.totalPlaySeconds = Math.max(nat(mine.totalPlaySeconds, 0), nat(theirs.totalPlaySeconds, 0));
+    mine.roomClock = Math.max(nat(mine.roomClock, 0), nat(theirs.roomClock, 0));
     mine.unlocked.rooms = Math.max(1, nat(mine.unlocked.rooms, 1), nat(theirs.unlocked && theirs.unlocked.rooms, 1));
     for (const k of Object.keys(theirs.flags || {})) mine.flags[k] = !!mine.flags[k] || !!theirs.flags[k];
     for (const k of Object.keys(theirs)) if (!(k in mine) && k !== '__proto__') mine[k] = theirs[k];

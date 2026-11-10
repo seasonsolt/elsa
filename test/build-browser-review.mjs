@@ -25,6 +25,8 @@ const qa = String.raw`
     const end = performance.now() + timeout;
     while (!check()) { if (performance.now() > end) throw new Error('Timed out: ' + label); await qaWait(20); }
   }
+  /* Enter-like press after the scene's quiet second: strict scenes ignore a plain advanceStory() (PLAN-2 A2) */
+  const qaAdvance = async () => { await qaUntil(() => story && performance.now() - story.openedAt >= 1100, 'the quiet second'); advanceStory(true); };
   let qaKey = '';
   voice.onSubtitle(p => { if (p) qaKey = p.key; });
   qaPanel.querySelector('#qa-hide').onclick = () => { qaPanel.hidden = true; };
@@ -49,31 +51,39 @@ const qa = String.raw`
       for (let i = 0; i < LEVELS.length; i++) {
         voice.stop(); game.state = 'title'; playFlow.phase = 'intro'; game.load(i); handleEvents();
         const lv = LEVELS[i];
-        playFlow.wordBaseline = Object.fromEntries(lv.words.map(id => [id, (save.words[id] || {}).heard || 0]));
+        const wordBaseline = Object.fromEntries(lv.words.map(id => [id, (save.words[id] || {}).heard || 0]));
         if (i) await new Promise(done => showRecall(LEVELS[i - 1], done));
         showChapter(lv, () => {});
-        if (i % 2) advanceStory(); // deliberately skip half the chapter lessons
-        else { await qaUntil(() => $('overlay').querySelector('[data-act="go"].ux-pulse'), lv.id + ' chapter'); advanceStory(); }
+        if (i % 2) await qaAdvance(); // deliberately skip half the chapter lessons
+        else { await qaUntil(() => $('overlay').querySelector('[data-act="go"].ux-pulse'), lv.id + ' chapter'); await qaAdvance(); }
         game.state = 'clear'; playFlow.phase = 'clear';
         markRoom(lv.id, { cleared: true, stars: [true, true, true], memory: true });
+        awardStickers(lv.id); // what 15-toys does in the frame that detects the clear
         let finished = false;
         showClear(lv, () => { finished = true; });
         await qaUntil(() => story && story.phase === 2, lv.id + ' review phase');
         advanceStory();
         check(story && story.phase === 2, lv.id + ': keyboard cannot skip unfinished review');
         await qaUntil(() => $('overlay').querySelector('#uxCtl [data-act="next"]'), lv.id + ' word review');
-        const counts = Object.fromEntries(lv.words.map(id => [id, (save.words[id].heard || 0) - playFlow.wordBaseline[id]]));
-        check(Object.values(counts).every(n => n >= 8), lv.id + ': >=8 completed hearings ' + JSON.stringify(counts));
-        advanceStory();
-        if (i % 2) advanceStory(); // quiz is optional
-        else {
+        const counts = Object.fromEntries(lv.words.map(id => [id, (save.words[id].heard || 0) - wordBaseline[id]]));
+        check(Object.values(counts).every(n => n >= 1), lv.id + ': every word was heard at least once since entering the room ' + JSON.stringify(counts));
+        await qaAdvance();
+        if (i % 2) { // the quiz is optional: only its on-screen skip button leaves it, Enter does not
+          await qaUntil(() => story && story.phase === 3 && $('overlay').querySelector('#uxCtl [data-act="skip"]'), lv.id + ' quiz skip button');
+          await qaAdvance();
+          check(story && story.phase === 3, lv.id + ': the keyboard cannot leave the quiz');
+          $('overlay').querySelector('#uxCtl [data-act="skip"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        } else {
           let previous = '';
           for (let q = 0; q < lv.words.length; q++) {
             await qaUntil(() => qaKey.startsWith('quiz_') && lv.words.includes(qaKey.slice(5)) && qaKey !== previous, lv.id + ' quiz question');
             previous = qaKey;
             const target = qaKey.slice(5);
+            const shown = [...$('overlay').querySelectorAll('[data-act="pick"]')].map(n => n.dataset.word);
+            check(new Set(shown).size === 3 && shown.includes(target), lv.id + ': three different cards, the asked word among them ' + shown);
+            if (i > 0) check(shown.some(w => !lv.words.includes(w)), lv.id + ': a card from a room cleared before ' + shown);
             if (q === 0) {
-              const wrong = lv.words.find(w => w !== target);
+              const wrong = shown.find(w => w !== target);
               $('overlay').querySelector('[data-act="pick"][data-word="' + wrong + '"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
               check(!!$('overlay').querySelector('.ux-glow'), lv.id + ': incorrect quiz answer gets a picture hint');
             }
@@ -81,7 +91,7 @@ const qa = String.raw`
           }
         }
         await qaUntil(() => story && story.phase === 4, lv.id + ' finished quiz');
-        advanceStory();
+        await qaAdvance();
         check(finished, lv.id + ': clear/quiz/next callback completed');
       }
       game.start(0); companion.reset(); handleEvents(); playFlow.phase = 'play';

@@ -1,5 +1,5 @@
 /* test/exposure.mjs: the static counting rules, on small invented rooms, plus the real inputs it reads from the view source. */
-import { computeExposure, readObjectConst, repoInputs, summarize, renderMarkdown, THRESHOLD } from '../exposure.mjs';
+import { computeExposure, exposureProblems, exposureReport, readObjectConst, repoInputs, summarize, renderMarkdown, THRESHOLD } from '../exposure.mjs';
 
 const seg = (...s) => ({ say: s });
 const W = id => ({ w: id });
@@ -69,4 +69,22 @@ export function theRealTableCoversEveryCoreWordOnceAndIsDeterministic({ assert, 
   for (const r of rows) assert.ok(r.learn >= 3 && r.card === 1 && r.inContext >= 5, `${r.room}/${r.word} lost its learn line or its card`);
   assert.equal(renderMarkdown(rows), renderMarkdown(computeExposure(repoInputs(logic))));
   assert.equal(summarize(rows).words, expected);
+}
+
+export function theGateNamesEveryWordBelowTheThresholdAndAStaleDocument({ assert }) {
+  const lines = { learn_heart: seg(W('heart'), W('heart'), W('heart')), learn_door: seg(W('door'), W('door'), W('door')), start_r1_1: seg(W('heart')), clear_r1: seg(W('heart')) };
+  const rows = computeExposure({ levels: [room()], lines, kindWord: {}, toyCfg: CFG });
+  assert.equal(row(rows, 'heart').inContext, THRESHOLD, 'a word exactly at the threshold passes');
+  assert.equal(THRESHOLD, 6);
+  assert.deepEqual(exposureProblems({ rows, stale: false, doc: 'x.md' }), [`r1/door: 4 in-context hearings, need at least ${THRESHOLD}`]);
+  assert.deepEqual(exposureProblems({ rows: rows.filter(r => !r.low), stale: true, doc: 'x.md' }), ['x.md is stale: run node test/exposure.mjs --write']);
+  const pickupsDoNotCount = computeExposure({ levels: [room({ words: ['heart'], map: ['hhhhhhhh'] })], lines: { pick_heart_1: seg(W('heart')) }, kindWord: KIND, toyCfg: CFG });
+  assert.ok(row(pickupsDoNotCount, 'heart').all >= THRESHOLD && row(pickupsDoNotCount, 'heart').low, 'pickups lift "all" but never the gated in-context count');
+}
+
+/* The gate itself (PLAN-2 C1): fails the whole run when a core word has fewer than 6 in-context hearings in its own room, or when
+   src/content/exposure.md is not what `node test/exposure.mjs --write` produces. */
+export function everyCoreWordHasAtLeastSixInContextHearingsAndTheDocIsCurrent({ assert, logic }) {
+  const problems = exposureProblems(exposureReport(logic));
+  assert.deepEqual(problems, [], problems.join('\n'));
 }

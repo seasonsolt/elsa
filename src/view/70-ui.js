@@ -33,9 +33,6 @@
     if (!p || typeof p.then !== 'function') return uxWait(900);
     return Promise.race([p.catch(() => false), uxWait(8000).then(() => false)]);
   }
-  function uxVoiceBusy() { try { return typeof voice !== 'undefined' && !!voice && !!voice.busy; } catch (e) { return false; } }
-  /* Why the latest call for `key` did not complete ('missing' | 'interrupted' | 'muted' | 'expired'), or null when unknown. */
-  function uxVoiceReason(key) { try { return typeof voice !== 'undefined' && voice && typeof voice.lastReason === 'function' ? voice.lastReason(key) : null; } catch (e) { return null; } }
   const uxKey = (stem, id) => stem + '_' + id;   // line keys built from a stem, e.g. uxKey('learn', 'heart')
   /* Warm the voice cache for lines that will play soon; unknown keys and a missing voice are ignored. */
   function uxPreload(keys) {
@@ -46,6 +43,13 @@
     } catch (e) {}
   }
   function uxUiVoice(name) { try { if (typeof voice !== 'undefined' && voice && typeof voice.ui === 'function') voice.ui(name); } catch (e) {} }
+  /* The name of the button the gamepad focus just landed on: the pad's way of hovering it (PLAN-2 D7). voice.ui is silent while a
+     scene is open, so this asks for the same quiet clip itself (priority 0, tag 'ui'): it is said only when nothing else is being
+     said, cuts only another button name, and so never talks over a lesson or a quiz question. */
+  function uxPadName(name) {
+    if (!name || !hasLineKey('ui_' + name)) return;
+    try { if (typeof voice !== 'undefined' && voice && typeof voice.line === 'function') voice.line('ui_' + name, { interrupt: true, priority: 0, tag: 'ui', maxWait: 600, subtitle: false }); } catch (e) {}
+  }
   function uxStopVoice() { try { if (typeof voice !== 'undefined' && voice && typeof voice.stop === 'function') voice.stop(); } catch (e) {} }
   function uxSfx(name) { try { if (typeof sfx === 'function') sfx(name); } catch (e) {} }
 
@@ -68,19 +72,55 @@
     return list;
   }
   function uxWord(id) { return uxAllWords().find(w => w.id === id) || { id, en: id, zh: '', icon: 'word_' + id, room: null }; }
-  function uxRoomWords(lv) { return ((lv && lv.words) || []).map(uxWord); }
+  function uxWordList(ids) { return ids.map(uxWord); }
+  function uxRoomWords(lv) { return uxWordList((lv && lv.words) || []); }
   function uxWordRec(id) {
     try { if (typeof save !== 'undefined' && save) { save.words = save.words || {}; return (save.words[id] = save.words[id] || { heard: 0, quiz: 0 }); } } catch (e) {}
     return (uxState.seen[id] = uxState.seen[id] || { heard: 0, quiz: 0 });
   }
-  function uxWordKnown(id) { const r = uxWordRec(id); return !!(r.heard > 0 || r.seen); }
+  function uxWordKnown(id) { const r = (save.words || {})[id]; return !!(r && (r.heard > 0 || r.seen)); }   // reads only: looking at a card must not write a record
   function uxSaveNow() { try { if (typeof saveWrite === 'function') saveWrite(); } catch (e) {} }
+  /* One quiz question was answered (firstTry: right at the first tap). Stored at once: leaving half way loses nothing. */
+  function uxNoteQuiz(id, firstTry) { noteQuizAnswer(save.words, id, firstTry, reviewContext(save)); uxSaveNow(); }
+  /* An older word came back in a recall. */
+  function uxNoteReviewed(id) { noteReviewed(save.words, id, reviewContext(save)); uxSaveNow(); }
   function uxRoomSave(id) { try { return (save.rooms && save.rooms[id]) || {}; } catch (e) { return {}; } }
   function uxCleared(i) { return !!uxRoomSave((LEVELS[i] || {}).id).cleared; }
   function uxUnlocked(i) {
     if (i === 0) return true;
     try { if (save.unlocked && save.unlocked.rooms > i) return true; } catch (e) {}
     return uxCleared(i - 1);
+  }
+  /* The room a core word is taught in (index into LEVELS), or -1 for the general words that belong to no room. */
+  function uxWordRoom(id) { return LEVELS.findIndex(lv => (lv.words || []).includes(id)); }
+  /* True unless the word's room is still locked. A silhouette of a locked room stays silent (hearing it would count as learned)
+     and its word never comes up in a review. */
+  function uxWordOpen(id) { const i = uxWordRoom(id); return i < 0 || uxUnlocked(i); }
+  /* Where a quiz takes its wrong answers from: the words met in the OTHER rooms the child has cleared. */
+  function uxQuizPool(lv) {
+    const ids = [];
+    LEVELS.forEach((other, i) => { if (other.id !== lv.id && uxCleared(i)) ids.push(...(other.words || [])); });
+    return reviewLearned(save.words, ids);
+  }
+  /* Core words the review game may ask: met at least once, and from a room the child can open. */
+  function uxReviewPool() {
+    const ids = [];
+    LEVELS.forEach((lv, i) => { if (uxUnlocked(i)) ids.push(...(lv.words || [])); });
+    return reviewLearned(save.words, ids);
+  }
+  /* The words of a recall: the room just left, then up to two older words that are due. Only core words of rooms the child can open
+     are eligible: the general words (hello, one ...) have no recall line, and a word of a locked room must not show up early. */
+  function uxRecallWords(prevWords, exclude) {
+    const eligible = {};
+    for (const id of uxReviewPool()) eligible[id] = save.words[id];
+    return recallWordsFor(prevWords, eligible, Object.assign(reviewContext(save), { exclude }));
+  }
+  /* The next `n` review questions: what reviewDue wants first (missed words at the head), then the rest of the pool, least recently met first. */
+  function uxReviewQueue(n) {
+    const pool = uxReviewPool(), at = id => (save.words[id] || {}).lastSeen || 0, quiz = id => (save.words[id] || {}).quiz || 0;
+    const due = reviewDue(save.words, reviewContext(save)).filter(id => pool.includes(id));
+    const rest = pool.filter(id => !due.includes(id)).sort((a, b) => at(a) - at(b) || quiz(a) - quiz(b) || (a < b ? -1 : a > b ? 1 : 0));
+    return due.concat(rest).slice(0, n);
   }
   function uxLineArt(key, fallback) {
     const l = LINES && LINES.lines && LINES.lines[key];
@@ -165,7 +205,12 @@
     const t = ui ? lineText('ui_' + ui)[0] : '';
     return String(t || fallback || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   }
-  /* o: { act, ui, icon, x, y, r, plate: 'light'|'gold'|'dark', cls, keep (tabbable: default true), ring } */
+  /* layoutHitRadius lives in src/lib/layout.js; a page or test that loads 70-ui without that lib still gets the same floor (30 = 64 CSS px). */
+  const uxHitRadius = (r, ring) => (typeof layoutHitRadius === 'function' ? layoutHitRadius(r, ring) : Math.max(r + (ring ? 8 : 0), 30));
+  /* o: { act, ui, icon, x, y, r, plate: 'light'|'gold'|'dark', cls, keep (tabbable: default true), ring }
+     The picture is r big, but the part that takes a tap is never smaller than 64 CSS px on the reference tablet (layoutHitRadius):
+     a small plate (the parent gear, the back arrows) keeps its looks and gets an invisible, larger touch area. cls 'ux-minor' marks
+     a button that is not one of the screen's few main buttons. */
   function uxButton(o) {
     const r = o.r || 36, plate = o.plate || 'light';
     const fill = plate === 'gold' ? 'url(#goldGrad)' : plate === 'dark' ? '#141c52' : 'url(#plateGrad)';
@@ -173,7 +218,7 @@
     const ink = plate === 'dark' ? '#f6f7ff' : uxInk;
     const ring = o.ring ? `<circle class="ux-ring" r="${r + 5}" fill="none" stroke="#ffd27a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * (r + 5)).toFixed(1)}" style="--len:${(2 * Math.PI * (r + 5)).toFixed(1)}"/>` : '';
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${uxLabel(o.ui, o.act)}">
-      <circle r="${r + (o.ring ? 8 : 0)}" fill="#000" fill-opacity="0" pointer-events="all"/>
+      <circle r="${uxHitRadius(r, o.ring)}" fill="#000" fill-opacity="0" pointer-events="all"/>
       <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .78 : 1}" stroke="${stroke}" stroke-width="3" filter="url(#softShadow)"/>${ring}
       ${uxIcon(o.icon || o.act, r, ink)}</g></g>`;
   }
@@ -311,6 +356,8 @@
   };
 
   /* ---------- title ---------- */
+  /* Four main buttons (start, rooms, wordbook, sticker book; PLAN D3). The two small corner buttons are not main buttons: "meet the
+     sisters" (the wardrobe is a button inside that page) and the parent gear (a 2 s hold). */
   function showTitle() {
     const tok = uxScreen('title', false);
     uxClearOverlay();
@@ -323,10 +370,9 @@
       ${uxButton({ act: 'play', ui: cont ? 'continue' : 'start', icon: 'play', x: 480, y: 318, r: 66, plate: 'gold', cls: 'ux-pulse' })}
       ${uxButton({ act: 'rooms', ui: 'rooms', x: 372, y: 448, r: 36 })}
       ${uxButton({ act: 'words', ui: 'words', x: 480, y: 448, r: 36 })}
-      ${uxButton({ act: 'meet', ui: 'meet', x: 588, y: 448, r: 36 })}
-      ${uxButton({ act: 'stickers', ui: 'stickers', x: 48, y: 474, r: 30 })}
-      ${uxButton({ act: 'wardrobe', ui: 'wardrobe', x: 118, y: 474, r: 30 })}
-      ${uxButton({ act: 'gear', ui: 'settings', icon: 'gear', x: 912, y: 474, r: 28, plate: 'dark', ring: true })}
+      ${uxButton({ act: 'stickers', ui: 'stickers', x: 588, y: 448, r: 36 })}
+      ${uxButton({ act: 'meet', ui: 'meet', x: 42, y: 482, r: 24, cls: 'ux-minor' })}
+      ${uxButton({ act: 'gear', ui: 'settings', icon: 'gear', x: 920, y: 484, r: 20, plate: 'dark', ring: true, cls: 'ux-minor' })}
     </g>`;
     const root = uxPaint(html);
     uxBind(root, {
@@ -335,7 +381,6 @@
       words: () => showWordbook(),
       meet: () => showMeet(),
       stickers: el => { if (typeof showStickers === 'function') showStickers(); else uxNudge(el); },
-      wardrobe: el => { if (typeof showWardrobe === 'function') showWardrobe(); else uxNudge(el); },
       gear: null,
     });
     const gear = root.querySelector('[data-act="gear"]');
@@ -387,9 +432,12 @@
         <rect x="-135" y="76" width="270" height="360" rx="22" fill="none" stroke="${p.hue}" stroke-width="6"/>
       </g></g></g>`).join('');
     const html = `<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".55"/>
-      ${cards}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
+      ${cards}${uxButton({ act: 'wardrobe', ui: 'wardrobe', x: 480, y: 290, r: 42 })}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
     const root = uxPaint(html);
-    uxBind(root, { back: () => { uxStopVoice(); showTitle(); } });
+    uxBind(root, {
+      back: () => { uxStopVoice(); showTitle(); },
+      wardrobe: el => { uxStopVoice(); if (typeof showWardrobe === 'function') showWardrobe(); else uxNudge(el); },
+    });
     root.querySelectorAll('.ux-person').forEach(/** @param {HTMLElement} n */ n => {
       n.addEventListener('click', ev => {
         ev.stopPropagation(); uxWake();
@@ -425,9 +473,11 @@
       const head = pg.lv ? `<image href="${SRC(pg.lv.bg)}" x="400" y="26" width="160" height="90" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round 12px)"/><rect x="400" y="26" width="160" height="90" rx="12" fill="none" stroke="#ffd27a" stroke-width="3"/>`
         : `<g transform="translate(480 70) scale(34)">${uxGlyph('star')}</g>`;
       const dots = pages.map((_, k) => `<circle cx="${480 + (k - (pages.length - 1) / 2) * 16}" cy="478" r="${k === cur ? 6 : 4}" fill="${k === cur ? '#ffd27a' : '#8090d6'}"/>`).join('');
+      const playable = uxReviewPool().length >= 3;   // the review game needs three words to choose between
       const html = `<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".6"/>
         ${head}${cards}${dots}
         ${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}
+        ${uxButton({ act: 'review', ui: 'start', icon: 'ear', x: 906, y: 50, r: 34, plate: 'gold', cls: playable ? '' : 'dim' })}
         ${cur > 0 ? `<g transform="translate(54 270) scale(-1 1)">${uxButton({ act: 'prev', ui: 'back', icon: 'next', x: 0, y: 0, r: 34 })}</g>` : ''}
         ${cur < pages.length - 1 ? uxButton({ act: 'nextpage', ui: 'next', icon: 'next', x: 906, y: 270, r: 34 }) : ''}</g>`;
       const root = uxPaint(html);
@@ -435,10 +485,16 @@
         back: () => { uxStopVoice(); showTitle(); },
         prev: () => { cur--; draw(); },
         nextpage: () => { cur++; draw(); },
+        review: el => {
+          if (!playable) { uxNudge(el); return; }
+          uxStopVoice();
+          showReview(() => showWordbook(cur));
+        },
         word: el => {
           const id = el.dataset.word;
           const was = uxWordKnown(id);
           uxNudge(el);
+          if (!was && !uxWordOpen(id)) return;   // a silhouette of a room not opened yet: hearing it would count as learned
           uxWordVoice(id).then(() => {
             if (!uxAlive(tok) || was) return;
             draw();
@@ -450,30 +506,85 @@
   }
 
   /* ---------- parent settings ---------- */
-  function showSettings() {
+  /* Learning progress for the parent page (PLAN-2 C5): per core word, how often it was heard, the share of quiz questions
+     answered right at the first tap (null before the first question) and how many rooms ago it was last met (null: never
+     stamped). `lastSeen` is the room clock, not a date: the save has no wall clock. */
+  function uxProgressRows() {
+    const now = save.roomClock || 0;
+    return LEVELS.map(lv => ({
+      room: lv.id,
+      words: (lv.words || []).map(id => {
+        const w = save.words[id] || {}, tries = (w.quiz || 0) + (w.wrong || 0);
+        return {
+          id, en: uxWord(id).en, heard: w.heard || 0,
+          accuracy: tries ? Math.round(100 * (w.quiz || 0) / tries) : null,
+          ago: w.lastSeen > 0 ? Math.max(0, now - w.lastSeen) : null,
+        };
+      }),
+    }));
+  }
+  function uxPlayTimeText(sec) {
+    const total = Math.max(0, Math.floor(sec || 0)), m = Math.floor(total / 60);
+    if (m >= 60) return `${Math.floor(m / 60)} 小时 ${m % 60} 分`;
+    return m >= 1 ? `${m} 分 ${total % 60} 秒` : `${total} 秒`;
+  }
+  function uxProgressHtml() {
+    const rows = uxProgressRows(), colW = 288, x0 = 62;
+    const head = [0, 1, 2].map(c => `<text x="${x0 + c * colW + 130}" y="112" font-size="15" fill="#a9b6e2" text-anchor="middle">听过</text><text x="${x0 + c * colW + 190}" y="112" font-size="15" fill="#a9b6e2" text-anchor="middle">首答对</text><text x="${x0 + c * colW + 250}" y="112" font-size="15" fill="#a9b6e2" text-anchor="middle">最近</text>`).join('');
+    const body = rows.map((r, i) => {
+      const y = 126 + i * 34;
+      const cells = r.words.map((w, c) => {
+        const x = x0 + c * colW, low = w.accuracy !== null && w.accuracy < 60;
+        return `<text class="latin" x="${x}" y="${y + 22}" font-size="18" fill="${w.heard ? '#f6f7ff' : '#8d96bd'}">${w.en}</text>
+          <text x="${x + 130}" y="${y + 22}" font-size="17" fill="${w.heard ? '#f6f7ff' : '#8d96bd'}" text-anchor="middle">${w.heard}</text>
+          <text x="${x + 190}" y="${y + 22}" font-size="17" fill="${low ? '#ffb1c9' : '#f6f7ff'}" text-anchor="middle">${w.accuracy === null ? '—' : w.accuracy + '%'}</text>
+          <text x="${x + 250}" y="${y + 22}" font-size="15" fill="#c9d3f5" text-anchor="middle">${w.ago === null ? '—' : w.ago === 0 ? '刚刚' : w.ago + ' 间前'}</text>`;
+      }).join('');
+      return `<rect x="50" y="${y}" width="860" height="32" rx="10" fill="#1b2563" opacity="${i % 2 ? 0 : .7}"/>${cells}`;
+    }).join('');
+    return `<g class="page"><rect width="960" height="520" fill="#0d1438" opacity=".7"/>
+      <rect x="30" y="20" width="900" height="480" rx="24" fill="#141c52" stroke="#4a5aa6" stroke-width="2"/>
+      <text x="480" y="70" text-anchor="middle" font-size="30" fill="#f6f7ff">学习进度</text>
+      <text x="880" y="70" text-anchor="end" font-size="20" fill="#ffd27a">累计游玩 ${uxPlayTimeText(save.totalPlaySeconds)}</text>
+      ${head}${body}
+      ${uxButton({ act: 'back', ui: 'back', icon: 'back', x: 78, y: 50, r: 28, plate: 'dark' })}</g>`;
+  }
+
+  const UX_OPT_H = 62;   // a settings option is a button too: 62 stage units are 66 CSS px on the reference tablet
+  function showSettings(view) {
     uxInit();
     uxInputReset();
+    let page = view === 'progress' ? 'progress' : 'main';
     const render = () => {
+      const root = $('modal');
+      if (page === 'progress') {
+        root.innerHTML = uxProgressHtml();
+        uxBind(root, { back: () => { page = 'main'; render(); } });
+        return;
+      }
       const opt = (key, val, x, y, w, label, icon) => {
         const cur = uxSetting(key), on = (cur === val) || (typeof val === 'boolean' && !!cur === val);
-        return `<g class="ux-opt ux-btn" data-act="set" data-key="${key}" data-val="${val}" data-ui="" tabindex="0" role="button" aria-label="${label}" transform="translate(${x} ${y})">
-          <rect class="ux-bg" width="${w}" height="56" rx="14" fill="${on ? '#ffd27a' : '#27357f'}" stroke="${on ? '#fff3c9' : '#4a5aa6'}" stroke-width="2"/>
-          ${icon ? `<g transform="translate(26 28) scale(17)">${uxGlyph(icon, on ? '#4a2c05' : '#f6f7ff')}</g>` : ''}
-          <text x="${icon ? w / 2 + 14 : w / 2}" y="36" text-anchor="middle" font-size="20" fill="${on ? '#4a2c05' : '#f6f7ff'}">${label}</text></g>`;
+        return `<g transform="translate(${x} ${y})"><g class="ux-opt ux-btn" data-act="set" data-key="${key}" data-val="${val}" data-ui="" tabindex="0" role="button" aria-label="${label}">
+          <rect class="ux-bg" width="${w}" height="${UX_OPT_H}" rx="14" fill="${on ? '#ffd27a' : '#27357f'}" stroke="${on ? '#fff3c9' : '#4a5aa6'}" stroke-width="2"/>
+          ${icon ? `<g transform="translate(26 ${UX_OPT_H / 2}) scale(17)">${uxGlyph(icon, on ? '#4a2c05' : '#f6f7ff')}</g>` : ''}
+          <text x="${icon ? w / 2 + 14 : w / 2}" y="${UX_OPT_H / 2 + 8}" text-anchor="middle" font-size="20" fill="${on ? '#4a2c05' : '#f6f7ff'}">${label}</text></g></g>`;
       };
-      const row = (y, label, opts) => `<text x="206" y="${y + 36}" font-size="23" fill="#ffd27a">${label}</text>${opts}`;
-      const html = `<g class="page"><rect width="960" height="520" fill="#0d1438" opacity=".7"/>
-        <rect x="150" y="40" width="660" height="396" rx="24" fill="#141c52" stroke="#4a5aa6" stroke-width="2"/>
-        <text x="480" y="98" text-anchor="middle" font-size="30" fill="#f6f7ff">家长设置</text>
-        ${row(124, '字幕', opt('subtitles', false, 336, 124, 216, '关') + opt('subtitles', true, 566, 124, 216, '开'))}
-        ${row(200, '英文', opt('english', 'words', 336, 200, 216, '只念单词') + opt('english', 'words+phrases', 566, 200, 216, '单词 + 短语'))}
-        ${row(276, '模式', opt('mode', 'solo', 336, 276, 216, '一个人玩', 'solo') + opt('mode', 'duo', 566, 276, 216, '和大人一起玩', 'duo'))}
-        ${row(352, '声音', opt('sound', true, 336, 352, 216, '开') + opt('sound', false, 566, 352, 216, '关'))}
-        ${uxButton({ act: 'close', ui: 'back', icon: 'close', x: 806, y: 40, r: 28, plate: 'dark' })}</g>`;
-      const root = $('modal');
-      root.innerHTML = html;
+      const row = (y, label, opts) => `<text x="206" y="${y + UX_OPT_H / 2 + 8}" font-size="23" fill="#ffd27a">${label}</text>${opts}`;
+      root.innerHTML = `<g class="page"><rect width="960" height="520" fill="#0d1438" opacity=".7"/>
+        <rect x="150" y="30" width="660" height="450" rx="24" fill="#141c52" stroke="#4a5aa6" stroke-width="2"/>
+        <text x="480" y="80" text-anchor="middle" font-size="30" fill="#f6f7ff">家长设置</text>
+        ${row(100, '字幕', opt('subtitles', false, 336, 100, 216, '关') + opt('subtitles', true, 566, 100, 216, '开'))}
+        ${row(170, '英文', opt('english', 'words', 336, 170, 216, '只念单词') + opt('english', 'words+phrases', 566, 170, 216, '单词 + 短语'))}
+        ${row(240, '模式', opt('mode', 'solo', 336, 240, 216, '一个人玩', 'solo') + opt('mode', 'duo', 566, 240, 216, '和大人一起玩', 'duo'))}
+        ${row(310, '声音', opt('sound', true, 336, 310, 216, '开') + opt('sound', false, 566, 310, 216, '关'))}
+        <g transform="translate(336 394)"><g class="ux-opt ux-btn" data-act="progress" data-ui="" tabindex="0" role="button" aria-label="学习进度">
+          <rect class="ux-bg" width="446" height="${UX_OPT_H}" rx="14" fill="#27357f" stroke="#4a5aa6" stroke-width="2"/>
+          <g transform="translate(40 ${UX_OPT_H / 2}) scale(17)">${uxGlyph('words', '#f6f7ff')}</g>
+          <text x="243" y="${UX_OPT_H / 2 + 8}" text-anchor="middle" font-size="20" fill="#f6f7ff">学习进度</text></g></g>
+        ${uxButton({ act: 'close', ui: 'back', icon: 'close', x: 806, y: 30, r: 28, plate: 'dark' })}</g>`;
       uxBind(root, {
         close: () => { root.textContent = ''; uxState.modal = null; },
+        progress: () => { page = 'progress'; render(); },
         set: el => {
           const v = el.dataset.val;
           uxPutSetting(el.dataset.key, v === 'true' ? true : v === 'false' ? false : v);
@@ -522,6 +633,9 @@
     { id: 'left', kbd: 'l', x: 836, y: 466, w: 36 }, { id: 'right', kbd: 'r', x: 916, y: 466, w: 36 },
     { id: 'up', kbd: 'up', x: 876, y: 426, w: 36 }, { id: 'space', kbd: 'space', x: 696, y: 466, w: 132 },
   ];
+  /* The four round buttons of the top bar, 68 apart: 30 stage units of plate is 64 CSS px on the reference tablet and the hold rings
+     (restart, home) widen the touch area, so they must not crowd each other. The key diagram may reach up to the first of them. */
+  const UX_HUD_X = { restart: 700, home: 768, hint: 836, fs: 904 };
   function buildHud() {
     uxInit();
     const keys = UX_KEYS.map(k => {
@@ -542,10 +656,10 @@
           <g id="uxAvOther" transform="translate(30 20)"><circle r="14" fill="#cfe0ff" stroke="#fff" stroke-width="2" opacity=".95"/><clipPath id="uxClipB"><circle r="12"/></clipPath><image id="uxAvImg2" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMin slice" clip-path="url(#uxClipB)"/></g>
         </g></g></g>
       <g id="uxPills" transform="translate(98 19)">${pills}</g>
-      ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: 716, y: 38, r: 26, plate: 'dark', keep: false, ring: true }) : ''}
-      ${uxButton({ act: 'home', ui: 'back', icon: 'home', x: 776, y: 38, r: 26, plate: 'dark', keep: false, ring: true })}
-      ${uxButton({ act: 'hint', ui: 'hint', icon: 'bulb', x: 836, y: 38, r: 26, plate: 'dark', keep: false })}
-      ${uxButton({ act: 'fs', ui: 'fullscreen', icon: 'fullscreen', x: 896, y: 38, r: 26, plate: 'dark', keep: false })}
+      ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: UX_HUD_X.restart, y: 38, r: 30, plate: 'dark', keep: false, ring: true, cls: 'ux-minor' }) : ''}
+      ${uxButton({ act: 'home', ui: 'back', icon: 'home', x: UX_HUD_X.home, y: 38, r: 30, plate: 'dark', keep: false, ring: true, cls: 'ux-minor' })}
+      ${uxButton({ act: 'hint', ui: 'hint', icon: 'bulb', x: UX_HUD_X.hint, y: 38, r: 30, plate: 'dark', keep: false, cls: 'ux-minor' })}
+      ${uxButton({ act: 'fs', ui: 'fullscreen', icon: 'fullscreen', x: UX_HUD_X.fs, y: 38, r: 30, plate: 'dark', keep: false, cls: 'ux-minor' })}
       <g id="uxKeysPos"><g id="uxKeys">${keys}</g></g></g>`;
     const root = $('hud');
     uxBind(root, {
@@ -606,7 +720,7 @@
     /* keyboard diagram (solo only): game.kbd is kept by 80-input, teach = the key the tutorial asks for. A tap stays lit a moment. */
     /* The diagram rides in the top bar just after the counter pills (off the floor and the door).
        UX_KEYS span x 696..952, y 426..502 in stage units; KB_S keeps even 5 pills + diagram left of the buttons at x 750. */
-    const kbX = 98 + x + 12, KB_S = Math.max(.34, Math.min(.62, (typeof restartRoomHeld === 'function' ? 684 - kbX : 744 - kbX) / 256));   // 256 = width of UX_KEYS in stage units
+    const kbX = 98 + x + 12, KB_S = Math.max(.34, Math.min(.62, (typeof restartRoomHeld === 'function' ? UX_HUD_X.restart - 44 - kbX : UX_HUD_X.home - 44 - kbX) / 256));   // 256 = width of UX_KEYS in stage units
     $('uxKeysPos').setAttribute('transform', `translate(${(kbX - 696 * KB_S).toFixed(1)} ${(14 - 426 * KB_S).toFixed(1)}) scale(${KB_S})`);
     const kroot = $('uxKeys'), kbd = g.kbd || {}, now = performance.now();
     kroot.setAttribute('visibility', solo ? 'visible' : 'hidden');

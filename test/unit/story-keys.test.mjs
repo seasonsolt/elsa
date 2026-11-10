@@ -1,11 +1,12 @@
-/* PLAN-2 A2 / A5: the learning scenes (chapter card, recall, clear page, quiz) only answer to on-screen buttons and Enter,
-   the clear page offers "next" as soon as the three cards were said once, and its top-up never runs more than one round.
-   src/view/60-story.js is run for real inside a vm; the helpers it takes from 70-ui.js / 90-main.js are stubs below, and the
-   stubs record what the scenes do (bound button handlers, voice calls, the scene token). */
+/* PLAN-2 A2 / A5 / C1: the learning scenes (chapter card, recall, clear page, quiz) only answer to on-screen buttons and Enter,
+   and the clear page offers "next" as soon as the three cards were said once: nothing is repeated to pad a count.
+   src/view/60-story.js is run for real inside a vm together with src/lib/review.js; the helpers it takes from 70-ui.js / 90-main.js
+   are stubs below, and the stubs record what the scenes do (bound button handlers, voice calls, the scene token). The real 70-ui
+   helpers and the quiz / review game are covered in learning-ui.test.mjs. */
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../../src/view/60-story.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../../src/lib/review.js', import.meta.url), 'utf8') + fs.readFileSync(new URL('../../src/view/60-story.js', import.meta.url), 'utf8');
 const flush = () => new Promise(r => setImmediate(r));
 const settle = async (n = 6) => { for (let i = 0; i < n; i++) await flush(); };
 
@@ -21,13 +22,12 @@ function fakeNode() {
   return n;
 }
 
-/* wordMode: 'auto' resolves every word call with `autoResult` at once; 'manual' queues them in env.pending for the test.
-   reasons: what voice.lastReason answers per key. */
+/* wordMode: 'auto' resolves every word call with `autoResult` at once; 'manual' queues them in env.pending for the test. */
 function setupWithStory(opts = {}) {
-  const { wordMode = 'auto', autoResult = true, reasons = {}, sound = true } = opts;
+  const { wordMode = 'auto', autoResult = true } = opts;
   const env = {
     now: 0, handlers: [], stopVoice: 0, lines: [], wordCalls: [], pending: [], preloads: [], waits: [], manualWaits: false,
-    reasons: { ...reasons }, sound, busy: false, saves: 0,
+    saves: 0, reviewed: [], quiz: [],
   };
   const overlay = fakeNode();
   const LEVELS = [
@@ -41,25 +41,26 @@ function setupWithStory(opts = {}) {
     performance: { now: () => env.now },
     addEventListener: (type, fn) => { if (type === 'keydown') env.handlers.push(fn); },
     $: id => (id === 'overlay' ? overlay : fakeNode()),
-    LEVELS, game: { stars: { total: 0, got: 0 }, memoryFound: false }, playFlow: { wordBaseline: {} },
+    LEVELS, game: { stars: { total: 0, got: 0 }, memoryFound: false }, save: { words: {}, roomClock: 3 },
     SRC: n => n,
     uxState: { modal: null, tok: null },
     uxWake() {}, uxInputReset() {}, uxSfx() {}, uxConfetti() {}, uxNudge() {}, uxSaveNow() { env.saves++; },
-    uxPaint: () => overlay,
+    uxPaint: html => { env.painted = html; return overlay; },
     uxButton: o => `[btn:${o.act}]`, uxIcon: () => '', uxPic: () => '', uxWordCard: wd => `[card:${wd.id}]`,
     uxBind: (root, acts) => { root.__acts = acts; },
     uxAlive: tok => context.uxState.tok === tok,
     uxLevel: x => (x && typeof x === 'object' ? x : LEVELS.find(l => l.id === x) || LEVELS[0]),
     uxLevelIndex: lv => Math.max(0, LEVELS.indexOf(lv)),
-    uxRoomWords: lv => lv.words.map(id => ({ id, en: id, icon: 'word_' + id })),
+    uxWordList: ids => ids.map(id => ({ id, en: id, icon: 'word_' + id })),
+    uxRoomWords: lv => context.uxWordList(lv.words),
+    uxQuizPool: () => [],
+    uxNoteQuiz: (id, firstTry) => env.quiz.push([id, firstTry]),
+    uxNoteReviewed: id => env.reviewed.push(id),
     uxLineArt: (k, fallback) => fallback || null,
     uxWordRec: id => recs.get(id) || (recs.set(id, { heard: 0, quiz: 0 }), recs.get(id)),
-    uxSetting: k => (k === 'sound' ? env.sound : undefined),
     uxKey: (stem, id) => stem + '_' + id,
     uxPreload: keys => env.preloads.push(keys),
     uxStopVoice() { env.stopVoice++; },
-    uxVoiceBusy: () => env.busy,
-    uxVoiceReason: key => (key in env.reasons ? env.reasons[key] : null),
     uxHooks: { replay() {} },
     uxLine(key) { env.lines.push(key); return Promise.resolve(); },
     uxWordVoice(id) {
@@ -77,7 +78,7 @@ function setupWithStory(opts = {}) {
   };
   const api = vm.runInNewContext(`
     ${source}
-    ({ showChapter, showRecall, showClear, openStory, advanceStory, wordOutcome, storyKeyAction,
+    ({ showChapter, showRecall, showClear, openStory, advanceStory, storyKeyAction,
        current: () => story, setStory: v => { story = v; } });
   `, context);
   setStory = api.setStory;
@@ -224,7 +225,7 @@ export function keyPolicyIsPureAndQuietForTheFirstSecond({ assert }) {
   assert.equal(a.storyKeyAction({}, 'Space', false, 0, false), 'advance');
 }
 
-/* ---------- A5: clear page word cards ---------- */
+/* ---------- A5 / C1: clear page word cards ---------- */
 
 export async function nextButtonAppearsOnceThreeCardsWereSaidOnce({ assert }) {
   const { env, api, overlay } = setupWithStory({ wordMode: 'manual' });
@@ -234,81 +235,45 @@ export async function nextButtonAppearsOnceThreeCardsWereSaidOnce({ assert }) {
   assert.equal(env.pending.length, 1, 'first card is being said');
   assert.ok(!ctl.innerHTML.includes('[btn:next]'));
   for (let k = 0; k < 3; k++) { env.pending.shift().resolve(true); await settle(); }
-  assert.ok(ctl.innerHTML.includes('[btn:next]'), 'next is there after the third card, before any top-up');
-  assert.equal(env.wordCalls.length, 4, 'the top-up has just started with a fourth clip');
+  assert.ok(ctl.innerHTML.includes('[btn:next]'), 'next is there right after the third card');
   assert.ok(env.saves >= 1, 'seen is saved as soon as the cards were said');
 }
 
-export async function topUpRunsOneRoundAtMostAndPlainHearsEndIt({ assert }) {
-  const { env, api } = setupWithStory({ wordMode: 'manual' });
-  api.showClear('hall', () => {});
-  await settle();
-  for (let i = 0; i < 6; i++) { await settle(); assert.ok(env.pending.length, 'clip ' + (i + 1) + ' is queued'); env.pending.shift().resolve(true); }
-  await settle(10);
-  assert.equal(env.wordCalls.length, 6, 'three cards + exactly one extra round, however short of eight the counts are');
-  assert.equal(env.pending.length, 0);
-}
-
-export async function aClipThatWasInterruptedOrMutedDoesNotEndTheTopUp({ assert }) {
-  for (const reason of ['interrupted', 'expired', 'muted']) {
-    const { env, api } = setupWithStory({ wordMode: 'manual', reasons: { word_heart: reason, word_star: reason } });
+export async function eachWordCardIsSaidOnceAndNothingIsRepeatedToPadTheCount({ assert }) {
+  for (const result of [true, false]) {   // heard, or cut off / muted: either way the page does not go round again
+    const { env, api } = setupWithStory({ wordMode: 'manual' });
     api.showClear('hall', () => {});
     await settle();
-    for (let k = 0; k < 3; k++) { env.pending.shift().resolve(true); await settle(); }   // first pass
-    env.pending.shift().resolve(false); await settle();                                  // top-up heart: not heard
-    env.pending.shift().resolve(false); await settle();                                  // top-up star: not heard
-    assert.equal(env.pending.length, 1, `${reason}: the round goes on to the third card`);
+    for (let i = 0; i < 3; i++) { await settle(); assert.ok(env.pending.length, 'clip ' + (i + 1) + ' is queued'); env.pending.shift().resolve(result); }
+    await settle(20);
+    assert.deepEqual(env.wordCalls, ['heart', 'star', 'door'], 'exactly the three cards, once each, in order');
+    assert.equal(env.pending.length, 0, 'no fourth clip is waiting');
+    env.now = 5000;
+    key(env, 'Enter');
+    await settle(20);
+    assert.equal(api.current().phase, 3);
+    assert.equal(env.wordCalls.length, 3, 'nor does the quiz bring a top-up round back');
   }
 }
 
-export async function onlyAMissingClipEndsTheTopUp({ assert }) {
-  const { env, api } = setupWithStory({ wordMode: 'manual', reasons: { word_heart: 'missing' } });
-  api.showClear('hall', () => {});
-  await settle();
-  for (let k = 0; k < 3; k++) { env.pending.shift().resolve(true); await settle(); }
-  env.pending.shift().resolve(false); await settle(10);
-  assert.equal(env.pending.length, 0, 'a missing clip ends the round at once');
-  assert.equal(env.wordCalls.length, 4);
+export function theViewHasNoTopUpLoopLeft({ assert }) {
+  for (const f of fs.readdirSync(new URL('../../src/view/', import.meta.url))) {
+    const text = fs.readFileSync(new URL('../../src/view/' + f, import.meta.url), 'utf8');
+    assert.ok(!text.includes('round < 8'), f + ': no clear-page round loop');
+    assert.ok(!text.includes('wordBaseline'), f + ': no per-room hearing baseline');
+  }
+  assert.ok(!/sort\(\(\) => Math\.random\(\) - \.5\)/.test(source), 'the quiz shuffles with Fisher-Yates, not a biased sort');
 }
 
-export async function aTapThatCutsTheClipOffCountsAsInterruptedNotMissing({ assert }) {
-  const { env, api, overlay } = setupWithStory({ wordMode: 'manual' });   // no reason from the audio side: only a plain false
+export async function aWordCardTappedOnTheClearPageSaysItAgainWithoutDisturbingTheScene({ assert }) {
+  const { env, api, overlay } = setupWithStory({ wordMode: 'manual' });
   api.showClear('hall', () => {});
   await settle();
   for (let k = 0; k < 3; k++) { env.pending.shift().resolve(true); await settle(); }
   const body = overlay.querySelector('#uxBody');
-  env.now = 10;
-  body.__acts.word({ dataset: { word: 'star' } });        // the child taps a card while the top-up clip plays
-  env.now = 20;
-  assert.equal(env.pending.length, 2, 'the tap started its own clip');
-  env.pending.shift().resolve(false); await settle();     // the top-up clip was cut off
-  assert.equal(env.pending.length, 2, 'the round carried on to the next card (plus the child\'s own clip)');
-}
-
-export async function leavingForTheQuizStopsTheTopUp({ assert }) {
-  const { env, api } = setupWithStory({ wordMode: 'manual' });
-  api.showClear('hall', () => {});
-  await settle();
-  for (let k = 0; k < 3; k++) { env.pending.shift().resolve(true); await settle(); }
-  env.now = 5000;
-  const before = env.wordCalls.length;
-  key(env, 'Enter');
-  await settle();
-  assert.equal(api.current().phase, 3);
-  env.pending.shift().resolve(false); await settle(10);
-  assert.equal(env.wordCalls.length, before, 'no further top-up clip once the quiz is open');
-}
-
-export function wordOutcomeTellsMissingInterruptedAndMutedApart({ assert }) {
-  const { api: a } = setupWithStory();
-  assert.equal(a.wordOutcome(true, {}), 'heard');
-  assert.equal(a.wordOutcome('muted', {}), 'muted');
-  assert.equal(a.wordOutcome('expired', {}), 'interrupted');
-  assert.equal(a.wordOutcome({ reason: 'missing' }, {}), 'missing');
-  assert.equal(a.wordOutcome(false, { muted: true }), 'muted');
-  assert.equal(a.wordOutcome(false, { interrupted: true }), 'interrupted');
-  assert.equal(a.wordOutcome(false, {}), 'missing');
-  assert.equal(a.wordOutcome(undefined, {}), 'missing');
+  body.__acts.word({ dataset: { word: 'star' } });
+  assert.equal(env.wordCalls.length, 4, 'the tap is the child\'s own replay');
+  assert.equal(api.current().phase, 2, 'and the page stays where it is');
 }
 
 /* ---------- preload ---------- */
@@ -327,4 +292,41 @@ export async function sceneOpeningsWarmTheLinesThatComeNext({ assert }) {
   const last = setupWithStory({ wordMode: 'manual' });
   last.api.showClear('lake', () => {});
   assert.equal(last.env.preloads.length, 0, 'there is no next room after the last one');
+}
+
+/* ---------- C2: recall with older words ---------- */
+
+export async function recallShowsThePreviousRoomsWordsThenDueOnesAndMarksOnlyTheOlderOnesReviewed({ assert }) {
+  const { env, api } = setupWithStory({ wordMode: 'manual' });
+  let done = 0;
+  api.showRecall('hall', () => done++, ['heart', 'star', 'door', 'ice', 'fish']);
+  await settle();
+  const cards = env.painted.match(/\[card:\w+\]/g);
+  assert.deepEqual(cards, ['[card:heart]', '[card:star]', '[card:door]', '[card:ice]', '[card:fish]'], 'three of the room and two older ones');
+  await settle(20);
+  assert.deepEqual(env.lines, ['recall_heart', 'recall_star', 'recall_door', 'recall_ice', 'recall_fish']);
+  assert.deepEqual(env.reviewed, ['ice', 'fish'], 'only the older words are marked: the recap of the room just left is not a spaced review');
+  assert.ok(env.preloads.some(k => k.includes('recall_ice')), 'the older lines are warmed too');
+}
+
+export async function recallWithoutAWordListShowsTheRoomsOwnWordsAndMarksNone({ assert }) {
+  const { env, api } = setupWithStory({ wordMode: 'manual' });
+  api.showRecall('hall', () => {});
+  await settle(20);
+  assert.deepEqual(env.lines, ['recall_heart', 'recall_star', 'recall_door']);
+  assert.deepEqual(env.reviewed, []);
+}
+
+export async function skippingTheRecallEarlyDoesNotMarkWordsThatWereNeverSaid({ assert }) {
+  const { env, api, overlay } = setupWithStory({ wordMode: 'manual' });
+  env.manualWaits = true;
+  let done = 0;
+  api.showRecall('hall', () => done++, ['heart', 'star', 'door', 'ice']);
+  await settle();
+  overlay.__acts.skip();
+  env.manualWaits = false;
+  for (const w of env.waits.splice(0)) w();
+  await settle(20);
+  assert.equal(done, 1);
+  assert.deepEqual(env.reviewed, [], 'the older word was never reached');
 }

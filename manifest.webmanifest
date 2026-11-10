@@ -1,0 +1,19 @@
+{
+  "name": "艾莎和安娜的冰堡",
+  "short_name": "冰堡",
+  "description": "和艾莎、安娜一起探索冰堡，边玩边学英文单词。",
+  "lang": "zh-CN",
+  "id": "ice-castle.html",
+  "start_url": "ice-castle.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#141c46",
+  "theme_color": "#141c46",
+  "icons": [
+    { "src": "game/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "game/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "game/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

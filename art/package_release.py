@@ -1,7 +1,8 @@
 """Package the built static game, omitting obsolete audio and all authoring/QA files.
 
 Run after build_page.py: python3 art/package_release.py --out /path/to/game.zip
-Refuses to package when game/vo_manifest.json and src/content disagree (a line changed without its audio being redone).
+Refuses to package when game/vo_manifest.json and src/content disagree (a line changed without its audio being redone), or when sw.js was
+generated for another build than ice-castle.html (PLAN-2 D5: the offline worker, the manifest and the icons ship with the page).
 """
 import argparse
 import hashlib
@@ -27,9 +28,10 @@ def package(out):
                          + ', '.join(f'{n} {kind}' for n, kind in stale[:8]) + (' ...' if len(stale) > 8 else ''))
     jobs = plan(content, None, True, str(ROOT / 'game'), None)
     files = {p.name: p for p in (ROOT / 'game').glob('*.webp')}
+    files.update({p.name: p for p in (ROOT / 'game').glob('*.png')})   # the app icons (art/make_icons.py)
     files.update({j.name: ROOT / 'game' / j.name for j in jobs})
     files['subs.json'] = ROOT / 'game/subs.json'
-    payload = {'index.html': page, 'ice-castle.html': page}
+    payload = {'index.html': page, 'ice-castle.html': page, 'sw.js': (ROOT / 'sw.js').read_bytes(), 'manifest.webmanifest': (ROOT / 'manifest.webmanifest').read_bytes()}
     for name, path in sorted(files.items()):
         data = path.read_bytes()
         if not data:
@@ -41,6 +43,13 @@ def package(out):
     version = re.search(rb'const ASSET_VERSION = "([a-f0-9]+)"', page)
     if not version:
         raise ValueError('Build the page with asset fingerprints before packaging')
+    worker = re.search(rb'const ASSET_VERSION = "([a-f0-9]+)"', payload['sw.js'])
+    if not worker or worker[1] != version[1]:
+        raise ValueError('sw.js belongs to another build than ice-castle.html: run art/build_page.py again')
+    precache = json.loads(re.search(rb'const PRECACHE = (\[.*?\]);', payload['sw.js'], re.S)[1])
+    missing = [u for u in precache if u.split('?')[0] not in payload]
+    if missing:
+        raise ValueError('sw.js precaches files that are not in the release: ' + ', '.join(missing[:5]))
     manifest = {'asset_version': version[1].decode(), 'runtime_bytes': total,
                 'audio_files': len(jobs), 'webp_files': sum(n.endswith('.webp') for n in files),
                 'files': {name: hashlib.sha256(data).hexdigest() for name, data in sorted(payload.items())}}

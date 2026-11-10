@@ -10,7 +10,27 @@
     { vo: 'p3', get art() { return uxLineArt('p3', 'key'); } },
   ];
 
-  /* Keys while a scene is open: Space / Enter / Escape do the scene's main action; game keys never leak through. */
+  /* Keys while a scene is open: game keys never leak through. Plain story pages (prologue, memories, ending) advance on
+     Space / Enter / Escape. The learning scenes (chapter card, recall, clear page + quiz) are `strict`: a child mashing the
+     magic key must not skip them, so only on-screen buttons and Enter act, nothing reacts in the first second after the
+     scene opens, and the quiz skip is a button only. */
+  const STORY_QUIET_MS = 1000;
+  /* What a key does while `scene` is open: 'pass' (a focused button takes it), 'advance' (the scene's main action) or 'swallow'. */
+  function storyKeyAction(scene, code, repeat, now, onBtn) {
+    const enter = code === 'Enter' || code === 'NumpadEnter';
+    if (scene && scene.strict) {
+      if (now - scene.openedAt < STORY_QUIET_MS || !enter) return 'swallow';
+      if (onBtn) return 'pass';
+      return repeat ? 'swallow' : 'advance';
+    }
+    const activate = enter || code === 'Space';
+    if (onBtn && activate) return 'pass';
+    if (activate || code === 'Escape') return repeat ? 'swallow' : 'advance';
+    return 'swallow';
+  }
+  /* A scene that only the on-screen buttons and Enter may move. */
+  function storyStrict(s) { s.strict = true; s.openedAt = performance.now(); return s; }
+
   addEventListener('keydown', e => {
     const modal = uxState.modal;
     if (!modal && !story) return;
@@ -21,11 +41,13 @@
       else if (!onBtn && e.code !== 'F11' && !e.metaKey && !e.ctrlKey) e.stopImmediatePropagation();
       return;
     }
-    if (onBtn && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) return;
-    if (['Enter', 'NumpadEnter', 'Space', 'Escape'].includes(e.code)) {
-      e.preventDefault(); e.stopImmediatePropagation();
-      if (!e.repeat) advanceStory();
-    } else if (!e.metaKey && !e.ctrlKey && e.code !== 'F11') e.stopImmediatePropagation();
+    const action = storyKeyAction(story, e.code, e.repeat, performance.now(), onBtn);
+    if (action === 'pass') return;
+    const activating = ['Enter', 'NumpadEnter', 'Space', 'Escape'].includes(e.code);
+    if (!activating && (e.metaKey || e.ctrlKey || e.code === 'F11')) return;
+    if (activating) e.preventDefault();
+    e.stopImmediatePropagation();
+    if (action === 'advance' && story.onKey) story.onKey();
   }, true);
 
   /* ---------- story pages ---------- */
@@ -36,7 +58,13 @@
     uxInputReset();
     renderStory();
   }
-  function advanceStory() { if (story && story.onKey) story.onKey(); }
+  /* The funnel for touch and gamepad presses (80-input): strict scenes ignore a plain call, a jump or magic tap must not skip a
+     lesson. `enterLike` (the gamepad's Start button, the same deliberate press as Enter) moves them after the quiet second. */
+  function advanceStory(enterLike) {
+    if (!story || !story.onKey) return;
+    if (story.strict && !(enterLike === true && performance.now() - story.openedAt >= STORY_QUIET_MS)) return;
+    story.onKey();
+  }
   function uxStoryNext(s) {
     if (!uxAlive(s)) return;
     uxStopVoice();
@@ -75,8 +103,10 @@
 
   /* Room picture, one narrator sentence, then the 3 words pop up one by one: "this level we look for heart", "say it", 1.5 s ear/mouth pause. */
   function showChapter(level, done) {
-    const lv = uxLevel(level), words = uxRoomWords(lv), s = uxScreen('chapter', true);
+    const lv = uxLevel(level), words = uxRoomWords(lv), s = storyStrict(uxScreen('chapter', true));
     uxInputReset();
+    /* the clear page of this room comes next: have its sentence, the quiz questions and the answers warm in the cache */
+    uxPreload([uxKey('clear', lv.id), ...words.map(w => uxKey('quiz', w.id)), ...words.map(w => uxKey('word', w.id)), 'quiz_right_1', 'quiz_right_2', 'quiz_right_3', 'quiz_wrong_1', 'quiz_wrong_2', 'quiz_wrong_3']);
     const n = words.length, cw = 190, gap = 26, x0 = (960 - (n * cw + (n - 1) * gap)) / 2;
     const root = uxPaint(`<g class="page"><image href="${SRC(uxLineArt('ch_' + lv.id, lv.bg))}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
       <rect y="220" width="960" height="300" fill="url(#bottomFade)"/>
@@ -115,7 +145,7 @@
   function showRecall(prevLevel, done) {
     const lv = prevLevel == null ? null : uxLevel(prevLevel), words = lv ? uxRoomWords(lv) : [];
     if (!lv || !words.length) { if (done) done(); return; }
-    const s = uxScreen('recall', true);
+    const s = storyStrict(uxScreen('recall', true));
     uxInputReset();
     const root = uxPaint(`<g class="page"><image href="${SRC(lv.bg)}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".5"/>
       ${uxCardRow(words, 140, 200, 230, 30)}
@@ -150,8 +180,11 @@
   }
 
   function showClear(level, done) {
-    const lv = uxLevel(level), idx = uxLevelIndex(lv), words = uxRoomWords(lv), s = uxScreen('clear', true);
+    const lv = uxLevel(level), idx = uxLevelIndex(lv), words = uxRoomWords(lv), s = storyStrict(uxScreen('clear', true));
     uxInputReset();
+    /* the next room opens with the recall of these words, then its chapter card: warm those lines while this page is up */
+    const nextLv = LEVELS[idx + 1];
+    if (nextLv) uxPreload([...words.map(w => uxKey('recall', w.id)), uxKey('ch', nextLv.id), ...uxRoomWords(nextLv).map(w => uxKey('learn', w.id))]);
     const g = game, memory = !!g.memoryFound;
     const small = !g.stars || g.stars.total === 0 ? true : g.stars.got >= g.stars.total;
     const got = [true, memory, small];   // 90-main has already stored these with markRoom()
@@ -186,53 +219,59 @@
       })();
     };
 
-    /* B: word cards, each said once; sparkle badge (no text) the first time */
+    /* B: word cards, each said once; sparkle badge (no text) the first time. The next button shows as soon as all three
+       have been said once; after that at most ONE extra round tops the room's hearings up towards eight, in the background. */
     const phaseWords = () => {
       s.phase = 2; const ok = mark();
-      let ready = false;
+      let ready = false, tappedAt = -1;
       stars.style.transform = 'translate(480px,52px) scale(.42)';
-      s.onKey = () => { if (ok() && ready) phaseQuiz(); };
+      s.onKey = () => { if (ok() && ready) { uxStopVoice(); phaseQuiz(); } };
       const rec = words.map(w => uxWordRec(w.id));
       const isNew = rec.map(r => !r.seen);
       body.innerHTML = uxCardRow(words, 128, 200, 238, 30, (wd, k) => ({ isNew: isNew[k] }));
-      uxBind(body, { word });
+      uxBind(body, { word: el => { tappedAt = performance.now(); word(el); } });
       setCtl('');
+      /* say a card's word and report what happened to it: 'heard' | 'interrupted' | 'muted' | 'missing' */
+      const say = async id => {
+        const t0 = performance.now();
+        const result = await uxWordVoice(id);
+        return wordOutcome(result === true ? true : uxVoiceReason(uxKey('word', id)) || result, { muted: !uxSetting('sound'), interrupted: tappedAt >= t0 || uxVoiceBusy() });
+      };
       (async () => {
-        await uxWait(500);
+        await uxWait(300);
         for (let k = 0; k < words.length; k++) {
           if (!ok()) return;
           uxPopSlot(root, k); uxSfx('page');
           rec[k].seen = true;
-          await uxWordVoice(words[k].id);
-          await uxWait(250);
+          await say(words[k].id);
+          await uxWait(200);
         }
-        // The child may skip chapter cards or interrupt pickup speech. Complete the room's
-        // eight hearings here, counting only audible clips that actually finished.
+        if (!ok()) return;
+        uxSaveNow();
+        ready = true; setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse');
+        // The child may have skipped the chapter card or interrupted pickup speech: one more round for words short of
+        // eight audible hearings. Only a clip that is missing ends it; a tap that cut a clip off or a muted clip does not.
+        if (!uxSetting('sound')) return;
         const baseline = (typeof playFlow === 'object' && playFlow.wordBaseline) || {};
-        for (let round = 0; round < 8 && ok() && uxSetting('sound'); round++) {
-          let pending = false;
-          for (const wd of words) {
-            if (!ok()) return;
-            if ((uxWordRec(wd.id).heard || 0) - (baseline[wd.id] || 0) >= 8) continue;
-            pending = true;
-            const card = body.querySelector(`[data-word="${wd.id}"]`);
-            if (card) card.classList.add('ux-pulse');
-            const heard = await uxWordVoice(wd.id);
-            if (card) card.classList.remove('ux-pulse');
-            if (!heard) { ready = true; break; } // missing audio must never strand the child
-            await uxWait(200);
-          }
-          if (!pending || ready) break;
+        for (const wd of words) {
+          if (!ok()) return;
+          if ((uxWordRec(wd.id).heard || 0) - (baseline[wd.id] || 0) >= 8) continue;
+          const card = body.querySelector(`[data-word="${wd.id}"]`);
+          if (card) card.classList.add('ux-pulse');
+          const outcome = await say(wd.id);
+          if (card) card.classList.remove('ux-pulse');
+          if (!ok()) return;
+          if (outcome === 'missing') break;
+          await uxWait(200);
         }
         uxSaveNow();
-        if (ok()) { ready = true; setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse'); }
       })();
     };
 
     /* C: quiz, 3 big picture cards, spoken question, skippable */
     const phaseQuiz = () => {
       s.phase = 3; const ok = mark();
-      s.onKey = () => finishPage();
+      s.onKey = null;   // the quiz has no keyboard way out: skip is the on-screen button only
       if (!words.length) { finishPage(); return; }
       const order = words.map((_, k) => k).sort(() => Math.random() - .5);
       (async () => {
@@ -285,4 +324,22 @@
       uxConfetti(root.querySelector('.page'), 480, 150, 24);
     }
     phaseStars();
+  }
+
+  /* What became of one spoken word. voice.word() answers true when the clip was heard to the end and false otherwise; the
+     audio side says why through voice.lastReason (passed in here as a string; 'expired' = never got its turn, which is an
+     interruption, not a missing file). Without a reason a plain false is told apart from the context: sound off -> muted;
+     something else started speaking over it -> interrupted; else the file never played -> missing. */
+  function wordOutcome(result, ctx) {
+    const kinds = ['heard', 'interrupted', 'muted', 'missing'];
+    if (result === true) return 'heard';
+    if (result === 'expired') return 'interrupted';
+    if (typeof result === 'string' && kinds.includes(result)) return result;
+    if (result && typeof result === 'object') {
+      if (result.heard) return 'heard';
+      if (kinds.includes(result.reason)) return result.reason;
+    }
+    if (ctx && ctx.muted) return 'muted';
+    if (ctx && ctx.interrupted) return 'interrupted';
+    return 'missing';
   }

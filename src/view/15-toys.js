@@ -29,6 +29,8 @@
     im.src = SRC(name);
   }
   const tyHas = name => tyImgState[name] === 'ok';
+  /* 90-main decodes the toy pictures before the first frame; remember that, so the first room does not flash the vector stand-ins. */
+  function toyImageReady(name) { if (!tyImgState[name]) tyImgState[name] = 'ok'; }
   /* A <g> that holds the picture `name` in the box, or fallback(g) until the picture exists. */
   function tyPic(parent, name, x, y, w, h, fallback, extra) {
     const g = el('g', {}, parent);

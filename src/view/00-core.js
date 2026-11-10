@@ -6,6 +6,7 @@
      Save (PLAN §5, CONTRACT §2). Every storage access is wrapped: in a private window, a preview or a sandboxed frame
      localStorage throws, and the game must stay playable with the defaults (the save then lives in memory only).
      --------------------------------------------------------------------------------------------------------------- */
+  /* >>> save-block (unit-tested by test/unit/save.test.mjs: keep it free of DOM and of names from other files) */
   const SAVE_KEY = 'icecastle.save';
   const OLD_STARS_KEY = 'icecastle.stars';
   const LEGACY_IDS = ['hall', 'lake', 'tower', 'ballroom'];   // the order of the old icecastle.stars array
@@ -16,13 +17,14 @@
     player: v => v === 'frost',
     sound: v => typeof v === 'boolean',
   };
+  const SAVE_VERSION = 2;   // what this build writes and understands; a stored v above it belongs to a newer build
   function lsRead(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
   function lsWrite(key, text) { try { window.localStorage.setItem(key, text); return true; } catch (e) { return false; } }
   function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (e) {} }
 
   function defaultSave() {
     return {
-      v: 2,
+      v: SAVE_VERSION,
       settings: { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true },
       rooms: {},
       words: {},
@@ -54,7 +56,9 @@
     if (isObj(raw.words)) {
       for (const id of Object.keys(raw.words)) {
         const w = raw.words[id];
-        if (isObj(w)) s.words[id] = { heard: nat(w.heard, 0), quiz: nat(w.quiz, 0) };
+        if (!isObj(w)) continue;
+        s.words[id] = { heard: nat(w.heard, 0), quiz: nat(w.quiz, 0) };
+        if (w.seen) s.words[id].seen = true;   // "met on a card" survives a reload even when the sound was off
       }
     }
     if (Array.isArray(raw.stickers)) s.stickers = raw.stickers.filter(x => typeof x === 'string');
@@ -70,10 +74,53 @@
     return s;
   }
 
+  /* A save written by a newer build (v above what this one understands) is read for play but never written back. */
+  function saveVersionTooNew(raw) { return isObj(raw) && Number.isFinite(raw.v) && raw.v > SAVE_VERSION; }
+  function storedSaveIsNewer(text) {
+    if (!text) return false;
+    try { return saveVersionTooNew(JSON.parse(text)); } catch (e) { return false; }
+  }
+
+  /* Fold another tab's save (already sanitized) into `mine`, in place, so objects held elsewhere stay valid.
+     Progress only ever grows: cleared rooms, stars, memories, stickers and flags are unions, counters take the larger
+     value, unlocked rooms the larger count. Settings, outfit and sticker positions stay as this tab has them.
+     Merging the same save twice changes nothing. */
+  function mergeSaveInto(mine, theirs) {
+    if (!isObj(mine) || !isObj(theirs)) return mine;
+    for (const id of Object.keys(theirs.rooms || {})) {
+      const o = theirs.rooms[id];
+      const r = mine.rooms[id] || (mine.rooms[id] = { cleared: false, stars: [false, false, false], memory: false });
+      r.cleared = !!r.cleared || !!o.cleared;
+      r.memory = !!r.memory || !!o.memory;
+      if (!Array.isArray(r.stars)) r.stars = [false, false, false];
+      for (let i = 0; i < 3; i++) r.stars[i] = !!r.stars[i] || !!(o.stars && o.stars[i]);
+      if (r.memory) r.stars[1] = true;
+      if (r.cleared) r.stars[0] = true;
+      for (const k of Object.keys(o)) if (!(k in r)) r[k] = o[k];
+    }
+    for (const id of Object.keys(theirs.words || {})) {
+      const o = theirs.words[id];
+      const w = mine.words[id] || (mine.words[id] = { heard: 0, quiz: 0 });
+      w.heard = Math.max(nat(w.heard, 0), nat(o.heard, 0));
+      w.quiz = Math.max(nat(w.quiz, 0), nat(o.quiz, 0));
+      if (o.seen) w.seen = true;
+      for (const k of Object.keys(o)) if (!(k in w)) w[k] = o[k];
+    }
+    for (const id of theirs.stickers || []) if (!mine.stickers.includes(id)) mine.stickers.push(id);
+    for (const b of theirs.board || []) if (!mine.board.some(x => x.id === b.id)) mine.board.push({ id: b.id, x: b.x, y: b.y });
+    mine.unlocked.rooms = Math.max(1, nat(mine.unlocked.rooms, 1), nat(theirs.unlocked && theirs.unlocked.rooms, 1));
+    for (const k of Object.keys(theirs.flags || {})) mine.flags[k] = !!mine.flags[k] || !!theirs.flags[k];
+    for (const k of Object.keys(theirs)) if (!(k in mine) && k !== '__proto__') mine[k] = theirs[k];
+    return mine;
+  }
+  /* The same merge without touching either argument. */
+  function mergeSaves(a, b) { return mergeSaveInto(sanitizeSave(JSON.parse(JSON.stringify(a))), sanitizeSave(JSON.parse(JSON.stringify(b)))); }
+
   function loadSave() {
     let raw = null;
     try { const t = lsRead(SAVE_KEY); if (t) raw = JSON.parse(t); } catch (e) { raw = null; }
     const s = sanitizeSave(raw);
+    const readOnly = saveVersionTooNew(raw);
     /* One-time migration of the old best-stars array: [clear, memory, par] per room, in the original four-room order.
        The third old star meant "finished within par seconds", the new one means "every small star", so it is not carried over. */
     let old = null;
@@ -89,7 +136,7 @@
         r.stars[1] = r.stars[1] || !!st[1];
         if (st[0]) s.unlocked.rooms = Math.max(s.unlocked.rooms, i + 2);
       });
-      if (lsWrite(SAVE_KEY, JSON.stringify(s))) lsRemove(OLD_STARS_KEY);   // only forget the old copy once the new one is safe
+      if (!readOnly && lsWrite(SAVE_KEY, JSON.stringify(s))) lsRemove(OLD_STARS_KEY);   // only forget the old copy once the new one is safe
     } else if (old !== null) {
       lsRemove(OLD_STARS_KEY);
     }
@@ -100,11 +147,23 @@
   let saveTimer = 0;
   function saveWrite() {
     clearTimeout(saveTimer); saveTimer = 0;
-    try { lsWrite(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+    if (storedSaveIsNewer(lsRead(SAVE_KEY))) return false;   // a newer build owns this key: play on in memory, never overwrite it
+    try { return lsWrite(SAVE_KEY, JSON.stringify(save)); } catch (e) { return false; }
   }
   /* Counters change many times a minute; coalesce them. */
   function saveSoon() { if (!saveTimer) saveTimer = setTimeout(saveWrite, 400); }
   addEventListener('pagehide', () => { if (saveTimer) saveWrite(); });
+  /* Another tab saved: take its progress into ours and write the union back, but only when that changed something, so two
+     tabs settle after at most one round of writes. */
+  addEventListener('storage', e => {
+    if (!e || e.key !== SAVE_KEY || !e.newValue) return;
+    let raw = null;
+    try { raw = JSON.parse(e.newValue); } catch (err) { return; }
+    if (!isObj(raw) || saveVersionTooNew(raw)) return;
+    const before = JSON.stringify(save);
+    mergeSaveInto(save, sanitizeSave(raw));
+    if (JSON.stringify(save) !== before) saveWrite();
+  });
 
   function setting(key) {
     const v = save.settings[key];
@@ -117,6 +176,7 @@
     try { onSettingChanged(key, value); } catch (e) { console.error(e); }   // 90-main applies mode / player to the game
     return true;
   }
+  /* <<< save-block */
 
   /* Dev counter: how often each word was heard, per room (?dev=1, CONTRACT §4 wordStats). */
   const heardLog = {};

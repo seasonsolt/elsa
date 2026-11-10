@@ -83,8 +83,9 @@
   }
 
   /* ---- Guide (PLAN A3): a soft light column on the current target, an arrow when it is off screen, and the stuck timer.
-     10 s without progress: the companion says the hint. 20 s: a trail of sparkles leads there. Any progress resets both. */
-  const guideFx = { t: 0, seen: 0, nextSay: 10, key: '', fade: 0, nodes: [] };
+     10 s on the same target: the companion says the hint. 20 s: a trail of sparkles leads there. Only a new target resets both;
+     g.progress does not, because building ice or pausing a floe over and over is not getting closer to the target. */
+  const guideFx = { t: 0, nextSay: 10, key: '', fade: 0, nodes: [] };
   const GUIDE_SAY_AT = 10, GUIDE_PATH_AT = 20, GUIDE_REPEAT = 20;
   const guideBox = layer('guideBox', 'shadows');     // under the sisters
   const guideTop = layer('guideTop', 'talk');        // over everything in the room
@@ -123,7 +124,7 @@
     } catch (e) { return null; }
   }
   function guideReset() {
-    guideFx.t = 0; guideFx.seen = game.progress | 0; guideFx.nextSay = GUIDE_SAY_AT; guideFx.key = ''; guideFx.fade = 0;
+    guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; guideFx.key = ''; guideFx.fade = 0;
     guideFx.beam.setAttribute('visibility', 'hidden');
     guideFx.arrow.setAttribute('visibility', 'hidden');
     guideFx.trail.setAttribute('visibility', 'hidden');
@@ -141,9 +142,7 @@
     const tg = active ? guideTarget() : null;
     if (!tg) { guideFx.beam.setAttribute('visibility', 'hidden'); guideFx.arrow.setAttribute('visibility', 'hidden'); guideFx.trail.setAttribute('visibility', 'hidden'); return; }
     const key = tg.i + ':' + tg.x + ':' + tg.y;
-    const progressed = (game.progress | 0) !== guideFx.seen;
-    if (progressed) { guideFx.seen = game.progress | 0; guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; }
-    if (key !== guideFx.key) { guideFx.key = key; guideFx.fade = 0; }
+    if (key !== guideFx.key) { guideFx.key = key; guideFx.fade = 0; guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; }
     guideFx.fade = Math.min(1, guideFx.fade + dt * 2.2);
     guideFx.t += dt;
     if (guideFx.t >= guideFx.nextSay && !playFlow.tutoring) {

@@ -80,20 +80,33 @@
     else img('door_closed', -39, -115, 78, 115, g);
   }
 
-  function drawGates() {
+  /* The gate columns are kept between calls and only their transform changes, so the CSS transition (.gateArt) slides them up and
+     down when a plate is pressed. They are rebuilt only when the room's gates are different (a new room: `fresh`, no animation). */
+  const gateView = { key: '', cols: [], plates: null };
+  function drawGates(fresh) {
     const box = $('gates');
-    box.textContent = '';
     const cols = new Map();
     for (const gt of game.gates) cols.set(gt.c, [...(cols.get(gt.c) || []), gt.r]);
-    for (const [c, rows] of cols) {
-      const top = Math.min(...rows) * T, h = rows.length * T;
-      const a = el('g', { class: 'gateArt', style: `transform:translateY(${game.gatesOpen ? -h * .9 : 0}px)` }, box);
-      img('gate', c * T - 4, top, T + 8, h, a);
+    const spec = [...cols].map(([c, rows]) => ({ c, top: Math.min(...rows) * T, h: rows.length * T }));
+    const key = spec.map(s => `${s.c},${s.top},${s.h}`).join(';');
+    const kept = gateView.plates && gateView.plates.parentNode === box && gateView.cols.every(n => n.parentNode === box);
+    if (fresh || key !== gateView.key || !kept) {
+      box.textContent = '';
+      gateView.key = key;
+      gateView.cols = spec.map(s => {
+        const a = el('g', { class: 'gateArt' }, box);
+        img('gate', s.c * T - 4, s.top, T + 8, s.h, a);
+        return a;
+      });
+      gateView.plates = el('g', {}, box);
     }
+    gateView.cols.forEach((a, i) => { a.style.transform = `translateY(${game.gatesOpen ? -spec[i].h * .9 : 0}px)`; });
+    const plates = gateView.plates;
+    plates.textContent = '';
     for (const p of game.plates) {
       const x = p.c * T, bottom = (p.r + 1) * T + 2;
-      if (p.down) img('plate_down', x + 1, bottom - 11, T - 2, 11, box);
-      else img('plate_up', x + 1, bottom - 20, T - 2, 20, box);
+      if (p.down) img('plate_down', x + 1, bottom - 11, T - 2, 11, plates);
+      else img('plate_up', x + 1, bottom - 20, T - 2, 20, plates);
     }
   }
 
@@ -201,7 +214,7 @@
   function rebuild() {
     const lv = LEVELS[game.index];
     $('bg').setAttribute('href', SRC(lv.bg));
-    drawTiles(); drawGlows(); drawItems(); drawGoal(); drawGates(); drawFish(); drawFragment();
+    drawTiles(); drawGlows(); drawItems(); drawGoal(); drawGates(true); drawFish(); drawFragment();
     if (typeof drawToys === 'function') drawToys();   // 15-toys
     clearFx();
     guideReset();

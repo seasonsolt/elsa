@@ -29,10 +29,11 @@
     if (!hasLineKey(key) || typeof voice === 'undefined' || !voice || typeof voice.line !== 'function') return Promise.resolve();
     try { return Promise.resolve(voice.line(key, opts)).catch(() => {}); } catch (e) { return Promise.resolve(); }
   }
-  /* Wait until cond() holds, `ms` pass or the flow moves on (token changes). */
+  /* Wait until cond() holds, `ms` of GAME time pass or the flow moves on (token changes). Game time only runs while the room is
+     live, so a hidden tab or the parent settings do not use up a lesson's waiting time. */
   async function waitUntil(cond, ms, tok) {
-    const end = performance.now() + ms;
-    while (!stale(tok) && !cond() && performance.now() < end) await sleep(100);
+    const end = game.time + ms / 1000;
+    while (!stale(tok) && !cond() && game.time < end) await sleep(100);
   }
 
   /* ---- settings that change the game itself ---- */
@@ -112,7 +113,8 @@
 
   function beginPlay(i, tok) {
     applySettings();
-    game.start(i);
+    /* enterRoom already loaded this room (and drew it behind the cards): going live must not load it a second time */
+    if (game.index === i) game.state = 'play'; else game.start(i);
     if (companion) companion.reset();
     handleEvents();
     Object.assign(inputSeen, { move: false, jump: false, magic: false, swap: false });
@@ -150,7 +152,7 @@
       if (stale(tok)) return false;
       kbd.teach = teach;
       const spoke = vline(key);
-      if (!hasLineKey(key)) await sleep(1500);
+      if (!hasLineKey(key)) await waitUntil(() => false, 1500, tok);
       await Promise.race([spoke, waitUntil(done, 12000, tok)]);   // the key may be pressed while she is still talking
       await waitUntil(done, ms, tok);
       return !stale(tok);
@@ -177,7 +179,7 @@
   /* The logic said 'clear': let the sisters cheer, record the stars, show the clear page, then on to the next room. */
   async function onRoomClear() {
     if (playFlow.phase !== 'play') return;
-    const tok = playFlow.token;
+    const tok = newToken();   // everything started in this room (tutorial lines, the room intro) is stale from here on
     playFlow.phase = 'clear';
     game.kbd.teach = null;
     clearInput();
@@ -227,6 +229,7 @@
       handleEvents();
       drawSister('frost', now, dt);
       drawSister('nuan', now, dt);
+      drawDuoTouchMark(now);
       const n = game.sisters.nuan, fr = game.sisters.frost;
       lanternGlow.setAttribute('cx', (n.x + n.w / 2 + n.dir * 6).toFixed(1));
       lanternGlow.setAttribute('cy', (n.y + n.h - 26).toFixed(1));
@@ -250,8 +253,13 @@
 
   /* Decode every painting first, so frames never flash in empty. */
   const lineArts = Object.values(LINES.lines || {}).map(l => l && l.art).filter(Boolean);
-  const names = [...new Set(['key', 'brick', 'water', 'pinkice', 'frozen', 'iceblock', 'door_open', 'door_closed', 'ball', 'two', 'snowman', 'flake', 'heart', 'gate', 'plate_up', 'plate_down', 'shelf0', 'shelf1', 'shelf2', 'drift0', 'drift1', ...lineArts, ...LEVELS.map(lv => lv.bg), ...Object.keys(SIZES).filter(k => k.startsWith('fx_') || /^fish_/.test(k) || /^(frost|nuan)_/.test(k))])];
-  const loads = names.map(n => { const i = new Image(); i.src = SRC(n); return i.decode().catch(() => {}); });
+  /* the six toy families of rooms 3-10: slope, spring, floe, note steps, ice flower, bunny (and its nest) */
+  const TOY_ART = /^(tile_slope_|spring_|floe_|note_|flower_|bunny_)/;
+  const names = [...new Set(['key', 'brick', 'water', 'pinkice', 'frozen', 'iceblock', 'door_open', 'door_closed', 'ball', 'two', 'snowman', 'flake', 'heart', 'gate', 'plate_up', 'plate_down', 'shelf0', 'shelf1', 'shelf2', 'drift0', 'drift1', ...lineArts, ...LEVELS.map(lv => lv.bg), ...Object.keys(SIZES).filter(k => k.startsWith('fx_') || /^fish_/.test(k) || /^(frost|nuan)_/.test(k) || TOY_ART.test(k))])];
+  const loads = names.map(n => {
+    const i = new Image(); i.src = SRC(n);
+    return i.decode().then(() => { if (TOY_ART.test(n) && typeof toyImageReady === 'function') toyImageReady(n); }, () => {});
+  });
 
   if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom };
 

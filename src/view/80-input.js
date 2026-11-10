@@ -34,12 +34,12 @@
   addEventListener('blur', clearInput);
 
   /* Gamepad: d-pad or left stick walks, A / up jumps, X / B magic; Elsa remains the solo lead. */
-  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false };
+  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false };
   function pollGamepad() {
     let p = null;
     try { p = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(x => x && x.connected) || null; } catch (e) { p = null; }
-    const was = { jump: padState.jump, act: padState.act, swap: padState.swap, any: padState.any };
-    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false }); return; }
+    const was = { jump: padState.jump, act: padState.act, swap: padState.swap, any: padState.any, start: padState.start };
+    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false }); return; }
     const b = i => !!(p.buttons[i] && p.buttons[i].pressed), ax = p.axes[0] || 0, ay = p.axes[1] || 0;
     padState.l = ax < -.45 || b(14) ? 1 : 0;
     padState.r = ax > .45 || b(15) ? 1 : 0;
@@ -47,9 +47,11 @@
     padState.jump = b(0) || b(12) || ay < -.75;
     padState.act = b(2) || b(1) || b(7);
     padState.swap = false;
-    padState.any = padState.jump || padState.act || padState.swap || b(9);
+    padState.start = b(9);
+    padState.any = padState.jump || padState.act || padState.swap || padState.start;
     if (padState.any && !was.any) wakeOnce();
-    if (storyIsOpen()) { if (padState.any && !was.any) advanceStoryPage(); return; }
+    /* a scene (chapter card, recall, clear page, quiz) is left with the Start button only, like Enter on the keyboard */
+    if (storyIsOpen()) { if (padState.start && !was.start) advanceStoryPage(true); return; }
     if (!canPlay()) return;
     if (padState.jump && !was.jump) pressPlay(steered(), 'jump');
     if (padState.act && !was.act) pressPlay(steered(), 'act');
@@ -61,6 +63,27 @@
     if (!canPlay()) return;
     game.press(id, what);
     if (what === 'jump') inputSeen.jump = true; else inputSeen.magic = true;
+  }
+
+  /* Restart the room. There is deliberately no key for this (a mashed R used to wipe a nearly finished room): the only way in is
+     the hud's restart button, which calls this once a 1 s long press has completed. Ignored unless the room is live. */
+  function restartRoomHeld() {
+    if (!canPlay()) return false;
+    restartRoom();
+    return true;
+  }
+
+  /* Duo on a touch screen: the touch buttons steer one sister at a time (touchDuoId), so she wears the golden marker. 20-sisters
+     only marks the solo lead; the frame loop calls this right after drawing the sisters. */
+  function drawDuoTouchMark(now) {
+    if (!isTouch || game.mode !== 'duo') return;
+    for (const id of ['frost', 'nuan']) {
+      const m = view[id] && view[id].mark;
+      if (!m) continue;
+      const mine = id === touchDuoId;
+      m.setAttribute('visibility', game.state === 'play' && mine ? 'visible' : 'hidden');
+      if (mine) m.setAttribute('transform', `translate(0 ${(Math.sin(now * 6) * 3).toFixed(1)})`);
+    }
   }
 
   /* Copy the held keys / gamepad / touch into g.input for whoever is player-controlled. In solo only the player's entry is
@@ -104,14 +127,15 @@
 
   /* ---- keyboard ---- */
   function wakeOnce() { if (typeof wakeAudio === 'function') { try { wakeAudio(); } catch (e) { console.error(e); } } }
-  function advanceStoryPage() { if (typeof advanceStory === 'function') advanceStory(); }
-  const ADVANCE_KEYS = ['Enter', 'NumpadEnter', 'Space', 'ArrowUp', 'KeyW', 'KeyF', 'KeyL', 'Escape'];
+  function advanceStoryPage(enterLike) { if (typeof advanceStory === 'function') advanceStory(enterLike === true); }
+  /* Only Enter leaves a scene from the keyboard: Space and the arrows are play keys and a child mashing them must not skip lessons. */
+  const ADVANCE_KEYS = ['Enter', 'NumpadEnter'];
 
   addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;   // leave browser shortcuts alone
     wakeOnce();
     if (storyIsOpen()) {
-      if (!e.repeat && ADVANCE_KEYS.includes(e.code)) { e.preventDefault(); advanceStoryPage(); }
+      if (!e.repeat && ADVANCE_KEYS.includes(e.code)) { e.preventDefault(); advanceStoryPage(true); }
       return;
     }
     const active = document.activeElement;
@@ -124,8 +148,6 @@
       }
       return;
     }
-    if (e.code === 'KeyM' && !e.repeat) { setSetting('sound', !setting('sound')); return; }
-    if (e.code === 'KeyR' && !e.repeat && game.state === 'play') { restartRoom(); return; }
     const solo = game.mode === 'solo';
     const map = solo ? SOLO_KEYS : DUO_KEYS;
     const m = map[e.code];
@@ -154,14 +176,17 @@
     b.addEventListener('pointerdown', on);
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, off);
   }
+  /* The jump / magic / switch buttons are play controls: while a scene (chapter card, recall, clear page, quiz) is open they do nothing. */
   function bindTap(id, fn) {
     const b = $(id);
     if (!b) return;
-    b.addEventListener('pointerdown', e => { e.preventDefault(); wakeOnce(); if (storyIsOpen()) advanceStoryPage(); else fn(); });
+    b.addEventListener('pointerdown', e => { e.preventDefault(); wakeOnce(); if (!storyIsOpen()) fn(); });
   }
+  /* The sister the touch buttons act for: Elsa in solo, the one picked with the switch button in duo. */
+  const touchId = () => (game.mode === 'solo' ? steered() : touchDuoId);
   bindHold('tLeft', 'l'); bindHold('tRight', 'r');
-  bindTap('tJump', () => pressPlay(steered(), 'jump'));
-  bindTap('tAct', () => pressPlay(steered(), 'act'));
+  bindTap('tJump', () => pressPlay(touchId(), 'jump'));
+  bindTap('tAct', () => pressPlay(touchId(), 'act'));
   bindTap('tSwitch', () => {
     if (game.mode === 'solo') { swapPlayer(); return; }
     clearInput();

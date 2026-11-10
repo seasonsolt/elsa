@@ -31,7 +31,7 @@ createGame() → g, plus:
   g.swap()                      toggles g.player (solo); emits {type:'swap', player}
   g.blink(id, x, y)             teleports sister id (feet-safe position); emits {type:'blink', who:id, from:{x,y}, to:{x,y}}
   g.progress                    integer, increments on any real progress: collect, melt, freeze, block, gate open, door open,
-                                memory found, player reaching a guide target. View uses it for the stuck timer.
+                                memory found, player reaching a guide target. Not used for the stuck timer (see guide in section 5).
   g.guide()                     → { i, c, r, say, x, y } current guide target (first not-yet-done entry of LEVELS[g.index].guide), or null
   g.stars                       { total, got } small decorative stars in this room
   g.memoryFound                 boolean
@@ -127,8 +127,9 @@ d1 (60-story, 70-ui):
   subtitleView                     renders onSubtitle when subtitles on
 d2 (00-core, 10-stage, 20-sisters, 30-fx, 80-input, 90-main):
   main loop: solo → companion.update(dt) → g.step(dt); events → audioOnEvents → talkOnEvents → fx
-  guide: light column on g.guide() target, edge arrow when off-screen, stuck timer on g.progress:
-         10 s → voice.line(target.say), 20 s → sparkle path; resets on progress
+  guide: light column on g.guide() target, edge arrow when off-screen, stuck timer on the target:
+         10 s → voice.line(target.say), 20 s → sparkle path; resets only when the target changes (g.progress does
+         not: building ice or pausing a floe over and over is not getting closer)
   input: solo keys ← → ↑ Space, Tab = g.swap(); duo keeps A/D/W/S/F and ← → ↑ ↓ Enter; Gamepad optional
   blink fx: star-light fade out/in + sfx('blink'); small-star '+' drawing using fx_star
   tutorial: first room first time → tutor_move / tutor_jump / tutor_magic, keyboard diagram highlights the key being taught

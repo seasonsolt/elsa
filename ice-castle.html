@@ -1,3 +1,4 @@
+<html lang="zh-CN">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>艾莎和安娜的冰堡</title>
@@ -172,7 +173,7 @@ body.touch .keys { display: none; }
 </svg>
 
 <div id="touch">
-  <button id="tLeft" aria-label="left">&#9664;</button><button id="tRight" aria-label="right">&#9654;</button><button id="tJump" aria-label="jump">&#9650;</button><button id="tAct" aria-label="magic">&#10022;</button><button id="tSwitch" aria-label="swap">&#8646;</button>
+  <button id="tLeft" aria-label="向左走">&#9664;</button><button id="tRight" aria-label="向右走">&#9654;</button><button id="tJump" aria-label="跳">&#9650;</button><button id="tAct" aria-label="魔法">&#10022;</button><button id="tSwitch" aria-label="换人">&#8646;</button>
 </div>
 
 <div id="info">
@@ -1820,6 +1821,7 @@ function createGame() {
      Save (PLAN §5, CONTRACT §2). Every storage access is wrapped: in a private window, a preview or a sandboxed frame
      localStorage throws, and the game must stay playable with the defaults (the save then lives in memory only).
      --------------------------------------------------------------------------------------------------------------- */
+  /* >>> save-block (unit-tested by test/unit/save.test.mjs: keep it free of DOM and of names from other files) */
   const SAVE_KEY = 'icecastle.save';
   const OLD_STARS_KEY = 'icecastle.stars';
   const LEGACY_IDS = ['hall', 'lake', 'tower', 'ballroom'];   // the order of the old icecastle.stars array
@@ -1830,13 +1832,14 @@ function createGame() {
     player: v => v === 'frost',
     sound: v => typeof v === 'boolean',
   };
+  const SAVE_VERSION = 2;   // what this build writes and understands; a stored v above it belongs to a newer build
   function lsRead(key) { try { return window.localStorage.getItem(key); } catch (e) { return null; } }
   function lsWrite(key, text) { try { window.localStorage.setItem(key, text); return true; } catch (e) { return false; } }
   function lsRemove(key) { try { window.localStorage.removeItem(key); } catch (e) {} }
 
   function defaultSave() {
     return {
-      v: 2,
+      v: SAVE_VERSION,
       settings: { subtitles: false, english: 'words+phrases', mode: 'solo', player: 'frost', sound: true },
       rooms: {},
       words: {},
@@ -1868,7 +1871,9 @@ function createGame() {
     if (isObj(raw.words)) {
       for (const id of Object.keys(raw.words)) {
         const w = raw.words[id];
-        if (isObj(w)) s.words[id] = { heard: nat(w.heard, 0), quiz: nat(w.quiz, 0) };
+        if (!isObj(w)) continue;
+        s.words[id] = { heard: nat(w.heard, 0), quiz: nat(w.quiz, 0) };
+        if (w.seen) s.words[id].seen = true;   // "met on a card" survives a reload even when the sound was off
       }
     }
     if (Array.isArray(raw.stickers)) s.stickers = raw.stickers.filter(x => typeof x === 'string');
@@ -1884,10 +1889,53 @@ function createGame() {
     return s;
   }
 
+  /* A save written by a newer build (v above what this one understands) is read for play but never written back. */
+  function saveVersionTooNew(raw) { return isObj(raw) && Number.isFinite(raw.v) && raw.v > SAVE_VERSION; }
+  function storedSaveIsNewer(text) {
+    if (!text) return false;
+    try { return saveVersionTooNew(JSON.parse(text)); } catch (e) { return false; }
+  }
+
+  /* Fold another tab's save (already sanitized) into `mine`, in place, so objects held elsewhere stay valid.
+     Progress only ever grows: cleared rooms, stars, memories, stickers and flags are unions, counters take the larger
+     value, unlocked rooms the larger count. Settings, outfit and sticker positions stay as this tab has them.
+     Merging the same save twice changes nothing. */
+  function mergeSaveInto(mine, theirs) {
+    if (!isObj(mine) || !isObj(theirs)) return mine;
+    for (const id of Object.keys(theirs.rooms || {})) {
+      const o = theirs.rooms[id];
+      const r = mine.rooms[id] || (mine.rooms[id] = { cleared: false, stars: [false, false, false], memory: false });
+      r.cleared = !!r.cleared || !!o.cleared;
+      r.memory = !!r.memory || !!o.memory;
+      if (!Array.isArray(r.stars)) r.stars = [false, false, false];
+      for (let i = 0; i < 3; i++) r.stars[i] = !!r.stars[i] || !!(o.stars && o.stars[i]);
+      if (r.memory) r.stars[1] = true;
+      if (r.cleared) r.stars[0] = true;
+      for (const k of Object.keys(o)) if (!(k in r)) r[k] = o[k];
+    }
+    for (const id of Object.keys(theirs.words || {})) {
+      const o = theirs.words[id];
+      const w = mine.words[id] || (mine.words[id] = { heard: 0, quiz: 0 });
+      w.heard = Math.max(nat(w.heard, 0), nat(o.heard, 0));
+      w.quiz = Math.max(nat(w.quiz, 0), nat(o.quiz, 0));
+      if (o.seen) w.seen = true;
+      for (const k of Object.keys(o)) if (!(k in w)) w[k] = o[k];
+    }
+    for (const id of theirs.stickers || []) if (!mine.stickers.includes(id)) mine.stickers.push(id);
+    for (const b of theirs.board || []) if (!mine.board.some(x => x.id === b.id)) mine.board.push({ id: b.id, x: b.x, y: b.y });
+    mine.unlocked.rooms = Math.max(1, nat(mine.unlocked.rooms, 1), nat(theirs.unlocked && theirs.unlocked.rooms, 1));
+    for (const k of Object.keys(theirs.flags || {})) mine.flags[k] = !!mine.flags[k] || !!theirs.flags[k];
+    for (const k of Object.keys(theirs)) if (!(k in mine) && k !== '__proto__') mine[k] = theirs[k];
+    return mine;
+  }
+  /* The same merge without touching either argument. */
+  function mergeSaves(a, b) { return mergeSaveInto(sanitizeSave(JSON.parse(JSON.stringify(a))), sanitizeSave(JSON.parse(JSON.stringify(b)))); }
+
   function loadSave() {
     let raw = null;
     try { const t = lsRead(SAVE_KEY); if (t) raw = JSON.parse(t); } catch (e) { raw = null; }
     const s = sanitizeSave(raw);
+    const readOnly = saveVersionTooNew(raw);
     /* One-time migration of the old best-stars array: [clear, memory, par] per room, in the original four-room order.
        The third old star meant "finished within par seconds", the new one means "every small star", so it is not carried over. */
     let old = null;
@@ -1903,7 +1951,7 @@ function createGame() {
         r.stars[1] = r.stars[1] || !!st[1];
         if (st[0]) s.unlocked.rooms = Math.max(s.unlocked.rooms, i + 2);
       });
-      if (lsWrite(SAVE_KEY, JSON.stringify(s))) lsRemove(OLD_STARS_KEY);   // only forget the old copy once the new one is safe
+      if (!readOnly && lsWrite(SAVE_KEY, JSON.stringify(s))) lsRemove(OLD_STARS_KEY);   // only forget the old copy once the new one is safe
     } else if (old !== null) {
       lsRemove(OLD_STARS_KEY);
     }
@@ -1914,11 +1962,23 @@ function createGame() {
   let saveTimer = 0;
   function saveWrite() {
     clearTimeout(saveTimer); saveTimer = 0;
-    try { lsWrite(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+    if (storedSaveIsNewer(lsRead(SAVE_KEY))) return false;   // a newer build owns this key: play on in memory, never overwrite it
+    try { return lsWrite(SAVE_KEY, JSON.stringify(save)); } catch (e) { return false; }
   }
   /* Counters change many times a minute; coalesce them. */
   function saveSoon() { if (!saveTimer) saveTimer = setTimeout(saveWrite, 400); }
   addEventListener('pagehide', () => { if (saveTimer) saveWrite(); });
+  /* Another tab saved: take its progress into ours and write the union back, but only when that changed something, so two
+     tabs settle after at most one round of writes. */
+  addEventListener('storage', e => {
+    if (!e || e.key !== SAVE_KEY || !e.newValue) return;
+    let raw = null;
+    try { raw = JSON.parse(e.newValue); } catch (err) { return; }
+    if (!isObj(raw) || saveVersionTooNew(raw)) return;
+    const before = JSON.stringify(save);
+    mergeSaveInto(save, sanitizeSave(raw));
+    if (JSON.stringify(save) !== before) saveWrite();
+  });
 
   function setting(key) {
     const v = save.settings[key];
@@ -1931,6 +1991,7 @@ function createGame() {
     try { onSettingChanged(key, value); } catch (e) { console.error(e); }   // 90-main applies mode / player to the game
     return true;
   }
+  /* <<< save-block */
 
   /* Dev counter: how often each word was heard, per room (?dev=1, CONTRACT §4 wordStats). */
   const heardLog = {};
@@ -2117,20 +2178,33 @@ function createGame() {
     else img('door_closed', -39, -115, 78, 115, g);
   }
 
-  function drawGates() {
+  /* The gate columns are kept between calls and only their transform changes, so the CSS transition (.gateArt) slides them up and
+     down when a plate is pressed. They are rebuilt only when the room's gates are different (a new room: `fresh`, no animation). */
+  const gateView = { key: '', cols: [], plates: null };
+  function drawGates(fresh) {
     const box = $('gates');
-    box.textContent = '';
     const cols = new Map();
     for (const gt of game.gates) cols.set(gt.c, [...(cols.get(gt.c) || []), gt.r]);
-    for (const [c, rows] of cols) {
-      const top = Math.min(...rows) * T, h = rows.length * T;
-      const a = el('g', { class: 'gateArt', style: `transform:translateY(${game.gatesOpen ? -h * .9 : 0}px)` }, box);
-      img('gate', c * T - 4, top, T + 8, h, a);
+    const spec = [...cols].map(([c, rows]) => ({ c, top: Math.min(...rows) * T, h: rows.length * T }));
+    const key = spec.map(s => `${s.c},${s.top},${s.h}`).join(';');
+    const kept = gateView.plates && gateView.plates.parentNode === box && gateView.cols.every(n => n.parentNode === box);
+    if (fresh || key !== gateView.key || !kept) {
+      box.textContent = '';
+      gateView.key = key;
+      gateView.cols = spec.map(s => {
+        const a = el('g', { class: 'gateArt' }, box);
+        img('gate', s.c * T - 4, s.top, T + 8, s.h, a);
+        return a;
+      });
+      gateView.plates = el('g', {}, box);
     }
+    gateView.cols.forEach((a, i) => { a.style.transform = `translateY(${game.gatesOpen ? -spec[i].h * .9 : 0}px)`; });
+    const plates = gateView.plates;
+    plates.textContent = '';
     for (const p of game.plates) {
       const x = p.c * T, bottom = (p.r + 1) * T + 2;
-      if (p.down) img('plate_down', x + 1, bottom - 11, T - 2, 11, box);
-      else img('plate_up', x + 1, bottom - 20, T - 2, 20, box);
+      if (p.down) img('plate_down', x + 1, bottom - 11, T - 2, 11, plates);
+      else img('plate_up', x + 1, bottom - 20, T - 2, 20, plates);
     }
   }
 
@@ -2238,7 +2312,7 @@ function createGame() {
   function rebuild() {
     const lv = LEVELS[game.index];
     $('bg').setAttribute('href', SRC(lv.bg));
-    drawTiles(); drawGlows(); drawItems(); drawGoal(); drawGates(); drawFish(); drawFragment();
+    drawTiles(); drawGlows(); drawItems(); drawGoal(); drawGates(true); drawFish(); drawFragment();
     if (typeof drawToys === 'function') drawToys();   // 15-toys
     clearFx();
     guideReset();
@@ -2274,6 +2348,8 @@ function createGame() {
     im.src = SRC(name);
   }
   const tyHas = name => tyImgState[name] === 'ok';
+  /* 90-main decodes the toy pictures before the first frame; remember that, so the first room does not flash the vector stand-ins. */
+  function toyImageReady(name) { if (!tyImgState[name]) tyImgState[name] = 'ok'; }
   /* A <g> that holds the picture `name` in the box, or fallback(g) until the picture exists. */
   function tyPic(parent, name, x, y, w, h, fallback, extra) {
     const g = el('g', {}, parent);
@@ -2876,8 +2952,9 @@ function createGame() {
   }
 
   /* ---- Guide (PLAN A3): a soft light column on the current target, an arrow when it is off screen, and the stuck timer.
-     10 s without progress: the companion says the hint. 20 s: a trail of sparkles leads there. Any progress resets both. */
-  const guideFx = { t: 0, seen: 0, nextSay: 10, key: '', fade: 0, nodes: [] };
+     10 s on the same target: the companion says the hint. 20 s: a trail of sparkles leads there. Only a new target resets both;
+     g.progress does not, because building ice or pausing a floe over and over is not getting closer to the target. */
+  const guideFx = { t: 0, nextSay: 10, key: '', fade: 0, nodes: [] };
   const GUIDE_SAY_AT = 10, GUIDE_PATH_AT = 20, GUIDE_REPEAT = 20;
   const guideBox = layer('guideBox', 'shadows');     // under the sisters
   const guideTop = layer('guideTop', 'talk');        // over everything in the room
@@ -2916,7 +2993,7 @@ function createGame() {
     } catch (e) { return null; }
   }
   function guideReset() {
-    guideFx.t = 0; guideFx.seen = game.progress | 0; guideFx.nextSay = GUIDE_SAY_AT; guideFx.key = ''; guideFx.fade = 0;
+    guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; guideFx.key = ''; guideFx.fade = 0;
     guideFx.beam.setAttribute('visibility', 'hidden');
     guideFx.arrow.setAttribute('visibility', 'hidden');
     guideFx.trail.setAttribute('visibility', 'hidden');
@@ -2934,9 +3011,7 @@ function createGame() {
     const tg = active ? guideTarget() : null;
     if (!tg) { guideFx.beam.setAttribute('visibility', 'hidden'); guideFx.arrow.setAttribute('visibility', 'hidden'); guideFx.trail.setAttribute('visibility', 'hidden'); return; }
     const key = tg.i + ':' + tg.x + ':' + tg.y;
-    const progressed = (game.progress | 0) !== guideFx.seen;
-    if (progressed) { guideFx.seen = game.progress | 0; guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; }
-    if (key !== guideFx.key) { guideFx.key = key; guideFx.fade = 0; }
+    if (key !== guideFx.key) { guideFx.key = key; guideFx.fade = 0; guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; }
     guideFx.fade = Math.min(1, guideFx.fade + dt * 2.2);
     guideFx.t += dt;
     if (guideFx.t >= guideFx.nextSay && !playFlow.tutoring) {
@@ -3185,15 +3260,28 @@ function createGame() {
   }
   /* Voice: lazy mp3 clips, one at a time, a small priority queue, the music ducks underneath.
        voice.line(key, opts)  opts { interrupt, priority 0..2 (default 1), maxWait ms, tag, subtitle:false }
-       voice.word(id) / voice.ui(name) / voice.stop() / voice.busy / voice.preload(keys)
+       voice.word(id) / voice.ui(name) / voice.stop() / voice.busy / voice.preload(keys) / voice.lastReason(key)
      Every call returns quickly and never rejects: a missing or slow file just plays as silence for ~0.35 s so a story that
-     waits on the promise keeps moving (subtitles, if wanted, stay up for a reading time). */
+     waits on the promise keeps moving (subtitles, if wanted, stay up for a reading time).
+     The promise resolves true when the clip was heard to the end (audible, not muted, not cut), false otherwise.
+     WHY it was false: voice.lastReason(key) -> the reason of the most recent call for that key (the line key, 'word_<id>'
+     for voice.word, 'ui_<name>' for hover names), set before the promise resolves; null when it completed or was never called.
+       'missing'     no such line, or its mp3 failed to load / decode / arrive in time (played as silence)
+       'interrupted' cut by louder speech or voice.stop(), dropped from the queue, or a hover name that found speech playing
+       'muted'       the clip ran to the end but sound was off, so nothing was heard
+       'expired'     waited in the queue longer than maxWait without getting its turn
+     A failed mp3 load is not cached: the next request fetches it once more (a second failure is cached), one console warning per file.
+     voice.ui (hover names) is priority 0, tag 'ui': it may cut another 'ui' clip but never anything else, it is dropped instead of
+     queued behind speech, and it says nothing at all while a story / learning scene (`story`) is open. */
   const voice = (() => {
     const FILE_WAIT = 2500, SILENT_MS = 350, CACHE_MAX = 48, QUEUE_MAX = 4;
     const bufs = new Map();              // file -> Promise<AudioBuffer | null>, least recently used first
     const queue = [], listeners = [];
     let cur = null, seq = 0, SUBS = null, subsAsked = false, subTimer = 0, uiTimer = 0, uiLast = { name: '', t: -1e9 };
-    const warned = new Set();
+    const warned = new Set(), warnedFiles = new Set(), failures = new Map();   // failures: file -> failed loads so far
+    const reasons = new Map();           // key -> why the latest call for it did not complete (null = it did)
+    const storyOpen = () => typeof story !== 'undefined' && !!story;
+    function settle(job, ok, reason) { reasons.set(job.key, ok ? null : reason); job.resolve(ok); }
     const speakable = t => /[\p{L}\p{N}]/u.test(t);
     const lineDef = key => {
       const L = typeof LINES === 'object' && LINES;
@@ -3226,7 +3314,18 @@ function createGame() {
       if (!audio) return Promise.resolve(null);
       let p = bufs.get(file);
       if (p) bufs.delete(file);
-      else p = fetch(assetURL(file)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && new Promise((ok, no) => audio.decodeAudioData(b, ok, no))).catch(() => null);
+      else {
+        p = fetch(assetURL(file)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b && new Promise((ok, no) => audio.decodeAudioData(b, ok, no))).catch(() => null);
+        p = p.then(b => {
+          if (b) { failures.delete(file); return b; }
+          // a failed load is not remembered as silence: the next request tries once more, the second failure sticks
+          const n = (failures.get(file) || 0) + 1;
+          failures.set(file, n);
+          if (!warnedFiles.has(file)) { warnedFiles.add(file); try { console.warn('voice: could not load', file); } catch (e) {} }
+          if (n < 2 && bufs.get(file) === p) bufs.delete(file);
+          return null;
+        });
+      }
       bufs.set(file, p);
       while (bufs.size > CACHE_MAX) bufs.delete(bufs.keys().next().value);
       return p;
@@ -3244,7 +3343,7 @@ function createGame() {
       duck();
       const go = buf => {
         if (cur !== job) return;
-        if (!buf || !audio || !bus) { job.silent = true; job.timer = setTimeout(() => finish(job), SILENT_MS); return; }
+        if (!buf || !audio || !bus) { job.silent = true; job.timer = setTimeout(() => finish(job, false, 'missing'), SILENT_MS); return; }
         const src = audio.createBufferSource();
         src.buffer = buf; src.connect(bus.voice);
         job.audible = soundWanted();
@@ -3257,7 +3356,7 @@ function createGame() {
         Promise.race([load(job.file), new Promise(ok => { t = setTimeout(() => ok(null), FILE_WAIT); })]).then(b => { clearTimeout(t); go(b); });
       } else Promise.resolve().then(() => go(null));
     }
-    function finish(job, completed = false) {
+    function finish(job, completed = false, why) {
       if (cur !== job) return;
       cur = null;
       const heard = completed && job.audible && soundWanted();
@@ -3271,11 +3370,13 @@ function createGame() {
         if (job.silent) { const keep = Math.max(0, Math.min(8000, job.segments.reduce((n, s) => n + s.text.length, 0) * 220) - SILENT_MS); subTimer = setTimeout(() => emitSub(null), Math.max(900, keep)); }
         else emitSub(null);
       }
-      job.resolve(!!heard);
+      settle(job, !!heard, why || (completed ? 'muted' : 'interrupted'));
     }
-    function drop(job) { clearTimeout(job.expire); job.resolve(false); }
+    function drop(job, why) { clearTimeout(job.expire); settle(job, false, why || 'interrupted'); }
     function pump() { while (!cur && queue.length) { const j = queue.shift(); clearTimeout(j.expire); start(j); } }
     function submit(job) {
+      // hover names never cut or wait behind other speech: with anything but 'ui' speech around they are simply not said
+      if (job.tag === 'ui' && ((cur && cur.tag !== 'ui') || queue.some(j => j.tag !== 'ui'))) { settle(job, false, 'interrupted'); return; }
       if (job.tag) for (let i = queue.length - 1; i >= 0; i--) if (queue[i].tag === job.tag) drop(queue.splice(i, 1)[0]);
       if (job.interrupt && (!cur || cur.prio <= job.prio)) {
         for (let i = queue.length - 1; i >= 0; i--) if (queue[i].prio <= job.prio) drop(queue.splice(i, 1)[0]);
@@ -3285,7 +3386,7 @@ function createGame() {
       queue.push(job);
       queue.sort((a, b) => b.prio - a.prio || a.seq - b.seq);
       while (queue.length > QUEUE_MAX) drop(queue.pop());
-      if (isFinite(job.maxWait)) job.expire = setTimeout(() => { const i = queue.indexOf(job); if (i >= 0) { queue.splice(i, 1); drop(job); } }, job.maxWait);
+      if (isFinite(job.maxWait)) job.expire = setTimeout(() => { const i = queue.indexOf(job); if (i >= 0) { queue.splice(i, 1); drop(job, 'expired'); } }, job.maxWait);
     }
     function make(fields, opts) {
       const prio = opts.priority != null ? opts.priority : 1;
@@ -3299,6 +3400,7 @@ function createGame() {
         const def = lineDef(key);
         if (!def || !Array.isArray(def.say)) {
           if (!warned.has(key)) { warned.add(key); try { console.warn('voice.line: no line', key); } catch (e) {} }
+          reasons.set(key, 'missing');
           resolve(); return;
         }
         const who = speakerOf(def), wMode = wordsOnly() && hasEn(def), segments = segmentsOf(key, def, wMode);
@@ -3313,11 +3415,13 @@ function createGame() {
       opts = Object.assign({ interrupt: true, tag: 'word', maxWait: 1500, subtitle: false }, opts);
       return new Promise(resolve => submit(make({ kind: 'word', key: 'word_' + id, who: 'nuan', file: `word_${id}.mp3`, words: [id], resolve }, opts)));
     }
-    /* Hover names: debounced 400 ms, at most one waiting; hovering back to the name that already played cancels the pending one. */
+    /* Hover names: debounced 400 ms, at most one waiting; hovering back to the name that already played cancels the pending one.
+       Priority 0 and tag 'ui' (see submit): never cuts narration, learn_*, quiz_* or word clips, and silent while a scene is open. */
     function ui(name) {
+      if (storyOpen()) { clearTimeout(uiTimer); return; }
       const now = performance.now();
       if (name === uiLast.name && now - uiLast.t < 400) { clearTimeout(uiTimer); return; }
-      const run = () => { uiLast = { name, t: performance.now() }; line('ui_' + name, { interrupt: true, tag: 'ui', maxWait: 600, subtitle: false }); };
+      const run = () => { if (storyOpen()) return; uiLast = { name, t: performance.now() }; line('ui_' + name, { interrupt: true, priority: 0, tag: 'ui', maxWait: 600, subtitle: false }); };
       clearTimeout(uiTimer);
       const wait = uiLast.t + 400 - now;
       if (wait > 0) uiTimer = setTimeout(run, wait); else run();
@@ -3345,6 +3449,7 @@ function createGame() {
     }
     return {
       line, word, ui, stop, preload,
+      lastReason: key => reasons.has(key) ? reasons.get(key) : null,
       wordInfo: id => (SUBS && SUBS.words && SUBS.words[id]) || null,   // { en, zh, room } once game/subs.json has loaded
       get busy() { return cur !== null; },
       onSubtitle(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; },
@@ -3739,7 +3844,27 @@ function createGame() {
     { vo: 'p3', get art() { return uxLineArt('p3', 'key'); } },
   ];
 
-  /* Keys while a scene is open: Space / Enter / Escape do the scene's main action; game keys never leak through. */
+  /* Keys while a scene is open: game keys never leak through. Plain story pages (prologue, memories, ending) advance on
+     Space / Enter / Escape. The learning scenes (chapter card, recall, clear page + quiz) are `strict`: a child mashing the
+     magic key must not skip them, so only on-screen buttons and Enter act, nothing reacts in the first second after the
+     scene opens, and the quiz skip is a button only. */
+  const STORY_QUIET_MS = 1000;
+  /* What a key does while `scene` is open: 'pass' (a focused button takes it), 'advance' (the scene's main action) or 'swallow'. */
+  function storyKeyAction(scene, code, repeat, now, onBtn) {
+    const enter = code === 'Enter' || code === 'NumpadEnter';
+    if (scene && scene.strict) {
+      if (now - scene.openedAt < STORY_QUIET_MS || !enter) return 'swallow';
+      if (onBtn) return 'pass';
+      return repeat ? 'swallow' : 'advance';
+    }
+    const activate = enter || code === 'Space';
+    if (onBtn && activate) return 'pass';
+    if (activate || code === 'Escape') return repeat ? 'swallow' : 'advance';
+    return 'swallow';
+  }
+  /* A scene that only the on-screen buttons and Enter may move. */
+  function storyStrict(s) { s.strict = true; s.openedAt = performance.now(); return s; }
+
   addEventListener('keydown', e => {
     const modal = uxState.modal;
     if (!modal && !story) return;
@@ -3750,11 +3875,13 @@ function createGame() {
       else if (!onBtn && e.code !== 'F11' && !e.metaKey && !e.ctrlKey) e.stopImmediatePropagation();
       return;
     }
-    if (onBtn && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) return;
-    if (['Enter', 'NumpadEnter', 'Space', 'Escape'].includes(e.code)) {
-      e.preventDefault(); e.stopImmediatePropagation();
-      if (!e.repeat) advanceStory();
-    } else if (!e.metaKey && !e.ctrlKey && e.code !== 'F11') e.stopImmediatePropagation();
+    const action = storyKeyAction(story, e.code, e.repeat, performance.now(), onBtn);
+    if (action === 'pass') return;
+    const activating = ['Enter', 'NumpadEnter', 'Space', 'Escape'].includes(e.code);
+    if (!activating && (e.metaKey || e.ctrlKey || e.code === 'F11')) return;
+    if (activating) e.preventDefault();
+    e.stopImmediatePropagation();
+    if (action === 'advance' && story.onKey) story.onKey();
   }, true);
 
   /* ---------- story pages ---------- */
@@ -3765,7 +3892,13 @@ function createGame() {
     uxInputReset();
     renderStory();
   }
-  function advanceStory() { if (story && story.onKey) story.onKey(); }
+  /* The funnel for touch and gamepad presses (80-input): strict scenes ignore a plain call, a jump or magic tap must not skip a
+     lesson. `enterLike` (the gamepad's Start button, the same deliberate press as Enter) moves them after the quiet second. */
+  function advanceStory(enterLike) {
+    if (!story || !story.onKey) return;
+    if (story.strict && !(enterLike === true && performance.now() - story.openedAt >= STORY_QUIET_MS)) return;
+    story.onKey();
+  }
   function uxStoryNext(s) {
     if (!uxAlive(s)) return;
     uxStopVoice();
@@ -3804,8 +3937,10 @@ function createGame() {
 
   /* Room picture, one narrator sentence, then the 3 words pop up one by one: "this level we look for heart", "say it", 1.5 s ear/mouth pause. */
   function showChapter(level, done) {
-    const lv = uxLevel(level), words = uxRoomWords(lv), s = uxScreen('chapter', true);
+    const lv = uxLevel(level), words = uxRoomWords(lv), s = storyStrict(uxScreen('chapter', true));
     uxInputReset();
+    /* the clear page of this room comes next: have its sentence, the quiz questions and the answers warm in the cache */
+    uxPreload([uxKey('clear', lv.id), ...words.map(w => uxKey('quiz', w.id)), ...words.map(w => uxKey('word', w.id)), 'quiz_right_1', 'quiz_right_2', 'quiz_right_3', 'quiz_wrong_1', 'quiz_wrong_2', 'quiz_wrong_3']);
     const n = words.length, cw = 190, gap = 26, x0 = (960 - (n * cw + (n - 1) * gap)) / 2;
     const root = uxPaint(`<g class="page"><image href="${SRC(uxLineArt('ch_' + lv.id, lv.bg))}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
       <rect y="220" width="960" height="300" fill="url(#bottomFade)"/>
@@ -3844,7 +3979,7 @@ function createGame() {
   function showRecall(prevLevel, done) {
     const lv = prevLevel == null ? null : uxLevel(prevLevel), words = lv ? uxRoomWords(lv) : [];
     if (!lv || !words.length) { if (done) done(); return; }
-    const s = uxScreen('recall', true);
+    const s = storyStrict(uxScreen('recall', true));
     uxInputReset();
     const root = uxPaint(`<g class="page"><image href="${SRC(lv.bg)}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".5"/>
       ${uxCardRow(words, 140, 200, 230, 30)}
@@ -3879,8 +4014,11 @@ function createGame() {
   }
 
   function showClear(level, done) {
-    const lv = uxLevel(level), idx = uxLevelIndex(lv), words = uxRoomWords(lv), s = uxScreen('clear', true);
+    const lv = uxLevel(level), idx = uxLevelIndex(lv), words = uxRoomWords(lv), s = storyStrict(uxScreen('clear', true));
     uxInputReset();
+    /* the next room opens with the recall of these words, then its chapter card: warm those lines while this page is up */
+    const nextLv = LEVELS[idx + 1];
+    if (nextLv) uxPreload([...words.map(w => uxKey('recall', w.id)), uxKey('ch', nextLv.id), ...uxRoomWords(nextLv).map(w => uxKey('learn', w.id))]);
     const g = game, memory = !!g.memoryFound;
     const small = !g.stars || g.stars.total === 0 ? true : g.stars.got >= g.stars.total;
     const got = [true, memory, small];   // 90-main has already stored these with markRoom()
@@ -3915,53 +4053,59 @@ function createGame() {
       })();
     };
 
-    /* B: word cards, each said once; sparkle badge (no text) the first time */
+    /* B: word cards, each said once; sparkle badge (no text) the first time. The next button shows as soon as all three
+       have been said once; after that at most ONE extra round tops the room's hearings up towards eight, in the background. */
     const phaseWords = () => {
       s.phase = 2; const ok = mark();
-      let ready = false;
+      let ready = false, tappedAt = -1;
       stars.style.transform = 'translate(480px,52px) scale(.42)';
-      s.onKey = () => { if (ok() && ready) phaseQuiz(); };
+      s.onKey = () => { if (ok() && ready) { uxStopVoice(); phaseQuiz(); } };
       const rec = words.map(w => uxWordRec(w.id));
       const isNew = rec.map(r => !r.seen);
       body.innerHTML = uxCardRow(words, 128, 200, 238, 30, (wd, k) => ({ isNew: isNew[k] }));
-      uxBind(body, { word });
+      uxBind(body, { word: el => { tappedAt = performance.now(); word(el); } });
       setCtl('');
+      /* say a card's word and report what happened to it: 'heard' | 'interrupted' | 'muted' | 'missing' */
+      const say = async id => {
+        const t0 = performance.now();
+        const result = await uxWordVoice(id);
+        return wordOutcome(result === true ? true : uxVoiceReason(uxKey('word', id)) || result, { muted: !uxSetting('sound'), interrupted: tappedAt >= t0 || uxVoiceBusy() });
+      };
       (async () => {
-        await uxWait(500);
+        await uxWait(300);
         for (let k = 0; k < words.length; k++) {
           if (!ok()) return;
           uxPopSlot(root, k); uxSfx('page');
           rec[k].seen = true;
-          await uxWordVoice(words[k].id);
-          await uxWait(250);
+          await say(words[k].id);
+          await uxWait(200);
         }
-        // The child may skip chapter cards or interrupt pickup speech. Complete the room's
-        // eight hearings here, counting only audible clips that actually finished.
+        if (!ok()) return;
+        uxSaveNow();
+        ready = true; setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse');
+        // The child may have skipped the chapter card or interrupted pickup speech: one more round for words short of
+        // eight audible hearings. Only a clip that is missing ends it; a tap that cut a clip off or a muted clip does not.
+        if (!uxSetting('sound')) return;
         const baseline = (typeof playFlow === 'object' && playFlow.wordBaseline) || {};
-        for (let round = 0; round < 8 && ok() && uxSetting('sound'); round++) {
-          let pending = false;
-          for (const wd of words) {
-            if (!ok()) return;
-            if ((uxWordRec(wd.id).heard || 0) - (baseline[wd.id] || 0) >= 8) continue;
-            pending = true;
-            const card = body.querySelector(`[data-word="${wd.id}"]`);
-            if (card) card.classList.add('ux-pulse');
-            const heard = await uxWordVoice(wd.id);
-            if (card) card.classList.remove('ux-pulse');
-            if (!heard) { ready = true; break; } // missing audio must never strand the child
-            await uxWait(200);
-          }
-          if (!pending || ready) break;
+        for (const wd of words) {
+          if (!ok()) return;
+          if ((uxWordRec(wd.id).heard || 0) - (baseline[wd.id] || 0) >= 8) continue;
+          const card = body.querySelector(`[data-word="${wd.id}"]`);
+          if (card) card.classList.add('ux-pulse');
+          const outcome = await say(wd.id);
+          if (card) card.classList.remove('ux-pulse');
+          if (!ok()) return;
+          if (outcome === 'missing') break;
+          await uxWait(200);
         }
         uxSaveNow();
-        if (ok()) { ready = true; setCtl(nextBtn('next', 'next')); ctl.querySelector('[data-act="next"]').classList.add('ux-pulse'); }
       })();
     };
 
     /* C: quiz, 3 big picture cards, spoken question, skippable */
     const phaseQuiz = () => {
       s.phase = 3; const ok = mark();
-      s.onKey = () => finishPage();
+      s.onKey = null;   // the quiz has no keyboard way out: skip is the on-screen button only
       if (!words.length) { finishPage(); return; }
       const order = words.map((_, k) => k).sort(() => Math.random() - .5);
       (async () => {
@@ -4015,6 +4159,24 @@ function createGame() {
     }
     phaseStars();
   }
+
+  /* What became of one spoken word. voice.word() answers true when the clip was heard to the end and false otherwise; the
+     audio side says why through voice.lastReason (passed in here as a string; 'expired' = never got its turn, which is an
+     interruption, not a missing file). Without a reason a plain false is told apart from the context: sound off -> muted;
+     something else started speaking over it -> interrupted; else the file never played -> missing. */
+  function wordOutcome(result, ctx) {
+    const kinds = ['heard', 'interrupted', 'muted', 'missing'];
+    if (result === true) return 'heard';
+    if (result === 'expired') return 'interrupted';
+    if (typeof result === 'string' && kinds.includes(result)) return result;
+    if (result && typeof result === 'object') {
+      if (result.heard) return 'heard';
+      if (kinds.includes(result.reason)) return result.reason;
+    }
+    if (ctx && ctx.muted) return 'muted';
+    if (ctx && ctx.interrupted) return 'interrupted';
+    return 'missing';
+  }
   /* ===== d1 / view-ui: picture-button helpers, HUD, title, rooms, wordbook, meet-them, parent settings, subtitles =====
      Everything here is drawn as SVG strings into #hud / #overlay / #modal / #subs of the 960x520 stage.
      Private names carry the `ux` prefix so they cannot collide with the other view files (one shared scope).
@@ -4049,6 +4211,18 @@ function createGame() {
     try { if (typeof voice !== 'undefined' && voice && typeof voice.word === 'function') p = voice.word(id); } catch (e) {}
     if (!p || typeof p.then !== 'function') return uxWait(900);
     return Promise.race([p.catch(() => false), uxWait(8000).then(() => false)]);
+  }
+  function uxVoiceBusy() { try { return typeof voice !== 'undefined' && !!voice && !!voice.busy; } catch (e) { return false; } }
+  /* Why the latest call for `key` did not complete ('missing' | 'interrupted' | 'muted' | 'expired'), or null when unknown. */
+  function uxVoiceReason(key) { try { return typeof voice !== 'undefined' && voice && typeof voice.lastReason === 'function' ? voice.lastReason(key) : null; } catch (e) { return null; } }
+  const uxKey = (stem, id) => stem + '_' + id;   // line keys built from a stem, e.g. uxKey('learn', 'heart')
+  /* Warm the voice cache for lines that will play soon; unknown keys and a missing voice are ignored. */
+  function uxPreload(keys) {
+    try {
+      if (typeof voice === 'undefined' || !voice || typeof voice.preload !== 'function') return;
+      const p = voice.preload(keys.filter(k => hasLineKey(k) || /^word_/.test(k)));
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (e) {}
   }
   function uxUiVoice(name) { try { if (typeof voice !== 'undefined' && voice && typeof voice.ui === 'function') voice.ui(name); } catch (e) {} }
   function uxStopVoice() { try { if (typeof voice !== 'undefined' && voice && typeof voice.stop === 'function') voice.stop(); } catch (e) {} }
@@ -4166,6 +4340,11 @@ function createGame() {
   }
 
   /* ---------- buttons ---------- */
+  /* Screen-reader name: the Chinese words Anna says for that button (ui_<name> in lines.json); `fallback` when there is none. */
+  function uxLabel(ui, fallback) {
+    const t = ui ? lineText('ui_' + ui)[0] : '';
+    return String(t || fallback || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
   /* o: { act, ui, icon, x, y, r, plate: 'light'|'gold'|'dark', cls, keep (tabbable: default true), ring } */
   function uxButton(o) {
     const r = o.r || 36, plate = o.plate || 'light';
@@ -4173,7 +4352,7 @@ function createGame() {
     const stroke = plate === 'gold' ? '#fff3c9' : plate === 'dark' ? '#cfe6ff' : '#ffffff';
     const ink = plate === 'dark' ? '#f6f7ff' : uxInk;
     const ring = o.ring ? `<circle class="ux-ring" r="${r + 5}" fill="none" stroke="#ffd27a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * (r + 5)).toFixed(1)}" style="--len:${(2 * Math.PI * (r + 5)).toFixed(1)}"/>` : '';
-    return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${o.ui || o.act}">
+    return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${uxLabel(o.ui, o.act)}">
       <circle r="${r + (o.ring ? 8 : 0)}" fill="#000" fill-opacity="0" pointer-events="all"/>
       <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .78 : 1}" stroke="${stroke}" stroke-width="3" filter="url(#softShadow)"/>${ring}
       ${uxIcon(o.icon || o.act, r, ink)}</g></g>`;
@@ -4183,7 +4362,7 @@ function createGame() {
     if (!el) return el;
     if (!el.__uxHover) {
       el.__uxHover = true;
-      const hov = () => { if (uiName) uxUiVoice(uiName); uxSfx('hover'); };
+      const hov = () => { if (uiName && !story) uxUiVoice(uiName); uxSfx('hover'); };   // a hover name must never cut into a scene's own voice
       el.addEventListener('pointerenter', hov);
       el.addEventListener('focus', () => { try { if (el.matches(':focus-visible')) hov(); } catch (e) {} });
     }
@@ -4237,7 +4416,7 @@ function createGame() {
     const badge = o.isNew ? `<g transform="translate(${w - 18} 14) rotate(12)"><path d="M0 -30L8 -14L26 -18L16 -2L30 10L12 14L10 30L-4 18L-20 26L-16 8L-30 -4L-12 -8Z" fill="#ff6b9a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><path d="M0 -13L3.5 -3.5L13 0L3.5 3.5L0 13L-3.5 3.5L-13 0L-3.5 -3.5Z" fill="#fff"/></g>` : '';
     const txt = label ? `<text class="latin" x="${w / 2}" y="${h - 20}" text-anchor="middle" font-size="${wd.en.length > 8 ? 26 : 32}" fill="${gray ? '#8d96bd' : '#3b2a6b'}">${wd.en}</text>` : '';
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-pop ${o.show ? 'show' : ''}" data-pop="${o.slot == null ? '' : o.slot}">
-      <g class="ux-card" data-act="${o.act || 'word'}" data-word="${wd.id}" data-ui="" tabindex="0" role="button" aria-label="${wd.en}">
+      <g class="ux-card" data-act="${o.act || 'word'}" data-word="${wd.id}" data-ui="" tabindex="0" role="button" lang="en" aria-label="${wd.en}">
         <rect class="ux-glowrect" x="-8" y="-8" width="${w + 16}" height="${h + 16}" rx="28" fill="none" stroke="#ffe27a" stroke-width="7" opacity="0"/>
         <rect class="ux-frame" width="${w}" height="${h}" rx="22" fill="#fffaf0" stroke="#ffd27a" stroke-width="4" filter="url(#softShadow)"/>
         ${pic}${txt}${badge}</g></g></g>`;
@@ -4360,7 +4539,7 @@ function createGame() {
       const open = uxUnlocked(i), st = uxRoomSave(lv.id).stars || [];
       const dots = Array.from({ length: col + 1 }, (_, k) => `<circle cx="${12 + k * 18}" cy="${th + 16}" r="6.5" fill="${hues[row % 3]}" stroke="#fff" stroke-width="1.5"/>`).join('');
       const stars = [0, 1, 2].map(k => `<path transform="translate(${tw - 66 + k * 24} ${th + 16}) scale(10)" d="M0 -.8L.22 -.25L.8 -.22L.35 .15L.5 .72L0 .4L-.5 .72L-.35 .15L-.8 -.22L-.22 -.25Z" fill="${st[k] ? '#ffd27a' : '#3b4a96'}" opacity="${st[k] ? 1 : .6}"/>`).join('');
-      return `<g transform="translate(${x} ${y})"><g class="ux-tile ${open ? '' : 'locked'}" data-act="room" data-room="${i}" data-ui="room_${lv.id}" tabindex="0" role="button" aria-label="room ${i + 1}">
+      return `<g transform="translate(${x} ${y})"><g class="ux-tile ${open ? '' : 'locked'}" data-act="room" data-room="${i}" data-ui="room_${lv.id}" tabindex="0" role="button" aria-label="${uxLabel('room_' + lv.id, 'room ' + (i + 1))}">
         <rect class="ux-frame" x="-4" y="-4" width="${tw + 8}" height="${th + 8}" rx="14" fill="#fffaf0" stroke="${open ? '#ffd27a' : '#6a76b8'}" stroke-width="3" filter="url(#softShadow)"/>
         <image href="${SRC(lv.bg)}" width="${tw}" height="${th}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round 10px)"/>
         ${open ? '' : `<rect width="${tw}" height="${th}" rx="10" fill="#0d1438" opacity=".6"/><g transform="translate(${tw / 2} ${th / 2}) scale(22)">${uxGlyph('lock', '#e8ecff')}</g>`}
@@ -4543,6 +4722,7 @@ function createGame() {
           <g id="uxAvOther" transform="translate(30 20)"><circle r="14" fill="#cfe0ff" stroke="#fff" stroke-width="2" opacity=".95"/><clipPath id="uxClipB"><circle r="12"/></clipPath><image id="uxAvImg2" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMin slice" clip-path="url(#uxClipB)"/></g>
         </g></g></g>
       <g id="uxPills" transform="translate(98 19)">${pills}</g>
+      ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: 716, y: 38, r: 26, plate: 'dark', keep: false, ring: true }) : ''}
       ${uxButton({ act: 'home', ui: 'back', icon: 'home', x: 776, y: 38, r: 26, plate: 'dark', keep: false, ring: true })}
       ${uxButton({ act: 'hint', ui: 'hint', icon: 'bulb', x: 836, y: 38, r: 26, plate: 'dark', keep: false })}
       ${uxButton({ act: 'fs', ui: 'fullscreen', icon: 'fullscreen', x: 896, y: 38, r: 26, plate: 'dark', keep: false })}
@@ -4563,6 +4743,8 @@ function createGame() {
       },
     });
     uxHold(root.querySelector('[data-act="home"]'), 1500, () => uxHooks.home());
+    const restart = root.querySelector('[data-act="restart"]');   // a long press, never a tap: a stray finger must not wipe the room
+    if (restart) uxHold(restart, 1000, () => { if (typeof restartRoomHeld === 'function') restartRoomHeld(); });
     uxState.hudBuilt = true; uxState.sig = '';
   }
 
@@ -4605,7 +4787,7 @@ function createGame() {
     /* keyboard diagram (solo only): game.kbd is kept by 80-input, teach = the key the tutorial asks for. A tap stays lit a moment. */
     /* The diagram rides in the top bar just after the counter pills (off the floor and the door).
        UX_KEYS span x 696..952, y 426..502 in stage units; KB_S keeps even 5 pills + diagram left of the buttons at x 750. */
-    const KB_S = .62, kbX = 98 + x + 12;
+    const kbX = 98 + x + 12, KB_S = Math.max(.34, Math.min(.62, (typeof restartRoomHeld === 'function' ? 684 - kbX : 744 - kbX) / 256));   // 256 = width of UX_KEYS in stage units
     $('uxKeysPos').setAttribute('transform', `translate(${(kbX - 696 * KB_S).toFixed(1)} ${(14 - 426 * KB_S).toFixed(1)}) scale(${KB_S})`);
     const kroot = $('uxKeys'), kbd = g.kbd || {}, now = performance.now();
     kroot.setAttribute('visibility', solo ? 'visible' : 'hidden');
@@ -5036,12 +5218,12 @@ function createGame() {
   addEventListener('blur', clearInput);
 
   /* Gamepad: d-pad or left stick walks, A / up jumps, X / B magic; Elsa remains the solo lead. */
-  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false };
+  const padState = { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false };
   function pollGamepad() {
     let p = null;
     try { p = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(x => x && x.connected) || null; } catch (e) { p = null; }
-    const was = { jump: padState.jump, act: padState.act, swap: padState.swap, any: padState.any };
-    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false }); return; }
+    const was = { jump: padState.jump, act: padState.act, swap: padState.swap, any: padState.any, start: padState.start };
+    if (!p) { Object.assign(padState, { l: 0, r: 0, d: 0, jump: false, act: false, swap: false, any: false, start: false }); return; }
     const b = i => !!(p.buttons[i] && p.buttons[i].pressed), ax = p.axes[0] || 0, ay = p.axes[1] || 0;
     padState.l = ax < -.45 || b(14) ? 1 : 0;
     padState.r = ax > .45 || b(15) ? 1 : 0;
@@ -5049,9 +5231,11 @@ function createGame() {
     padState.jump = b(0) || b(12) || ay < -.75;
     padState.act = b(2) || b(1) || b(7);
     padState.swap = false;
-    padState.any = padState.jump || padState.act || padState.swap || b(9);
+    padState.start = b(9);
+    padState.any = padState.jump || padState.act || padState.swap || padState.start;
     if (padState.any && !was.any) wakeOnce();
-    if (storyIsOpen()) { if (padState.any && !was.any) advanceStoryPage(); return; }
+    /* a scene (chapter card, recall, clear page, quiz) is left with the Start button only, like Enter on the keyboard */
+    if (storyIsOpen()) { if (padState.start && !was.start) advanceStoryPage(true); return; }
     if (!canPlay()) return;
     if (padState.jump && !was.jump) pressPlay(steered(), 'jump');
     if (padState.act && !was.act) pressPlay(steered(), 'act');
@@ -5063,6 +5247,27 @@ function createGame() {
     if (!canPlay()) return;
     game.press(id, what);
     if (what === 'jump') inputSeen.jump = true; else inputSeen.magic = true;
+  }
+
+  /* Restart the room. There is deliberately no key for this (a mashed R used to wipe a nearly finished room): the only way in is
+     the hud's restart button, which calls this once a 1 s long press has completed. Ignored unless the room is live. */
+  function restartRoomHeld() {
+    if (!canPlay()) return false;
+    restartRoom();
+    return true;
+  }
+
+  /* Duo on a touch screen: the touch buttons steer one sister at a time (touchDuoId), so she wears the golden marker. 20-sisters
+     only marks the solo lead; the frame loop calls this right after drawing the sisters. */
+  function drawDuoTouchMark(now) {
+    if (!isTouch || game.mode !== 'duo') return;
+    for (const id of ['frost', 'nuan']) {
+      const m = view[id] && view[id].mark;
+      if (!m) continue;
+      const mine = id === touchDuoId;
+      m.setAttribute('visibility', game.state === 'play' && mine ? 'visible' : 'hidden');
+      if (mine) m.setAttribute('transform', `translate(0 ${(Math.sin(now * 6) * 3).toFixed(1)})`);
+    }
   }
 
   /* Copy the held keys / gamepad / touch into g.input for whoever is player-controlled. In solo only the player's entry is
@@ -5106,14 +5311,15 @@ function createGame() {
 
   /* ---- keyboard ---- */
   function wakeOnce() { if (typeof wakeAudio === 'function') { try { wakeAudio(); } catch (e) { console.error(e); } } }
-  function advanceStoryPage() { if (typeof advanceStory === 'function') advanceStory(); }
-  const ADVANCE_KEYS = ['Enter', 'NumpadEnter', 'Space', 'ArrowUp', 'KeyW', 'KeyF', 'KeyL', 'Escape'];
+  function advanceStoryPage(enterLike) { if (typeof advanceStory === 'function') advanceStory(enterLike === true); }
+  /* Only Enter leaves a scene from the keyboard: Space and the arrows are play keys and a child mashing them must not skip lessons. */
+  const ADVANCE_KEYS = ['Enter', 'NumpadEnter'];
 
   addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;   // leave browser shortcuts alone
     wakeOnce();
     if (storyIsOpen()) {
-      if (!e.repeat && ADVANCE_KEYS.includes(e.code)) { e.preventDefault(); advanceStoryPage(); }
+      if (!e.repeat && ADVANCE_KEYS.includes(e.code)) { e.preventDefault(); advanceStoryPage(true); }
       return;
     }
     const active = document.activeElement;
@@ -5126,8 +5332,6 @@ function createGame() {
       }
       return;
     }
-    if (e.code === 'KeyM' && !e.repeat) { setSetting('sound', !setting('sound')); return; }
-    if (e.code === 'KeyR' && !e.repeat && game.state === 'play') { restartRoom(); return; }
     const solo = game.mode === 'solo';
     const map = solo ? SOLO_KEYS : DUO_KEYS;
     const m = map[e.code];
@@ -5156,14 +5360,17 @@ function createGame() {
     b.addEventListener('pointerdown', on);
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, off);
   }
+  /* The jump / magic / switch buttons are play controls: while a scene (chapter card, recall, clear page, quiz) is open they do nothing. */
   function bindTap(id, fn) {
     const b = $(id);
     if (!b) return;
-    b.addEventListener('pointerdown', e => { e.preventDefault(); wakeOnce(); if (storyIsOpen()) advanceStoryPage(); else fn(); });
+    b.addEventListener('pointerdown', e => { e.preventDefault(); wakeOnce(); if (!storyIsOpen()) fn(); });
   }
+  /* The sister the touch buttons act for: Elsa in solo, the one picked with the switch button in duo. */
+  const touchId = () => (game.mode === 'solo' ? steered() : touchDuoId);
   bindHold('tLeft', 'l'); bindHold('tRight', 'r');
-  bindTap('tJump', () => pressPlay(steered(), 'jump'));
-  bindTap('tAct', () => pressPlay(steered(), 'act'));
+  bindTap('tJump', () => pressPlay(touchId(), 'jump'));
+  bindTap('tAct', () => pressPlay(touchId(), 'act'));
   bindTap('tSwitch', () => {
     if (game.mode === 'solo') { swapPlayer(); return; }
     clearInput();
@@ -5247,10 +5454,11 @@ function createGame() {
     if (!hasLineKey(key) || typeof voice === 'undefined' || !voice || typeof voice.line !== 'function') return Promise.resolve();
     try { return Promise.resolve(voice.line(key, opts)).catch(() => {}); } catch (e) { return Promise.resolve(); }
   }
-  /* Wait until cond() holds, `ms` pass or the flow moves on (token changes). */
+  /* Wait until cond() holds, `ms` of GAME time pass or the flow moves on (token changes). Game time only runs while the room is
+     live, so a hidden tab or the parent settings do not use up a lesson's waiting time. */
   async function waitUntil(cond, ms, tok) {
-    const end = performance.now() + ms;
-    while (!stale(tok) && !cond() && performance.now() < end) await sleep(100);
+    const end = game.time + ms / 1000;
+    while (!stale(tok) && !cond() && game.time < end) await sleep(100);
   }
 
   /* ---- settings that change the game itself ---- */
@@ -5330,7 +5538,8 @@ function createGame() {
 
   function beginPlay(i, tok) {
     applySettings();
-    game.start(i);
+    /* enterRoom already loaded this room (and drew it behind the cards): going live must not load it a second time */
+    if (game.index === i) game.state = 'play'; else game.start(i);
     if (companion) companion.reset();
     handleEvents();
     Object.assign(inputSeen, { move: false, jump: false, magic: false, swap: false });
@@ -5368,7 +5577,7 @@ function createGame() {
       if (stale(tok)) return false;
       kbd.teach = teach;
       const spoke = vline(key);
-      if (!hasLineKey(key)) await sleep(1500);
+      if (!hasLineKey(key)) await waitUntil(() => false, 1500, tok);
       await Promise.race([spoke, waitUntil(done, 12000, tok)]);   // the key may be pressed while she is still talking
       await waitUntil(done, ms, tok);
       return !stale(tok);
@@ -5395,7 +5604,7 @@ function createGame() {
   /* The logic said 'clear': let the sisters cheer, record the stars, show the clear page, then on to the next room. */
   async function onRoomClear() {
     if (playFlow.phase !== 'play') return;
-    const tok = playFlow.token;
+    const tok = newToken();   // everything started in this room (tutorial lines, the room intro) is stale from here on
     playFlow.phase = 'clear';
     game.kbd.teach = null;
     clearInput();
@@ -5445,6 +5654,7 @@ function createGame() {
       handleEvents();
       drawSister('frost', now, dt);
       drawSister('nuan', now, dt);
+      drawDuoTouchMark(now);
       const n = game.sisters.nuan, fr = game.sisters.frost;
       lanternGlow.setAttribute('cx', (n.x + n.w / 2 + n.dir * 6).toFixed(1));
       lanternGlow.setAttribute('cy', (n.y + n.h - 26).toFixed(1));
@@ -5468,8 +5678,13 @@ function createGame() {
 
   /* Decode every painting first, so frames never flash in empty. */
   const lineArts = Object.values(LINES.lines || {}).map(l => l && l.art).filter(Boolean);
-  const names = [...new Set(['key', 'brick', 'water', 'pinkice', 'frozen', 'iceblock', 'door_open', 'door_closed', 'ball', 'two', 'snowman', 'flake', 'heart', 'gate', 'plate_up', 'plate_down', 'shelf0', 'shelf1', 'shelf2', 'drift0', 'drift1', ...lineArts, ...LEVELS.map(lv => lv.bg), ...Object.keys(SIZES).filter(k => k.startsWith('fx_') || /^fish_/.test(k) || /^(frost|nuan)_/.test(k))])];
-  const loads = names.map(n => { const i = new Image(); i.src = SRC(n); return i.decode().catch(() => {}); });
+  /* the six toy families of rooms 3-10: slope, spring, floe, note steps, ice flower, bunny (and its nest) */
+  const TOY_ART = /^(tile_slope_|spring_|floe_|note_|flower_|bunny_)/;
+  const names = [...new Set(['key', 'brick', 'water', 'pinkice', 'frozen', 'iceblock', 'door_open', 'door_closed', 'ball', 'two', 'snowman', 'flake', 'heart', 'gate', 'plate_up', 'plate_down', 'shelf0', 'shelf1', 'shelf2', 'drift0', 'drift1', ...lineArts, ...LEVELS.map(lv => lv.bg), ...Object.keys(SIZES).filter(k => k.startsWith('fx_') || /^fish_/.test(k) || /^(frost|nuan)_/.test(k) || TOY_ART.test(k))])];
+  const loads = names.map(n => {
+    const i = new Image(); i.src = SRC(n);
+    return i.decode().then(() => { if (TOY_ART.test(n) && typeof toyImageReady === 'function') toyImageReady(n); }, () => {});
+  });
 
   if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom };
 

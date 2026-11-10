@@ -33,6 +33,18 @@
     if (!p || typeof p.then !== 'function') return uxWait(900);
     return Promise.race([p.catch(() => false), uxWait(8000).then(() => false)]);
   }
+  function uxVoiceBusy() { try { return typeof voice !== 'undefined' && !!voice && !!voice.busy; } catch (e) { return false; } }
+  /* Why the latest call for `key` did not complete ('missing' | 'interrupted' | 'muted' | 'expired'), or null when unknown. */
+  function uxVoiceReason(key) { try { return typeof voice !== 'undefined' && voice && typeof voice.lastReason === 'function' ? voice.lastReason(key) : null; } catch (e) { return null; } }
+  const uxKey = (stem, id) => stem + '_' + id;   // line keys built from a stem, e.g. uxKey('learn', 'heart')
+  /* Warm the voice cache for lines that will play soon; unknown keys and a missing voice are ignored. */
+  function uxPreload(keys) {
+    try {
+      if (typeof voice === 'undefined' || !voice || typeof voice.preload !== 'function') return;
+      const p = voice.preload(keys.filter(k => hasLineKey(k) || /^word_/.test(k)));
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (e) {}
+  }
   function uxUiVoice(name) { try { if (typeof voice !== 'undefined' && voice && typeof voice.ui === 'function') voice.ui(name); } catch (e) {} }
   function uxStopVoice() { try { if (typeof voice !== 'undefined' && voice && typeof voice.stop === 'function') voice.stop(); } catch (e) {} }
   function uxSfx(name) { try { if (typeof sfx === 'function') sfx(name); } catch (e) {} }
@@ -149,6 +161,11 @@
   }
 
   /* ---------- buttons ---------- */
+  /* Screen-reader name: the Chinese words Anna says for that button (ui_<name> in lines.json); `fallback` when there is none. */
+  function uxLabel(ui, fallback) {
+    const t = ui ? lineText('ui_' + ui)[0] : '';
+    return String(t || fallback || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
   /* o: { act, ui, icon, x, y, r, plate: 'light'|'gold'|'dark', cls, keep (tabbable: default true), ring } */
   function uxButton(o) {
     const r = o.r || 36, plate = o.plate || 'light';
@@ -156,7 +173,7 @@
     const stroke = plate === 'gold' ? '#fff3c9' : plate === 'dark' ? '#cfe6ff' : '#ffffff';
     const ink = plate === 'dark' ? '#f6f7ff' : uxInk;
     const ring = o.ring ? `<circle class="ux-ring" r="${r + 5}" fill="none" stroke="#ffd27a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * (r + 5)).toFixed(1)}" style="--len:${(2 * Math.PI * (r + 5)).toFixed(1)}"/>` : '';
-    return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${o.ui || o.act}">
+    return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${uxLabel(o.ui, o.act)}">
       <circle r="${r + (o.ring ? 8 : 0)}" fill="#000" fill-opacity="0" pointer-events="all"/>
       <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .78 : 1}" stroke="${stroke}" stroke-width="3" filter="url(#softShadow)"/>${ring}
       ${uxIcon(o.icon || o.act, r, ink)}</g></g>`;
@@ -166,7 +183,7 @@
     if (!el) return el;
     if (!el.__uxHover) {
       el.__uxHover = true;
-      const hov = () => { if (uiName) uxUiVoice(uiName); uxSfx('hover'); };
+      const hov = () => { if (uiName && !story) uxUiVoice(uiName); uxSfx('hover'); };   // a hover name must never cut into a scene's own voice
       el.addEventListener('pointerenter', hov);
       el.addEventListener('focus', () => { try { if (el.matches(':focus-visible')) hov(); } catch (e) {} });
     }
@@ -220,7 +237,7 @@
     const badge = o.isNew ? `<g transform="translate(${w - 18} 14) rotate(12)"><path d="M0 -30L8 -14L26 -18L16 -2L30 10L12 14L10 30L-4 18L-20 26L-16 8L-30 -4L-12 -8Z" fill="#ff6b9a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><path d="M0 -13L3.5 -3.5L13 0L3.5 3.5L0 13L-3.5 3.5L-13 0L-3.5 -3.5Z" fill="#fff"/></g>` : '';
     const txt = label ? `<text class="latin" x="${w / 2}" y="${h - 20}" text-anchor="middle" font-size="${wd.en.length > 8 ? 26 : 32}" fill="${gray ? '#8d96bd' : '#3b2a6b'}">${wd.en}</text>` : '';
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-pop ${o.show ? 'show' : ''}" data-pop="${o.slot == null ? '' : o.slot}">
-      <g class="ux-card" data-act="${o.act || 'word'}" data-word="${wd.id}" data-ui="" tabindex="0" role="button" aria-label="${wd.en}">
+      <g class="ux-card" data-act="${o.act || 'word'}" data-word="${wd.id}" data-ui="" tabindex="0" role="button" lang="en" aria-label="${wd.en}">
         <rect class="ux-glowrect" x="-8" y="-8" width="${w + 16}" height="${h + 16}" rx="28" fill="none" stroke="#ffe27a" stroke-width="7" opacity="0"/>
         <rect class="ux-frame" width="${w}" height="${h}" rx="22" fill="#fffaf0" stroke="#ffd27a" stroke-width="4" filter="url(#softShadow)"/>
         ${pic}${txt}${badge}</g></g></g>`;
@@ -343,7 +360,7 @@
       const open = uxUnlocked(i), st = uxRoomSave(lv.id).stars || [];
       const dots = Array.from({ length: col + 1 }, (_, k) => `<circle cx="${12 + k * 18}" cy="${th + 16}" r="6.5" fill="${hues[row % 3]}" stroke="#fff" stroke-width="1.5"/>`).join('');
       const stars = [0, 1, 2].map(k => `<path transform="translate(${tw - 66 + k * 24} ${th + 16}) scale(10)" d="M0 -.8L.22 -.25L.8 -.22L.35 .15L.5 .72L0 .4L-.5 .72L-.35 .15L-.8 -.22L-.22 -.25Z" fill="${st[k] ? '#ffd27a' : '#3b4a96'}" opacity="${st[k] ? 1 : .6}"/>`).join('');
-      return `<g transform="translate(${x} ${y})"><g class="ux-tile ${open ? '' : 'locked'}" data-act="room" data-room="${i}" data-ui="room_${lv.id}" tabindex="0" role="button" aria-label="room ${i + 1}">
+      return `<g transform="translate(${x} ${y})"><g class="ux-tile ${open ? '' : 'locked'}" data-act="room" data-room="${i}" data-ui="room_${lv.id}" tabindex="0" role="button" aria-label="${uxLabel('room_' + lv.id, 'room ' + (i + 1))}">
         <rect class="ux-frame" x="-4" y="-4" width="${tw + 8}" height="${th + 8}" rx="14" fill="#fffaf0" stroke="${open ? '#ffd27a' : '#6a76b8'}" stroke-width="3" filter="url(#softShadow)"/>
         <image href="${SRC(lv.bg)}" width="${tw}" height="${th}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round 10px)"/>
         ${open ? '' : `<rect width="${tw}" height="${th}" rx="10" fill="#0d1438" opacity=".6"/><g transform="translate(${tw / 2} ${th / 2}) scale(22)">${uxGlyph('lock', '#e8ecff')}</g>`}
@@ -526,6 +543,7 @@
           <g id="uxAvOther" transform="translate(30 20)"><circle r="14" fill="#cfe0ff" stroke="#fff" stroke-width="2" opacity=".95"/><clipPath id="uxClipB"><circle r="12"/></clipPath><image id="uxAvImg2" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMin slice" clip-path="url(#uxClipB)"/></g>
         </g></g></g>
       <g id="uxPills" transform="translate(98 19)">${pills}</g>
+      ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: 716, y: 38, r: 26, plate: 'dark', keep: false, ring: true }) : ''}
       ${uxButton({ act: 'home', ui: 'back', icon: 'home', x: 776, y: 38, r: 26, plate: 'dark', keep: false, ring: true })}
       ${uxButton({ act: 'hint', ui: 'hint', icon: 'bulb', x: 836, y: 38, r: 26, plate: 'dark', keep: false })}
       ${uxButton({ act: 'fs', ui: 'fullscreen', icon: 'fullscreen', x: 896, y: 38, r: 26, plate: 'dark', keep: false })}
@@ -546,6 +564,8 @@
       },
     });
     uxHold(root.querySelector('[data-act="home"]'), 1500, () => uxHooks.home());
+    const restart = root.querySelector('[data-act="restart"]');   // a long press, never a tap: a stray finger must not wipe the room
+    if (restart) uxHold(restart, 1000, () => { if (typeof restartRoomHeld === 'function') restartRoomHeld(); });
     uxState.hudBuilt = true; uxState.sig = '';
   }
 
@@ -588,7 +608,7 @@
     /* keyboard diagram (solo only): game.kbd is kept by 80-input, teach = the key the tutorial asks for. A tap stays lit a moment. */
     /* The diagram rides in the top bar just after the counter pills (off the floor and the door).
        UX_KEYS span x 696..952, y 426..502 in stage units; KB_S keeps even 5 pills + diagram left of the buttons at x 750. */
-    const KB_S = .62, kbX = 98 + x + 12;
+    const kbX = 98 + x + 12, KB_S = Math.max(.34, Math.min(.62, (typeof restartRoomHeld === 'function' ? 684 - kbX : 744 - kbX) / 256));   // 256 = width of UX_KEYS in stage units
     $('uxKeysPos').setAttribute('transform', `translate(${(kbX - 696 * KB_S).toFixed(1)} ${(14 - 426 * KB_S).toFixed(1)}) scale(${KB_S})`);
     const kroot = $('uxKeys'), kbd = g.kbd || {}, now = performance.now();
     kroot.setAttribute('visibility', solo ? 'visible' : 'hidden');

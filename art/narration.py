@@ -1,8 +1,9 @@
-"""Voice the kids' edition with edge-tts: line clips, companion variants, word readings and subtitle text.
+"""Voice the kids' edition with ElevenLabs (Anna) and edge-tts (Elsa): line clips, companion variants, word readings and subtitle text.
 
 Run with a Python that has edge_tts (the user's lemo venv is fine for this; never install into it):
     ~/lemo-opuscar/.venv/bin/python art/narration.py [flags]
-Needs ffmpeg on PATH (mp3 encoder libmp3lame).
+Needs ffmpeg on PATH (mp3 encoder libmp3lame). A voice named "elevenlabs:<voice id>" is rendered by the ElevenLabs API and needs
+ELEVENLABS_API_KEY in the environment (keep the key in your shell profile, never in the repository).
 
 Input   src/content/lines.json  {"voices": {...}, "lines": {key: {who, say:[segments], art?}}, "pages"?: {...}}
         src/content/words.json  [{id, en, zh, icon, room}]
@@ -15,9 +16,14 @@ Output  <out>/vo_<key>.mp3                 frost / nuan lines
         <out>/subs.json                    subtitle text (English marked) plus the word table, see below
 <out> defaults to ./game (relative to the current directory, like the old script).
 
+Voices: lines.json "voices" maps speaker -> {"zh": entry, "en": entry}. An edge-tts entry is [voice, rate, pitch]; an ElevenLabs entry
+is ["elevenlabs:<voice id>", speed as a rate ("-15%" = 0.85), model id]. An ElevenLabs speaker has one voice for both languages.
+
 Segments (PLAN A4): a string is spoken with the speaker's zh voice, {"w": id} with the speaker's en voice (word text from
-words.json), {"en": "Yay!"} with the en voice. English segments are 15 % slower than the voice's own en rate. Segments are
-trimmed, joined with a 0.12 s gap, loudness-normalised and encoded as 48 kbps mono mp3.
+words.json), {"en": "Yay!"} with the en voice. With edge-tts every segment is its own request, English 15 % slower than the
+voice's own en rate, and the segments are trimmed and joined with a 0.12 s gap. An ElevenLabs speaker reads the whole line in
+one request at the zh entry's speed (one voice, unbroken intonation); its en entry sets the speed of the word readings.
+Clips are loudness-normalised and encoded as 48 kbps mono mp3.
 
 Flags
     (none)              only clips whose file is missing or whose recipe changed since the manifest was written (see below)
@@ -28,6 +34,7 @@ Flags
     --dry-run           print what would be generated as "name | reason | segments" (reason: missing, changed, unrecorded, forced),
                         no network, no ffmpeg
     --segments DIR      also keep every distinct synthesized segment as DIR/<id>.wav plus DIR/segments.json, for art/asr_check.py
+                        (a whole ElevenLabs line is one segment, lang "mix" when it holds both languages)
     --prune             delete the .mp3 files directly in <out> that plan() does not expect any more (the clips of removed or renamed
                         lines, old speaker variants); every other file and sub-directory is left alone. With --dry-run only list them.
                         Never synthesizes. A normal run afterwards rewrites subs.json (and says if a clip is missing)
@@ -70,13 +77,18 @@ SAMPLE_RATE = 24000
 BITRATE = '48k'
 LOUDNESS = 'I=-18:TP=-2:LRA=11'
 SPEAKERS = ('frost', 'nuan')
-# Used when lines.json carries no "voices" block; mirrors PLAN A4.
+EL_PREFIX = 'elevenlabs:'
+EL_API = 'https://api.elevenlabs.io'
+EL_SPEED = (0.7, 1.2)   # what the API accepts for voice_settings.speed
+ANNA_EL = EL_PREFIX + 'BT0SH7Hb8NRPpT5xbCgg'   # ElevenLabs voice library "Lulu - Cute Little Witch": a playful Mandarin girl, one voice for zh and en
+# Used when lines.json carries no "voices" block; mirrors lines.json.
 DEFAULT_VOICES = {
     'frost': {'zh': ['zh-CN-XiaoxiaoNeural', '-6%', '-4Hz']},   # Elsa speaks Chinese only
-    'nuan': {'zh': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz'], 'en': ['en-US-EmmaMultilingualNeural', '-5%', '+8Hz']},
+    'nuan': {'zh': [ANNA_EL, '+0%', 'eleven_v4'], 'en': [ANNA_EL, '-15%', 'eleven_v4']},
 }
 MANIFEST_NAME = 'vo_manifest.json'
 PUNCT_ONLY = re.compile(r'^[\W_]*$', re.UNICODE)   # nothing a voice could say
+CJK_PUNCT = '，。！？、；：～…）」』'
 
 
 class Fail(Exception):
@@ -91,6 +103,28 @@ def slower(rate, pct=EN_SLOWER):
     if not m:
         raise Fail(f'unsupported rate {rate!r}, expected something like "-20%"')
     return '%+d%%' % round(((1 + int(m.group(1)) / 100) * (1 - pct / 100) - 1) * 100)
+
+
+def is_el(voice_name):
+    return voice_name.startswith(EL_PREFIX)
+
+
+def rate_factor(rate):
+    """'-15%' -> 0.85"""
+    m = re.fullmatch(r'([+-]?\d+)%', rate.strip())
+    if not m:
+        raise Fail(f'unsupported rate {rate!r}, expected something like "-15%"')
+    return round(1 + int(m.group(1)) / 100, 4)
+
+
+def join_spoken(parts):
+    """Segment texts -> one sentence: a space where Latin text meets other text ("跟着 star 的光"), none next to CJK punctuation."""
+    out = ''
+    for p in (p.strip() for p in parts):
+        if out and p and p[0] not in CJK_PUNCT and out[-1] not in CJK_PUNCT and ((out[-1].isascii() and not out[-1].isspace()) or (p[0].isascii() and p[0].isalnum())):
+            out += ' '
+        out += p
+    return out
 
 
 def load_json(path, what):
@@ -111,9 +145,15 @@ class Content:
             for lang in ('zh', 'en') if who == 'nuan' else ('zh',):   # Elsa has no English voice: she speaks Chinese only
                 v = self.voices.get(who, {}).get(lang)
                 if not (isinstance(v, list) and len(v) == 3):
-                    raise Fail(f'voices.{who}.{lang} must be [voice, rate, pitch]')
-        if (self.voices['nuan']['zh'][0], self.voices['nuan']['zh'][2]) != (self.voices['nuan']['en'][0], self.voices['nuan']['en'][2]):
-            raise Fail('Anna must use one voice identity and pitch for both Chinese and English')
+                    raise Fail(f'voices.{who}.{lang} must be [voice, rate, pitch] (edge-tts) or ["elevenlabs:<id>", rate, model]')
+                if is_el(v[0]):
+                    if not (EL_SPEED[0] <= rate_factor(v[1]) <= EL_SPEED[1]) or not str(v[2]).startswith('eleven_'):
+                        raise Fail(f'voices.{who}.{lang}: an ElevenLabs entry is ["elevenlabs:<id>", rate within {EL_SPEED}, "eleven_<model>"]')
+            zh, en = self.voices[who]['zh'], self.voices[who].get('en')
+            if is_el(zh[0]) and en and (en[0], en[2]) != (zh[0], zh[2]):
+                raise Fail(f'voices.{who}: an ElevenLabs speaker reads whole mixed sentences, so zh and en must name the same voice and model')
+        if self.voices['nuan']['zh'][0] == self.voices['frost']['zh'][0]:
+            raise Fail('Anna and Elsa must not share a Chinese voice: a child tells the sisters apart by ear')
         self.lines = dict(doc.get('pages') or {})
         self.lines.update(doc['lines'])
         words = load_json(words_path, 'words')
@@ -145,7 +185,17 @@ class Content:
 
     def voice(self, who, lang):
         v = self.voices[who][lang]
-        return (v[0], v[1] if lang == 'zh' else slower(v[1]), v[2])
+        return (v[0], v[1] if lang == 'zh' or is_el(v[0]) else slower(v[1]), v[2])   # an ElevenLabs en entry carries its own speed
+
+    def spoken(self, key, who, words_only=False):
+        """-> the segments to synthesize for one clip. An ElevenLabs speaker reads the whole line in one request: the model speaks
+        both languages in one voice and a whole sentence keeps its intonation. edge-tts voices get one request per segment."""
+        segs = self.segments(key, who, words_only)
+        if not is_el(self.voices[who]['zh'][0]) or not any(s['voice'] for s in segs):
+            return segs
+        langs = {s['lang'] for s in segs if s['voice']}
+        lang = langs.pop() if len(langs) == 1 else 'mix'
+        return [{'text': join_spoken(s['text'] for s in segs), 'lang': lang, 'en': lang == 'en', 'voice': self.voice(who, 'zh')}]
 
     def segments(self, key, who, words_only=False):
         """-> [{text, lang, voice, en}] where en marks English for the subtitle. Punctuation-only text is kept for the
@@ -241,7 +291,7 @@ def plan(content, only, redo, out_dir, sample, manifest=None):
         if only is not None and key not in only:
             continue
         for fname, sp, wo in content.outputs(key):
-            segs = content.segments(key, sp, wo)
+            segs = content.spoken(key, sp, wo)
             reason = why(fname, segs)
             if reason and any(s['voice'] for s in segs):
                 jobs.append(Job(fname, segs, key, reason))
@@ -329,7 +379,7 @@ def sample_items(content, n):
     items = []
     for key in picked:
         fname, sp, wo = content.outputs(key)[0]
-        items.append((fname, content.segments(key, sp, wo), key))
+        items.append((fname, content.spoken(key, sp, wo), key))
     for wid in list(content.words)[:min(2, n)]:
         items.append((f'word_{wid}.mp3', [{'text': content.words[wid]['en'], 'lang': 'en', 'en': True, 'voice': content.voice('nuan', 'en')}], f'word_{wid}'))
     return items
@@ -344,8 +394,60 @@ def run(cmd, **kw):
     return r
 
 
-async def synth_all(specs, tmp):
-    """specs: {hash: (voice, text)} -> writes tmp/<hash>.raw.mp3; 4 at a time, 3 tries each."""
+def synth_all(specs, tmp):
+    """specs: {hash: (voice, text)} -> writes tmp/<hash>.raw.mp3, each through the service its voice names."""
+    el = {h: vt for h, vt in specs.items() if is_el(vt[0][0])}
+    if el:
+        synth_elevenlabs(el, tmp)
+    edge = {h: vt for h, vt in specs.items() if h not in el}
+    if edge:
+        asyncio.run(synth_edge(edge, tmp))
+
+
+def synth_elevenlabs(specs, tmp):
+    """ElevenLabs text-to-speech, 3 requests at a time, 4 tries each (429, 5xx and network errors back off). The key is read from ELEVENLABS_API_KEY."""
+    import http.client
+    import time
+    import urllib.error
+    import urllib.request
+    from concurrent.futures import ThreadPoolExecutor
+    key = os.environ.get('ELEVENLABS_API_KEY')
+    if not key:
+        raise Fail('ELEVENLABS_API_KEY is not set: lines.json names an ElevenLabs voice')
+
+    def one(h, voice, text):
+        body = {'text': text, 'model_id': voice[2]}
+        if rate_factor(voice[1]) != 1:
+            body['voice_settings'] = {'speed': rate_factor(voice[1])}
+        url = f'{EL_API}/v1/text-to-speech/{voice[0][len(EL_PREFIX):]}?output_format=mp3_44100_128'
+        err = ''
+        for attempt in range(4):
+            req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'),
+                                         headers={'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg'})
+            try:
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    data = r.read()
+                if data:
+                    with open(os.path.join(tmp, h + '.raw.mp3'), 'wb') as f:
+                        f.write(data)
+                    return
+                err = 'no audio'
+            except urllib.error.HTTPError as e:
+                err = f'HTTP {e.code}: {e.read()[:300].decode("utf-8", "replace")}'
+                if e.code not in (429, 500, 502, 503, 504):
+                    break
+            except (urllib.error.URLError, http.client.HTTPException, OSError) as e:   # incl. a dropped connection mid-body
+                err = f'{type(e).__name__}: {e}'
+            time.sleep(2 * (attempt + 1))
+        raise Fail(f'ElevenLabs failed for {text!r}: {err}')
+
+    with ThreadPoolExecutor(3) as ex:
+        for fut in [ex.submit(one, h, v, t) for h, (v, t) in specs.items()]:
+            fut.result()
+
+
+async def synth_edge(specs, tmp):
+    """edge-tts, 4 at a time, 3 tries each."""
     import edge_tts
     sem = asyncio.Semaphore(4)
 
@@ -368,7 +470,10 @@ async def synth_all(specs, tmp):
 
 def to_wav(h, tmp):
     raw, wav = os.path.join(tmp, h + '.raw.mp3'), os.path.join(tmp, h + '.wav')
-    trim = 'silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse'
+    # -60 dB and 60 ms of kept lead/tail: a child voice starts and ends words softly, and a tighter cut turned "two" into "chew"
+    # and "up" into "ah" (2026-11-10 ASR check)
+    edge = 'silenceremove=start_periods=1:start_threshold=-60dB:start_silence=0.06'
+    trim = f'{edge},areverse,{edge},areverse'
     run(['ffmpeg', '-v', 'error', '-y', '-i', raw, '-af', trim, '-ar', str(SAMPLE_RATE), '-ac', '1', wav])
     if os.path.getsize(wav) < 400:
         raise Fail(f'segment {h} came out empty after trimming')
@@ -428,7 +533,7 @@ def generate(jobs, out_dir, seg_dir, record=None):
             specs[seg_hash(s['voice'], s['text'])] = (s['voice'], s['text'])
     with tempfile.TemporaryDirectory() as tmp:
         print(f'synthesizing {len(specs)} distinct segments for {len(jobs)} clips ...', file=sys.stderr)
-        asyncio.run(synth_all(specs, tmp))
+        synth_all(specs, tmp)
         wavs = {h: to_wav(h, tmp) for h in specs}
         gap, tail = os.path.join(tmp, 'gap.wav'), os.path.join(tmp, 'tail.wav')
         silence(gap, GAP)

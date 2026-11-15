@@ -1,0 +1,89 @@
+{
+ "date": "2026-11-15",
+ "request": "用户试玩后把安娜从 Cherry Twinkle 换成 Lulu（中文母语的可爱动漫少女声）",
+ "voice": {
+  "nuan": {
+   "provider": "ElevenLabs voice library",
+   "name": "Lulu - Cute Little Witch",
+   "voice_id": "BT0SH7Hb8NRPpT5xbCgg",
+   "model": "eleven_v4",
+   "lines": "whole line per request, both languages, speed 1.0",
+   "word_cards": "speed 0.85"
+  },
+  "frost_unchanged": [
+   "edge-tts",
+   "zh-CN-XiaoxiaoNeural",
+   "-6%",
+   "-4Hz"
+  ],
+  "replaced": "Cherry Twinkle (XJ2fW4ybq7HouelYYGcL), 2026-11-10"
+ },
+ "replaced_clips": 368,
+ "asr": {
+  "tool": "art/asr_check.py (faster-whisper small); mixed lines: zh pass for Chinese (lost/changed characters), zh+en passes for English words",
+  "verdicts": {
+   "zh": {
+    "OK": 66,
+    "DIFF": 7,
+    "NEAR": 9
+   },
+   "en": {
+    "OK": 41,
+    "DIFF": 6
+   },
+   "mix": {
+    "OK": 166,
+    "DIFF": 61,
+    "NEAR": 12
+   }
+  },
+  "english_words_not_heard_in_lines": {
+   "high": 14,
+   "ball": 14,
+   "home": 8,
+   "warm": 6,
+   "flower": 4,
+   "down": 4,
+   "bunny": 4,
+   "heart": 2,
+   "star": 2,
+   "door": 2,
+   "wait": 2,
+   "snowman": 2,
+   "hat": 2,
+   "sun": 2
+  },
+  "word_cards_diff": [
+   [
+    "star one",
+    "Star 1"
+   ],
+   [
+    "star two",
+    "Star 2"
+   ],
+   [
+    "star three",
+    "Star 3"
+   ],
+   [
+    "up",
+    "Out"
+   ],
+   [
+    "high",
+    "Hi."
+   ],
+   [
+    "sun",
+    "sign"
+   ]
+  ],
+  "notes": [
+   "star one/two/three: digits; high: homophone of hi",
+   "ball and high inside Chinese sentences are the usual whisper misses (same as Cherry Twinkle, which the user confirmed by ear)",
+   "word_up (heard Out) and word_sun (heard sign) sent for listening"
+  ],
+  "human_listening_performed": false
+ }
+}

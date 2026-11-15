@@ -96,7 +96,8 @@ Besides the key families, `content_keys.mjs` asks `art/narration.py` about the a
 (`--prune --dry-run`) and a `game/vo_manifest.json` that disagrees with the content (`--verify-manifest`: stale, unrecorded or extra clip) each fail the run.
 The manifest holds `sha1(voice, rate, pitch, text)` per clip; a normal `python3 art/narration.py` redoes exactly the clips whose hash changed or whose file
 is missing, `--write-manifest` records the files now present without synthesizing (use it only when the audio is known to match), `--prune` deletes orphans.
-`test/unit/vo-manifest.test.mjs` and `narration.test.mjs` cover these hermetically (temp directories, stand-in `edge_tts` / `ffmpeg`, no network).
+`test/unit/vo-manifest.test.mjs` and `narration.test.mjs` cover these hermetically (temp directories, stand-in `edge_tts` / `ffmpeg`, no network);
+`elevenlabs.test.mjs` covers Anna's ElevenLabs voice (whole-line requests, the request body, the key only in a header, the mixed-line ASR verdict) with urllib replaced.
 
 ## Exposure report
 

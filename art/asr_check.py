@@ -17,6 +17,11 @@ Judging, after the skill script has printed its own verdicts:
   - English single words: pass when the transcript CONTAINS the word (whisper likes to add "a", "the" or a full stop;
     digits are read as number words, "1" == "one"). DIFF only when the word is missing.
   - English phrases ("Good job!"): the skill's error-rate verdict.
+  - mixed lines (lang "mix": an ElevenLabs speaker reads a whole zh/en line as one segment): transcribed twice, as zh and as en,
+    because whisper in zh mode often writes a clearly spoken English word as its Chinese translation (fast -> 快). The Chinese
+    characters of the zh pass are scored by how many the line lost or changed (extras are ignored: they are mostly translated English
+    words); OK within --max-err, NEAR for one character, else DIFF. Every English word must appear in Latin letters in either pass,
+    otherwise DIFF ("word not heard").
 Exit code 1 when anything is DIFF; every DIFF is listed again at the end with the clips that use it.
 """
 import argparse
@@ -38,6 +43,41 @@ RESULT = re.compile(r'^(OK  |NEAR|DIFF|SKIP)\s+(\S+)(?:\s+err=([\d.]+))?\s*\|\s*
 def words_of(text):
     text = re.sub(r"[^\w' ]", ' ', text.lower().replace("'", ''))
     return [DIGITS.get(t, t) for t in text.split()]
+
+
+def latin_words(text):
+    return [DIGITS.get(t, t) for t in re.findall(r"[a-z']+|\d+", text.lower().replace("'", ''))]
+
+
+def cjk_chars(text):
+    return [c for c in text if '\u4e00' <= c <= '\u9fff']
+
+
+def lcs(a, b):
+    prev = [0] * (len(b) + 1)
+    for x in a:
+        cur = [0]
+        for j, y in enumerate(b, 1):
+            cur.append(prev[j - 1] + 1 if x == y else max(prev[j], cur[j - 1]))
+        prev = cur
+    return prev[-1]
+
+
+def judge_mix(text, got, max_err, got_en=''):
+    """-> (verdict, why) for a whole mixed line. Chinese: the share of the line's characters the zh pass lost or changed; extra
+    characters do not count, they are mostly whisper writing an English word as its translation. English: each word in either pass."""
+    want_c, got_c = cjk_chars(text), cjk_chars(got)
+    dist = len(want_c) - lcs(want_c, got_c)
+    err = dist / max(1, len(want_c))
+    heard = set(latin_words(got)) | set(latin_words(got_en))
+    missing = [w for w in dict.fromkeys(latin_words(text)) if w not in heard]
+    if missing:
+        return 'DIFF', 'word not heard: ' + ', '.join(missing)
+    if err <= max_err:
+        return 'OK', ''
+    if dist == 1:
+        return 'NEAR', ''
+    return 'DIFF', f'err={err:.2f}'
 
 
 def run_skill(python, items, seg_dir, lang, model, max_err, tmp, tag):
@@ -77,10 +117,13 @@ def main(argv=None):
         raise SystemExit(f'missing {SKILL}')
     zh = [m for m in manifest if m['lang'] == 'zh']
     en = [m for m in manifest if m['lang'] == 'en']
+    mix = [m for m in manifest if m['lang'] == 'mix']
     bad = []
     with tempfile.TemporaryDirectory() as tmp:
         res_zh = run_skill(a.python, zh, a.segments, 'zh', a.model, a.max_err, tmp, 'zh') if zh else {}
         res_en = run_skill(a.python, en, a.segments, 'en', a.model, a.max_err, tmp, 'en') if en else {}
+        res_mix = run_skill(a.python, mix, a.segments, 'zh', a.model, a.max_err, tmp, 'mix') if mix else {}
+        res_mix_en = run_skill(a.python, mix, a.segments, 'en', a.model, a.max_err, tmp, 'mix_en') if mix else {}
     short = []
     judged = {}   # segment id -> (verdict, transcript)
     for it in zh:
@@ -113,9 +156,21 @@ def main(argv=None):
             judged[it['id']] = ('DIFF', verdict[3])
         else:
             judged[it['id']] = (verdict[0], verdict[3])
+    for it in mix:
+        res = res_mix.get(it['id'])
+        if res is None:
+            bad.append((it, 'no result', ''))
+            judged[it['id']] = ('NO_RESULT', '')
+            continue
+        got_en = (res_mix_en.get(it['id']) or ('', 0, '', ''))[3]
+        verdict, why = judge_mix(it['text'], res[3], a.max_err, got_en)
+        print(f'{verdict:5}{it["id"]} mixed {it["text"]!r} -> {res[3]!r} / en {got_en!r}' + (f' ({why})' if why else ''))
+        if verdict == 'DIFF':
+            bad.append((it, why, res[3] + ' / en: ' + got_en))
+        judged[it['id']] = (verdict, res[3] + ' / en: ' + got_en)
     if a.report:
         rows = []
-        for it in zh + en:
+        for it in zh + en + mix:
             with wave.open(os.path.join(a.segments, it['id'] + '.wav')) as w:
                 seconds = round(w.getnframes() / w.getframerate(), 2)
             verdict, got = judged[it['id']]
@@ -123,7 +178,7 @@ def main(argv=None):
                          'duration_s': seconds, 'used_by': it['used_by']})
         with open(a.report, 'w', encoding='utf-8') as f:
             json.dump({'segments': rows}, f, ensure_ascii=False, indent=1)
-    print(f'\n{len(zh)} zh + {len(en)} en segments checked, {len(bad)} DIFF, {len(short)} too short to judge')
+    print(f'\n{len(zh)} zh + {len(en)} en + {len(mix)} mixed segments checked, {len(bad)} DIFF, {len(short)} too short to judge')
     for it, got in short:
         print(f'  SHORT {it["id"]} [zh] {it["text"]!r} heard {got!r}; used by {", ".join(it["used_by"][:6])}: listen to it')
     for it, why, got in bad:

@@ -85,7 +85,7 @@ All keys live in `lines.json` → `lines`. `<lv>` is the level id (`hall`, `lake
 | `ui_<name>` | Anna | hover name. names: `start` `continue` `next` `replay` `back` `words` `stickers` `wardrobe` `settings` `hint` `fullscreen` `solo` `duo` `sound` `quiz_skip` `meet` `rooms` `room_<lv>` |
 | `cheer_<n>` | either | short fixed phrases: Yay / Good job / Let's go / Wow, n = 1..4 |
 
-Current lines use `who: "frost" | "nuan"`; every English-bearing lesson/phrase belongs to Anna, Elsa speaks Chinese only. Anna's zh/en entries must have the same bilingual voice identity and pitch; English can be slower, never a different speaker. Elsa has a Chinese voice only (`voices.frost` has no `en`; art/narration.py rejects English segments in her lines). The parser retains legacy `companion` support and its two generated file variants, but runtime always selects Anna for such a line. Segment: string (zh voice of that speaker) | `{"w": wordId}` (en voice, the word's `en`) | `{"en": "Yay!"}` (fixed phrase; skipped/replaced by its zh gloss when setting english === 'words').
+Current lines use `who: "frost" | "nuan"`; every English-bearing lesson/phrase belongs to Anna, Elsa speaks Chinese only. Anna is one ElevenLabs voice for both languages (`voices.nuan.zh/en` = `["elevenlabs:<id>", rate, model]`, same id and model): each of her lines is read whole in one request, the en entry only sets the word-card speed. Her voice must differ from Elsa's (edge-tts). Elsa has a Chinese voice only (`voices.frost` has no `en`; art/narration.py rejects English segments in her lines). The parser retains legacy `companion` support and its two generated file variants, but runtime always selects Anna for such a line. Segment: string (zh voice of that speaker) | `{"w": wordId}` (en voice, the word's `en`) | `{"en": "Yay!"}` (fixed phrase; skipped/replaced by its zh gloss when setting english === 'words').
 
 `words.json`: `[{ "id", "en", "zh", "icon": "word_<id>", "room": "<lv>" | null }]`. Write all ~38 words from PLAN A5 now (rooms 5–10 included, ids from the table; `room` uses these future ids: `slope` `spring` `bunny` `floe` `music` `garden` for rooms 3,5,6,7,8,10 — and `hall` `lake` `tower` `ballroom` for 1,2,4,9).
 
@@ -95,7 +95,7 @@ Current lines use `who: "frost" | "nuan"`; every English-bearing lesson/phrase b
 voice.line(key, opts?) → Promise   play vo_<key>.mp3 (a legacy `who: "companion"` line plays vo_<key>__nuan.mp3, Anna's; the `__w` suffix is the words-only variant);
                                    ducks music; opts {interrupt:true|false, priority}; resolves when finished or skipped;
                                    counts words only after audible completion; resolves true then, otherwise false; fires subtitle callback
-voice.word(wordId) → Promise       Anna's word_<id>.mp3 (slow standard pronunciation); same voice as mixed lessons
+voice.word(wordId) → Promise       Anna's word_<id>.mp3 (slow standard pronunciation); same en voice as the English in mixed lessons
 voice.ui(name)                     hover name (ui_<name>), debounced 400 ms, never queues more than one
 voice.stop()
 voice.busy → boolean
@@ -236,10 +236,10 @@ Agents edit only the files their package lists; a change needed elsewhere goes i
 
 ## 16. Voice manifest and pruning
 
-- `game/vo_manifest.json` = `{"v":1,"clips":{file: sha1}}`; the hash covers, per spoken segment in order, voice, effective rate, pitch and text. `python3 art/narration.py` (no flags) makes only the clips whose file is missing, whose hash changed or that are not listed, then records them; `--dry-run` lists them as `name | reason | segments`.
+- `game/vo_manifest.json` = `{"v":1,"clips":{file: sha1}}`; the hash covers, per spoken segment in order, voice, effective rate, pitch (the model for an ElevenLabs voice) and text; a whole ElevenLabs line is one segment. `python3 art/narration.py` (no flags) makes only the clips whose file is missing, whose hash changed or that are not listed, then records them; `--dry-run` lists them as `name | reason | segments`.
 - `--prune` deletes the `.mp3` files directly in `game/` that `plan()` does not expect (`--dry-run` lists them); `--write-manifest` records the files now present without synthesizing; `--verify-manifest` exits 1 on any stale, unrecorded or extra entry.
 - `test/content_keys.mjs` fails on a missing clip, an orphan clip or a manifest that disagrees with `lines.json`; `art/package_release.py` refuses to package then.
-- After editing a line: run `python3 art/narration.py` with edge-tts available (see the docstring of `art/narration.py`), then rebuild and run `make check`.
+- After editing a line: run `python3 art/narration.py` with edge-tts available and, for Anna, `ELEVENLABS_API_KEY` set (see the docstring of `art/narration.py`), then rebuild and run `make check`.
 
 ## 17. Exposure report
 

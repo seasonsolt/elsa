@@ -4,7 +4,7 @@
 
 > 最新主配角决定：艾莎固定为单人模式主角，安娜由 AI 辅助。英文学习、引导、卡片、菜单以及剧情回忆均用安娜的角色声线；剧情以安娜对姐姐说话的口吻呈现，不使用第三人称旁白。艾莎保留中文对白。旧存档保留进度和换装，玩家角色迁移为艾莎；单人模式不再提供换人教学或操作。
 
-> 声线修正：安娜的中文和英文必须使用同一个双语发声模型和音高，不能只挂在同一个角色名下。当前统一为 en-US-EmmaMultilingualNeural；英文仅放慢语速。旧的 Xiaoyi 中文 + Aria 英文组合已弃用。
+> 声线修正（2026-11-10）：安娜要像妹妹，不要播音腔。安娜改用 ElevenLabs 语音库的 Lulu - Cute Little Witch（voice id BT0SH7Hb8NRPpT5xbCgg，模型 eleven_v4，母语普通话的可爱动漫风少女声），同一个声音说中文和英文，每条台词整句一次生成；单词卡放慢到 0.85 倍。艾莎仍用 edge-tts 的 zh-CN-XiaoxiaoNeural。弃用：2026-11-10 先选的 Cherry Twinkle（英语母语卡通声，试玩后换成 Lulu）、2026-11-09 的 en-US-EmmaMultilingualNeural（成年播音腔）、更早的 Xiaoyi + Aria、试过的 Xiaoyi + en-US-AnaNeural。安娜和艾莎的中文声线必须不同。ElevenLabs 的 key 只放在环境变量 ELEVENLABS_API_KEY。
 
 > 状态：**第 3 稿**（已纳入 2026-11-09 的两轮 review 决定，见 §7），待最终确认。通过后由 Sonnet 5.5（high）以 workflow 分阶段开发。
 > 本文件是开发 agent 唯一的上下文来源：agent 看不到之前的对话，凡是需要知道的都写在这里。
@@ -343,9 +343,8 @@ art/build_page.py      → 按文件名顺序拼接 src/*.js 和 src/view/*.js�
 ```json
 {
   "voices": {
-    "narrator": { "zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"] },
-    "frost":    { "zh": ["zh-CN-XiaoxiaoNeural", "-6%", "-4Hz"], "en": ["en-US-JennyNeural", "-15%", "-4Hz"] },
-    "nuan":     { "zh": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"], "en": ["en-US-EmmaMultilingualNeural", "-5%", "+8Hz"] }
+    "frost":    { "zh": ["zh-CN-XiaoxiaoNeural", "-6%", "-4Hz"] },
+    "nuan":     { "zh": ["elevenlabs:BT0SH7Hb8NRPpT5xbCgg", "+0%", "eleven_v4"], "en": ["elevenlabs:BT0SH7Hb8NRPpT5xbCgg", "-15%", "eleven_v4"] }
   },
   "lines": {
     "hall_heart": { "who": "nuan", "say": ["看，是", { "w": "heart" }, "，爱心！"] },

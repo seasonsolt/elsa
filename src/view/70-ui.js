@@ -161,14 +161,21 @@
   }
   /* Picture with a placeholder. Browsers draw a broken-image icon for a missing <image>, so a picture is only emitted
      once a probe has loaded it; until then (or if it never exists) the placeholder shapes stand in. A successful probe
-     replaces every placeholder of that name that is already on screen. */
+     replaces every placeholder of that name that is already on screen. A failed probe (a dropped connection, a host that briefly
+     refuses a burst of requests) is tried again after UX_PROBE_RETRY_MS; only after the last try does the placeholder stay. */
+  const UX_PROBE_RETRY_MS = [2000, 5000, 15000];
   const uxImgState = {};
+  const uxImgFails = {};
   function uxProbe(name) {
     if (uxImgState[name]) return;
     uxImgState[name] = 'wait';
     const im = new Image();
     im.onload = () => { uxImgState[name] = 'ok'; uxUpgrade(name); };
-    im.onerror = () => { uxImgState[name] = 'bad'; };
+    im.onerror = () => {
+      uxImgState[name] = 'bad';
+      const fails = uxImgFails[name] = (uxImgFails[name] || 0) + 1;
+      if (fails <= UX_PROBE_RETRY_MS.length) setTimeout(() => { delete uxImgState[name]; uxProbe(name); }, UX_PROBE_RETRY_MS[fails - 1]);
+    };
     im.src = SRC(name);
   }
   const uxImgTag = (name, x, y, w, h, extra) => `<image href="${SRC(name)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet" ${extra || ''}/>`;

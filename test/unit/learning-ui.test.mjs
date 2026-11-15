@@ -55,9 +55,9 @@ function progress(cleared, extra = {}) {
 /**
  * The real 60-story + 70-ui + review + save in one scope. `initial` is the save they start from.
  * Returns { api, env, nodes, keydown, stored() } where env.lines / env.words / env.writes record what the scenes did and
- * stored() is the JSON that the latest saveWrite() would have put in localStorage.
+ * stored() is the JSON that the latest saveWrite() would have put in localStorage. `overrides` replace globals of the page (Image, timers, ...).
  */
-function page(initial = {}) {
+function page(initial = {}, overrides = {}) {
   const env = { now: 5000, lines: [], words: [], preloads: [], writes: 0, json: null, randomCalls: 0, handlers: [] };
   const nodes = {};
   const M = Object.create(Math);
@@ -83,6 +83,7 @@ function page(initial = {}) {
       word: id => { env.words.push(id); return Promise.resolve(true); },
     },
   };
+  Object.assign(context, overrides);
   vm.createContext(context);
   const prelude = `
     const save = sanitizeSave(__initial);
@@ -100,7 +101,7 @@ function page(initial = {}) {
     uxBind = (root, acts) => { root.__acts = acts; };
     uxConfetti = () => {};
     ({ save, current: () => story, showClear, showRecall, showReview, showWordbook, showSettings, recallWordsFor, reviewContext,
-       uxWordOpen, uxReviewPool, uxReviewQueue, uxRecallWords, uxQuizPool, uxProgressRows, uxPlayTimeText })`;
+       uxWordOpen, uxReviewPool, uxReviewQueue, uxRecallWords, uxQuizPool, uxProgressRows, uxPlayTimeText, uxPic })`;
   const code = [read('src', 'lib', 'review.js'), read('src', 'lib', 'save.js'), prelude, read('src', 'view', '60-story.js'), read('src', 'view', '70-ui.js'), epilogue].join('\n');
   const api = vm.runInContext(code, context, { filename: 'learning-ui' });
   return {
@@ -135,6 +136,38 @@ async function toQuiz(p, levelId) {
 }
 
 /* ---------- C3: the quiz ---------- */
+
+export function aPictureThatFailsToLoadIsTriedAgainAndThenReplacesItsPlaceholder({ assert }) {
+  const images = [], timers = [], upgraded = [];
+  const shownPlaceholder = name => ({ dataset: { box: '0,0,10,10', extra: '' }, insertAdjacentHTML: (where, html) => upgraded.push([name, html]), remove() {} });
+  const p = page({}, {
+    Image: class { set src(v) { this.src_ = v; images.push(this); } },
+    setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+    document: { body: { classList: { contains: () => false, toggle() {} }, dataset: {} }, querySelectorAll: sel => [shownPlaceholder(sel.match(/data-pic="([^"]+)"/)[1])] },
+  });
+  const pic = name => p.api.uxPic(name, 0, 0, 10, 10, '<circle/>');
+  const runTimer = () => timers.shift().fn();
+
+  // a picture refused once (Cloudflare answered a burst with 429) loads on its retry and replaces the placeholder already on screen
+  assert.match(pic('word_heart'), /data-pic="word_heart"/, 'first a placeholder');
+  images.pop().onerror();
+  assert.deepEqual(timers.map(t => t.ms), [2000], 'the failed probe is tried again later');
+  assert.match(pic('word_heart'), /data-pic=/, 'meanwhile the placeholder stays, without a second request');
+  assert.equal(images.length, 0);
+  runTimer();
+  images.pop().onload();
+  assert.equal(upgraded.length, 1, 'the retry that loads swaps the placeholder on screen for the picture');
+  assert.match(upgraded[0][1], /<image href="word_heart"/);
+  assert.match(pic('word_heart'), /^<image href="word_heart"/, 'and later screens draw the picture at once');
+
+  // a picture that never loads is asked for 1 + 3 times, then the placeholder stays for the session
+  pic('word_nope');
+  for (const ms of [2000, 5000, 15000]) { images.pop().onerror(); assert.equal(timers[0].ms, ms); runTimer(); }
+  images.pop().onerror();
+  assert.equal(timers.length, 0, 'no fifth try');
+  pic('word_nope');
+  assert.equal(images.length, 0, 'and no new request when it is drawn again');
+}
 
 export async function quizOptionsMixInWordsFromRoomsAlreadyClearedAndAreDistinctWithIcons({ assert }) {
   const p = page(progress(['hall', 'lake', 'slope']));

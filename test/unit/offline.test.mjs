@@ -146,19 +146,22 @@ export function theCheckedInSwJsIsWhatTheBuildWritesApartFromTheStamps({ assert 
 
 /* ---------- the worker's logic in a fake worker scope ---------- */
 function makeWorld({ origin = 'https://castle.test', scope = 'https://castle.test/play/' } = {}) {
-  const world = { store: new Map(), calls: [], offline: false, handlers: {}, claimed: 0, skipped: 0, status: {}, scope, origin };
+  const world = { store: new Map(), calls: [], offline: false, handlers: {}, claimed: 0, skipped: 0, status: {}, redirected: {}, scope, origin };
   const key = k => (typeof k === 'string' ? k : k.url);
   world.caches = {
     open: async name => { if (!world.store.has(name)) world.store.set(name, new Map()); const c = world.store.get(name); return { match: async k => c.get(key(k)), put: async (k, res) => { c.set(key(k), res); } }; },
     keys: async () => [...world.store.keys()],
     delete: async name => world.store.delete(name),
   };
-  const answer = (url, status = 200, type = 'basic') => ({ ok: status >= 200 && status < 300, status, type, url, clone() { return answer(url, status, type); } });
+  const answer = (url, status = 200, type = 'basic', redirected = false) => ({
+    ok: status >= 200 && status < 300, status, statusText: '', type, url, redirected, headers: new Headers({ 'content-type': 'text/html' }),
+    blob: async () => new Blob([`body of ${url}`]), clone() { return answer(url, status, type, redirected); },
+  });
   world.fetch = async req => {
     const url = key(req);
     world.calls.push({ url, cache: req.cache });
     if (world.offline) throw new TypeError('Failed to fetch');
-    return answer(url, world.status[url] || 200, world.status[url + '#type'] || 'basic');
+    return answer(url, world.status[url] || 200, world.status[url + '#type'] || 'basic', !!world.redirected[url]);
   };
   class Request { constructor(url, init = {}) { this.url = url; this.method = 'GET'; this.cache = init.cache; this.headers = new Headers(); this.mode = 'cors'; } }
   world.load = swSource => {
@@ -168,7 +171,7 @@ function makeWorld({ origin = 'https://castle.test', scope = 'https://castle.tes
       skipWaiting: () => { world.skipped++; return Promise.resolve(); },
       clients: { claim: () => { world.claimed++; return Promise.resolve(); } },
     };
-    vm.runInNewContext(swSource, { self, caches: world.caches, fetch: world.fetch, URL, Request, Promise, console });
+    vm.runInNewContext(swSource, { self, caches: world.caches, fetch: world.fetch, URL, Request, Response, Promise, console });
     return world;
   };
   world.event = async (type, extra = {}) => {
@@ -274,6 +277,19 @@ export async function thePageItselfIsServedFromTheCacheForTheFolderIndexAndThePa
     assert.ok(ev.answer, `${url} is answered`);
     assert.equal((await ev.answer).url, 'https://castle.test/play/ice-castle.html', `${url}: the cached page`);
   }
+}
+
+export async function aPageTheHostAnswersThroughARedirectIsCachedAsAPlainPageANavigationAccepts({ assert }) {
+  const w = makeWorld();
+  w.redirected['https://castle.test/play/ice-castle.html'] = true;   // Cloudflare static assets: ice-castle.html -> 307 -> ice-castle
+  w.load(sw1());
+  await w.event('install'); await w.event('activate');
+  w.offline = true;
+  const page = await (await w.event('fetch', { request: w.request('https://castle.test/play/', { mode: 'navigate' }) })).answer;
+  assert.equal(page.redirected, false, 'a browser rejects a redirected response for a navigation, so the stored page must not be one');
+  assert.equal(page.status, 200);
+  assert.equal(page.headers.get('content-type'), 'text/html', 'the headers are kept');
+  assert.equal(await page.text(), 'body of https://castle.test/play/ice-castle.html', 'and the body is the page');
 }
 
 export async function devPagesOtherPagesOtherOriginsAndWritesGoStraightToTheNetwork({ assert }) {

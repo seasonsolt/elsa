@@ -11,7 +11,7 @@
    The cache name holds ASSET_VERSION (the fingerprint of game/ and the manifest, also in every game/ URL of the page) and a hash of the
    built page, so a build that only changes code still replaces the cached page. Cross-origin requests (the Google fonts) are left alone:
    offline they fail and the page falls back to the system fonts. */
-/* global self, caches, fetch, URL, Request */
+/* global self, caches, fetch, URL, Request, Response */
 const ASSET_VERSION = /*ASSET_VERSION*/'dev';
 const PAGE_HASH = /*PAGE_HASH*/'dev';
 const PRECACHE = /*PRECACHE*/[];
@@ -22,13 +22,19 @@ const absolute = path => new URL(path, self.registration.scope).href;
 const scopePath = new URL(self.registration.scope).pathname;
 const known = new Set(PRECACHE.map(absolute));
 
+/* A host may answer ice-castle.html through a redirect (Cloudflare's static assets send it to the address without ".html"). A browser
+   refuses a redirected response as the answer to a navigation, so the cached page would then never open: keep a plain copy instead. */
+const unredirected = res => (res.redirected
+  ? res.blob().then(body => new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers }))
+  : res);
+
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => Promise.all(PRECACHE.map(path => {
     const url = absolute(path);
     // 'reload': the browser's own HTTP cache must not hand a new build the old page, manifest or icons
     return fetch(new Request(url, { cache: 'reload' })).then(res => {
       if (!res.ok) throw new Error(`${res.status} ${url}`);
-      return cache.put(url, res);
+      return Promise.resolve(unredirected(res)).then(plain => cache.put(url, plain));
     });
   }))).then(() => self.skipWaiting()));
 });

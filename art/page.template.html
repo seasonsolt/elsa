@@ -51,6 +51,7 @@ body.touch #stage { width: min(100vw, calc((100dvh - 96px) * 960 / 520)); }
 .page { animation: pageIn .45s ease-out both; }
 @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
 .gateArt { transition: transform .35s ease; }
+#veil { transition: opacity .28s ease; }
 .flicker { animation: flicker 3.2s ease-in-out infinite alternate; }
 @keyframes flicker { 0% { opacity: .55; } 40% { opacity: .9; } 70% { opacity: .68; } 100% { opacity: 1; } }
 .shimmer { animation: shimmer 2.4s ease-in-out infinite alternate; }
@@ -181,6 +182,7 @@ body.touch .keys { display: none; }
   <g id="memory"></g>
   <g id="snowFront" aria-hidden="true"></g>
   <rect id="chill" width="960" height="520" fill="url(#chillEdge)" opacity="0" pointer-events="none"/>
+  <rect id="veil" width="960" height="520" fill="#0d1438" opacity="0" pointer-events="none"/>
   <rect width="960" height="520" fill="url(#vignette)" pointer-events="none"/>
   <g id="talk" aria-live="polite"></g>
   <g id="hud"></g>

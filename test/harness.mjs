@@ -27,6 +27,8 @@ const LEGACY_IDS = ['hall', 'lake', 'tower', 'ballroom'];
 const EXPORTS = `;({
   createGame,
   createCompanion: typeof createCompanion === 'function' ? createCompanion : null,
+  screenOf: typeof screenOf === 'function' ? screenOf : lv => lv,
+  screenCount: typeof screenCount === 'function' ? screenCount : () => 1,
   LEVELS, T, COLS, ROWS, PHYS,
   KID_PHYS: typeof KID_PHYS === 'undefined' ? null : KID_PHYS,
   MAX_BLOCKS: typeof MAX_BLOCKS === 'undefined' ? null : MAX_BLOCKS,
@@ -58,8 +60,25 @@ export function loadLogic({ html = null } = {}) {
     source = `src:${files.join('+')}`;
   }
   const api = vm.runInNewContext(code + '\n' + EXPORTS, {}, { filename: source });
+  applyLevelPatch(api.LEVELS);
   const levels = api.LEVELS.map((lv, i) => (lv.id ? lv : Object.assign({}, lv, { id: LEGACY_IDS[i] || `level${i}` })));
   return Object.assign(api, { levels, source });
+}
+
+/* Drafting rooms (PLAN-2 E1): LEVEL_PATCH=file.json[,file2.json] merges { "<room id>": { field: value, ... } } into those rooms after
+   the logic is loaded, so a new screen can be tried with the real harness before it is written into src/levels.js. Keys that start with
+   "_" (draft notes, draft lines) are ignored. Never set in make check. */
+function applyLevelPatch(LEVELS) {
+  const files = (process.env.LEVEL_PATCH || '').split(',').filter(Boolean);
+  for (const f of files) {
+    const patch = JSON.parse(fs.readFileSync(path.resolve(f), 'utf8'));
+    for (const [id, fields] of Object.entries(patch)) {
+      if (id.startsWith('_')) continue;
+      const lv = LEVELS.find(l => l.id === id);
+      if (!lv) throw new Error(`LEVEL_PATCH ${f}: no room '${id}'`);
+      for (const [k, v] of Object.entries(fields)) if (!k.startsWith('_')) lv[k] = v;
+    }
+  }
 }
 
 /** The src/lib file names (without .js) in build order. */
@@ -76,7 +95,8 @@ export function loadLib(names, context = {}, expr = 'undefined') {
   return vm.runInNewContext(code + '\n' + expr, context, { filename: `lib:${list.join('+')}` });
 }
 
-/** A tiny hand-made room for unit tests, on a private copy of the logic (the real LEVELS are not touched).
+/** A tiny hand-made room for unit tests, on a private copy of the logic (the real LEVELS are not touched). extra.more: later screens,
+ *  each { map: rows (padded the same way), guide, ... }.
  *  rows: strings, the BOTTOM rows of a 13 x 24 map. Missing top rows are empty air; a row shorter than 24 is padded by repeating its last
  *  character (so '#####' is a floor to the edge and '#...' ends in air). Row 0 is made of walls. Needs one 'E' and one 'A'.
  *  extra: fields of the level object ({ melody: [1, 2, 3], goal: 'garden', guide: [...] }); the id is 'adhoc' and it is the LAST level,
@@ -84,20 +104,27 @@ export function loadLib(names, context = {}, expr = 'undefined') {
 export function loadMap(rows, extra = {}, opts = {}) {
   const logic = loadLogic();
   const { ROWS, COLS } = logic;
+  const full = padRows(rows, ROWS, COLS);
+  const flat = full.join('');
+  for (const ch of 'EA') if (flat.split(ch).length !== 2) throw new Error(`loadMap: the map needs exactly one '${ch}'`);
+  const level = Object.assign({ id: 'adhoc', name: { en: 'Test', zh: '测试' }, words: [], goal: 'door', guide: [], assists: [], music: 'x', bg: 'x', glows: [] }, extra, { map: full });
+  if (extra.more) level.more = extra.more.map(sc => Object.assign({}, sc, { map: padRows(sc.map, ROWS, COLS) }));
+  logic.LEVELS.push(level);
+  logic.levels.push(level);
+  const h = makeHarness(logic, 'adhoc', opts);
+  h.logic = logic;
+  return h;
+}
+
+/* loadMap's map rows: the bottom rows of a ROWS x COLS map, padded as loadMap describes */
+function padRows(rows, ROWS, COLS) {
   if (rows.length > ROWS) throw new Error(`loadMap: ${rows.length} rows, at most ${ROWS}`);
   const full = Array(ROWS - rows.length).fill('.'.repeat(COLS)).concat(rows.map(r => {
     if (r.length > COLS) throw new Error(`loadMap: row '${r}' is wider than ${COLS}`);
     return r + r[r.length - 1].repeat(COLS - r.length);
   }));
   full[0] = '#'.repeat(COLS);
-  const flat = full.join('');
-  for (const ch of 'EA') if (flat.split(ch).length !== 2) throw new Error(`loadMap: the map needs exactly one '${ch}'`);
-  const level = Object.assign({ id: 'adhoc', name: { en: 'Test', zh: '测试' }, words: [], goal: 'door', guide: [], assists: [], music: 'x', bg: 'x', glows: [] }, extra, { map: full });
-  logic.LEVELS.push(level);
-  logic.levels.push(level);
-  const h = makeHarness(logic, 'adhoc', opts);
-  h.logic = logic;
-  return h;
+  return full;
 }
 
 const dirOf = d => (d === 'left' || d === 'l' || d === -1 ? -1 : d === 'right' || d === 'r' || d === 1 ? 1 : 0);
@@ -139,7 +166,8 @@ export function makeHarness(logic, levelId, opts = {}) {
   const cx = s => s.x + s.w / 2;
   const feetRow = s => Math.floor((s.y + s.h - 1) / T);
   const where = s => `${s.id} at x=${s.x.toFixed(1)} y=${s.y.toFixed(1)} (col ${(cx(s) / T).toFixed(2)}, feet on row ${feetRow(s)}) ground=${s.ground}${s.splash > 0 ? ' in-water' : ''}`;
-  const playing = () => g.state === 'play';
+  /* a step drives the sisters only while they can move: not after the room is cleared, not while the next screen comes (g.passT) */
+  const playing = () => g.state === 'play' && !(g.passT > 0);
 
   function begin(name, id, args) {
     stepNo++;
@@ -199,6 +227,17 @@ export function makeHarness(logic, levelId, opts = {}) {
       for (let i = 0; i < 30; i++) { g.step(DT); ticks++; }
       log.push(...g.events.splice(0));
       return where(s);
+    },
+
+    /** One bare simulation step, the companion first as in every step above, with no step bookkeeping (test/lock.mjs replays a
+     *  recorded run with it). Returns the events of that step. */
+    stepOnce() {
+      if (companion) companion.update(DT);
+      g.step(DT);
+      ticks++;
+      const ev = g.events.splice(0);
+      log.push(...ev);
+      return ev;
     },
 
     /** number of events of this type seen so far */
@@ -308,6 +347,17 @@ export function makeHarness(logic, levelId, opts = {}) {
       const st = begin('wait', null, `${sec}`);
       const n = secs(sec);
       for (let i = 0; i < n && playing(); i++) tick(st, n + 1);
+    },
+
+    /** The goal of this screen is reached (the door, the snowman, every flower): wait for the next screen of the room (PLAN-2 E1)
+     *  and for both sisters to stand on it. Fails when the room has no further screen or it does not come. */
+    nextScreen() {
+      const st = begin('nextScreen', null, '');
+      const k = g.screen, max = secs(3), live = () => g.state === 'play';
+      if (k + 1 >= g.screens()) fail(st, `screen ${k + 1} is the last screen of the room`);
+      while (live() && g.screen === k) tick(st, max);
+      while (live() && !Object.values(g.sisters).every(s => s.ground)) tick(st, max);
+      if (g.screen !== k + 1) fail(st, `still on screen ${g.screen + 1}`);
     },
 
     /** Assert that every small star ('+') of the room has been collected by now. */

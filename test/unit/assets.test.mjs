@@ -54,7 +54,7 @@ export function eachRoomListsItsOwnBackgroundTilesToysMemoryAndWords({ assert, R
     for (const w of lv.words) assert.ok(room.has(`word_${w}`), `${lv.id}: word icon ${w}`);
     assert.ok(room.has(lines.lines[`mem_${lv.memoryId}`].art), `${lv.id}: memory painting`);
     assert.ok(room.has(`sticker_${lv.id}`), `${lv.id}: its sticker (the clear page awards it)`);
-    const chars = new Set(lv.map.join(''));
+    const chars = new Set([lv, ...(lv.more || [])].map(sc => sc.map.join('')).join(''));   // every screen of the room
     const has = (ch, name) => assert.equal(room.has(name), chars.has(ch), `${lv.id}: ${name} iff the map has '${ch}'`);
     has('\\', 'tile_slope_r'); has('/', 'tile_slope_l'); has('J', 'spring_0'); has('M', 'floe_m'); has('R', 'bunny_hop1'); has('N', 'bunny_nest'); has('F', 'flower_2');
     has('G', 'gate'); has('S', 'snowman');

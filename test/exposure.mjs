@@ -14,13 +14,14 @@
    (a repeated bare word, not a context; 2C removes it), word-book taps.
      learn    learn_<w> of every room word, played one after the other on the chapter card (the word's own line carries it 3 times)
      chapter  ch_<room>
-     start    start_<room>_1..n, all of them, in order
-     open     open_<room> (for the garden it plays as the room clears)
+     start    start_<room>_1..n, all of them, in order, and next_<room>_1..n when the room has a second screen (PLAN-2 E1)
+     open     one door line per screen: open_<room> on the first, open_<room>_<k> on screen k when it exists (else open_<room> again);
+              a garden has no door: open_<room>_<k> as it moves on to screen k, open_<room> as the last screen is cleared
      clear    clear_<room>
      card     the clear page says each card's word once
      in-context = the sum of the columns above (the figure PLAN-2 F9 / C1 talk about).
    Beside it, not part of it:
-     pickup   per required item (tile h * o) whose word is a core word of the room: voice.word(w) + pick_<w>_<((k-1) mod 3)+1>;
+     pickup   per required item (tile h * o, every screen) whose word is a core word of the room: voice.word(w) + pick_<w>_<((k-1) mod 3)+1>;
               assumes every clip plays to the end (a quick second pickup interrupts the first)
      toy      toy_<family>_<n> lines the toys CAN play when their events are forced by the layout (every bunny follows and goes home,
               every flower blooms, each melody note is played), run through the same cycling and per-room cap as src/view/15-toys.js.
@@ -64,25 +65,32 @@ export function computeExposure({ levels, lines, kindWord, toyCfg }) {
   const rows = [];
   levels.forEach((lv, idx) => {
     const next = levels[idx + 1];
+    const screens = [lv, ...(lv.more || [])], map = screens.flatMap(sc => sc.map), melodies = screens.filter(sc => sc.melody).map(sc => sc.melody);
+    /* the view's openKey: screen k (0-based) says open_<room>_<k+1>; a garden says open_<room>_<k+2> as it moves on and open_<room> last */
+    const openKeys = screens.map((sc, k) => {
+      const garden = (k ? sc.goal : lv.goal) === 'garden', n = garden ? (k < screens.length - 1 ? k + 2 : 0) : (k ? k + 1 : 0);
+      return n && lines[`open_${lv.id}_${n}`] ? `open_${lv.id}_${n}` : `open_${lv.id}`;
+    });
     /* toy lines per word: run each forced event through the view's own cycling (k = plays so far mod lines + 1) and cap */
-    const toyEvents = { bunny: count(lv.map, 'R'), bunny_home: count(lv.map, 'R'), bloom: count(lv.map, 'F'), melody: lv.melody ? 1 : 0 };
+    const toyEvents = { bunny: count(map, 'R'), bunny_home: count(map, 'R'), bloom: count(map, 'F'), melody: melodies.length };
     const toyKeys = [];
     for (const [family, events] of Object.entries(toyEvents)) {
       const cfg = toyCfg[family], n = numbered(`toy_${family}_`);
       for (let i = 0; cfg && n && i < Math.min(events, cfg.max); i++) toyKeys.push(`toy_${family}_${i % n + 1}`);
     }
-    if (toyCfg.note_ok) for (const note of lv.melody || []) if (lines[`toy_note_ok_${note}`]) toyKeys.push(`toy_note_ok_${note}`);
+    if (toyCfg.note_ok) for (const note of melodies.flat()) if (lines[`toy_note_ok_${note}`]) toyKeys.push(`toy_note_ok_${note}`);
 
     for (const w of lv.words) {
       const row = { room: lv.id, word: w, learn: 0, chapter: 0, start: 0, pickup: 0, open: 0, clear: 0, card: 1, toy: 0, recall: 0 };
       for (const x of lv.words) row.learn += hearings(`learn_${x}`, w);
       row.chapter = hearings(`ch_${lv.id}`, w);
       for (let n = 1; lines[`start_${lv.id}_${n}`]; n++) row.start += hearings(`start_${lv.id}_${n}`, w);
+      if (lv.more) for (let n = 1; lines[`next_${lv.id}_${n}`]; n++) row.start += hearings(`next_${lv.id}_${n}`, w);
       for (const [ch, word] of Object.entries(kindWord)) {
         if (word !== w) continue;
-        for (let k = 1; k <= count(lv.map, ch); k++) row.pickup += 1 + hearings(`pick_${w}_${(k - 1) % 3 + 1}`, w);
+        for (let k = 1; k <= count(map, ch); k++) row.pickup += 1 + hearings(`pick_${w}_${(k - 1) % 3 + 1}`, w);
       }
-      row.open = hearings(`open_${lv.id}`, w);
+      for (const key of openKeys) row.open += hearings(key, w);
       row.clear = hearings(`clear_${lv.id}`, w);
       row.inContext = row.learn + row.chapter + row.start + row.open + row.clear + row.card;
       for (const key of toyKeys) row.toy += hearings(key, w);

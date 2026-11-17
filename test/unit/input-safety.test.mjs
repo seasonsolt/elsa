@@ -255,8 +255,8 @@ export function noPlainKeyChangesTheSaveOrTheRoomWhileYouPlay({ assert }) {
     const { game } = env.exports;
     game.items[0].got = true;          // something collected: a room restart would take it back
     let starts = 0;
-    const start = game.start;
-    game.start = i => { starts++; return start(i); };
+    const restart = game.restart;      // the HUD restart starts the current screen again (PLAN-2 E1)
+    game.restart = () => { starts++; return restart(); };
     const before = snapshot(env);
     for (const code of PLAIN_KEYS) { env.keydown(code); env.keyup(code); }
     for (const code of ['KeyM', 'KeyR', 'KeyM', 'KeyR']) env.keydown(code);   // and again, the two that used to act
@@ -271,8 +271,8 @@ export function theRestartButtonsHeldPressRestartsOnlyALiveRoom({ assert }) {
   const env = playPage('solo');
   const { game, playFlow, restartRoomHeld } = env.exports;
   let starts = 0;
-  const start = game.start;
-  game.start = i => { starts++; return start(i); };
+  const restart = game.restart;        // the current screen again (PLAN-2 E1)
+  game.restart = () => { starts++; return restart(); };
   game.items[0].got = true;
   assert.equal(restartRoomHeld(), true, 'a live room restarts');
   assert.equal(starts, 1);

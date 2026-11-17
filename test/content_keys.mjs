@@ -38,7 +38,11 @@ const FAMILIES = [
   { name: 'chapter card', src: /'ch_' \+ lv\.id/, keys: c => c.levels.map(l => `ch_${l.id}`) },
   { name: 'clear page', src: /'clear_' \+ lv\.id/, keys: c => c.levels.map(l => `clear_${l.id}`) },
   { name: 'door open', src: /'open_' \+ /, keys: c => c.levels.map(l => `open_${l.id}`) },
-  { name: 'room start', src: /`start_\$\{lv\.id\}_\$\{n\}`/, keys: c => c.levels.flatMap(l => nums(RANGES.start).map(n => `start_${l.id}_${n}`)) },
+  { name: 'room start', src: /`start_\$\{lv\.id\}_`/, keys: c => c.levels.flatMap(l => nums(RANGES.start).map(n => `start_${l.id}_${n}`)) },
+  /* PLAN-2 E1: a room's next screen opens with next_<lv>_<n>; every later screen k has its own open_<lv>_<k> (a garden: said as it
+     moves on to screen k; its last flowers keep the room's open_<lv>) */
+  { name: 'next screen', src: /`next_\$\{\(curLevel\(\) \|\| \{\}\)\.id\}_`/, keys: c => c.levels.filter(l => l.more).flatMap(l => nums(RANGES.start).map(n => `next_${l.id}_${n}`)) },
+  { name: 'screen door open', src: /`open_\$\{id\}_\$\{/, keys: c => c.levels.flatMap(l => (l.more || []).map((sc, i) => `open_${l.id}_${i + 2}`)) },
   { name: 'word intro', src: /'learn_' \+ /, keys: c => c.levels.flatMap(l => l.words.map(w => `learn_${w}`)) },
   { name: 'word recall', src: /'recall_' \+ /, keys: c => c.levels.flatMap(l => l.words.map(w => `recall_${w}`)) },
   { name: 'quiz question', src: /'quiz_' \+ target\.id/, keys: c => c.levels.flatMap(l => l.words.map(w => `quiz_${w}`)) },
@@ -53,7 +57,7 @@ const FAMILIES = [
   { name: 'miss', src: /'miss_frost'/, keys: () => ['miss_frost'] },
   { name: 'memory', src: /'mem_' \+ e\.id/, keys: c => c.levels.filter(l => l.memoryId).map(l => `mem_${l.memoryId}`) },
   { name: 'meet them', src: /'me_' \+ who/, keys: () => ['me_frost', 'me_nuan'] },
-  { name: 'guide', src: /tgt\.say/, keys: c => c.levels.flatMap(l => (l.guide || []).map(g => g.say)) },
+  { name: 'guide', src: /tgt\.say/, keys: c => c.levels.flatMap(l => [l, ...(l.more || [])].flatMap(sc => (sc.guide || []).map(g => g.say))) },
   { name: 'toy reaction', src: /`toy_\$\{family\}_/, keys: () => TOY_LINES.flatMap(([f, n]) => nums(n).map(i => `toy_${f}_${i}`)) },
   { name: 'hover names', src: /line\('ui_' \+ name/, keys: c => c.uiNames.map(n => `ui_${n}`) },
 ];
@@ -69,7 +73,7 @@ const NOT_A_LINE = new Map([
   ['open_', 'prefix, joined with the room id'], ['mem_', 'prefix, joined with the memory id'],
   ['me_', 'prefix, joined with the sister id'], ['ui_', 'prefix, joined with the hover name'],
 ]);
-const KEYISH = /^(p[123]|win|end|tutor_|ch_|learn_|recall_|start_|guide_|pick_|star_|open_|clear_|quiz_|splash_|idle_|miss_|together_|mem_|me_|ui_|cheer_|toy_)/;
+const KEYISH = /^(p[123]|win|end|tutor_|ch_|learn_|recall_|start_|next_|guide_|pick_|star_|open_|clear_|quiz_|splash_|idle_|miss_|together_|mem_|me_|ui_|cheer_|toy_)/;
 
 function stripComments(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' ')).replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1');
@@ -125,7 +129,7 @@ export function checkContentKeys(logic = loadLogic()) {
 
   /* which words a room's items can speak */
   const pickWords = new Set();
-  for (const lv of logic.levels) for (const row of lv.map) for (const ch of row) if (PICK_WORDS[ch]) pickWords.add(PICK_WORDS[ch]);
+  for (const lv of logic.levels) for (const sc of [lv, ...(lv.more || [])]) for (const row of sc.map) for (const ch of row) if (PICK_WORDS[ch]) pickWords.add(PICK_WORDS[ch]);
   const ctx = { levels: logic.levels, uiNames: [...uiNames], pickWords: [...pickWords] };
 
   const covered = new Set();

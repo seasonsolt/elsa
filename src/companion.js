@@ -158,7 +158,7 @@ function createCompanion(g, opts) {
   }
 
   function runAssists(p, c, cid) {
-    const list = (LEVELS[g.index] && LEVELS[g.index].assists) || [];
+    const list = (LEVELS[g.index] && g.level().assists) || [];   // the assists of the screen being played
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
       if (st.fired[i] || (a.who && a.who !== 'any' && a.who !== cid) || !nearPlayer(a, p)) continue;

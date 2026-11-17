@@ -37,7 +37,7 @@
     const add = name => { if (name && !out.includes(name)) out.push(name); };
     const lineArt = key => { const d = L[key]; if (d && d.art) add(d.art); };
     add(level.bg);
-    const chars = new Set((level.map || []).join(''));
+    const chars = new Set((level.map || []).concat(...(level.more || []).map(s => s.map)).join(''));   // every screen of the room
     for (const ch of chars) (ART_TILES[ch] || []).forEach(add);
     (level.words || []).concat(o.extraWords || []).forEach(w => add(`word_${w}`));
     if ((level.words || []).includes('fish')) { add('fish_1'); add('fish_2'); }

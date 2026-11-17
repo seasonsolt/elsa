@@ -50,6 +50,8 @@ async function loadSolutions(id) {
   catch (e) { return { error: `cannot load ${path.relative(ROOT, file)}: ${e.message}` }; }
 }
 
+const MIN_ROOM_SECONDS = 30;
+
 async function runSolution(logic, id, kind, fn, o, player) {
   let h;
   try {
@@ -62,6 +64,8 @@ async function runSolution(logic, id, kind, fn, o, player) {
       const left = h.g.items.filter(i => !i.got).map(i => `${i.kind}@${i.c},${i.r}`);
       return fail(`solution ended with state '${state}', expected '${h.expectedFinalState}'${left.length ? ` (items left: ${left.join(' ')})` : ''}${h.g.doorOpen ? '' : ' (door never opened)'}`);
     }
+    /* PLAN-2 E1: a room's automatic solution plays for at least MIN_ROOM_SECONDS (a child takes several times as long) */
+    if (h.time < MIN_ROOM_SECONDS) return fail(`the room plays for ${h.time.toFixed(1)} s, at least ${MIN_ROOM_SECONDS} s are wanted`);
     return pass(`${h.time.toFixed(0)}s`);
   } catch (e) {
     return fail(e && e.stack && !(e.name === 'StepError') ? e.stack : String(e && e.message || e));
@@ -71,10 +75,13 @@ async function runSolution(logic, id, kind, fn, o, player) {
 async function levelResults(logic, index, o) {
   const lv = logic.levels[index];
   const res = {};
-  res.map = fromProblems(checkMapSize(lv, logic.ROWS, logic.COLS));
-  res.tiles = fromProblems(checkTiles(lv, legalChars(logic.TILE_CHARS)));
-  res.shape = fromProblems(checkStructure(lv));
-  res.reach = res.map.status === OK && res.tiles.status === OK ? fromProblems(checkReach(logic, index)) : skip('map invalid');
+  /* every screen of the room (PLAN-2 E1); a problem on a later screen names it */
+  const screens = Array.from({ length: logic.screenCount(lv) }, (_, k) => logic.screenOf(lv, k));
+  const each = check => screens.flatMap((sc, k) => check(sc, k).map(p => (k ? `screen ${k + 1}: ${p}` : p)));
+  res.map = fromProblems(each(sc => checkMapSize(sc, logic.ROWS, logic.COLS)));
+  res.tiles = fromProblems(each(sc => checkTiles(sc, legalChars(logic.TILE_CHARS))));
+  res.shape = fromProblems(each((sc, k) => checkStructure(sc, { later: k > 0 })));
+  res.reach = res.map.status === OK && res.tiles.status === OK ? fromProblems(each((sc, k) => checkReach(logic, index, k))) : skip('map invalid');
 
   const { mod, error } = await loadSolutions(lv.id);
   if (error) {

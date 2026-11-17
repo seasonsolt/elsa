@@ -132,7 +132,7 @@
   function drawGlows() {
     const box = $('glows');
     box.textContent = '';
-    LEVELS[game.index].glows.forEach(([x, y, r, fill], i) => {
+    game.level().glows.forEach(([x, y, r, fill], i) => {
       el('circle', { class: 'flicker', cx: x, cy: y, r, fill: `url(#${fill})`, style: `animation-delay:-${i * .9}s` }, box);
     });
   }
@@ -190,7 +190,7 @@
     const box = $('memory');
     box.textContent = '';
     fragNode = null;
-    const lv = LEVELS[game.index];
+    const lv = game.level();   // the fragment of the screen being played
     if (!lv || !lv.memory || game.memoryFound) return;
     const [c, r] = lv.memory;
     fragNode = el('g', { 'data-x': c * T + T / 2, 'data-y': r * T + T / 2 }, box);

@@ -197,7 +197,8 @@
     let tiles = false;
     for (const e of events) {
       switch (e.type) {
-        case 'load': rebuild(); tiles = false; break;
+        case 'load': rebuild(); tiles = false; $('veil').setAttribute('opacity', '0'); break;
+        case 'pass': drawGoal(); cheerBurst(); $('veil').setAttribute('opacity', '1'); break;   // on to the room's next screen: a short fade
         case 'freeze': tiles = true; puff('ring', e.c * T + 20, e.r * T + 14, 64, .55); burst(e.c * T + 20, e.r * T + 10, 'flake', 5); view.frost.castT = .3; break;
         case 'block': tiles = true; puff('burst', e.c * T + 20, e.r * T + 20, 86, .5); burst(e.c * T + 20, e.r * T + 20, 'flake', 6); view.frost.castT = .3; break;
         case 'unblock': tiles = true; puff('dust', e.c * T + 20, e.r * T + 30, 44, .5); break;

@@ -31,8 +31,11 @@ export function checkTiles(level, legal) {
   return problems;
 }
 
-/* Things every room needs: one spawn each, the goal tile that matches `goal`, plates when there are gates. */
-export function checkStructure(level) {
+/* Things every screen needs: one spawn each, the goal tile that matches `goal`, plates when there are gates. `later`: a later screen of
+   a room (PLAN-2 E1), which has 2-4 small stars instead of the first screen's 3-5. */
+const HUD_FREE_ROW = 4;
+
+export function checkStructure(level, { later = false } = {}) {
   const problems = [];
   const flat = (level.map || []).join('');
   const count = ch => flat.split(ch).length - 1;
@@ -66,7 +69,13 @@ export function checkStructure(level) {
     }
   });
   if (count('G') && !count('P')) problems.push('map has gates (G) but no pressure plate (P)');
-  if (count('+') < 3 || count('+') > 5) problems.push(`a room needs 3-5 small stars (+), found ${count('+')}`);
+  /* the goal is drawn taller than its tile (the open door 119 px, the built snowman 126 px, up from the tile's foot); the HUD covers the
+     top 76 px of the stage across its whole width (src/view/70-ui.js), so a door or snowman spot stands on row 4 or lower */
+  (level.map || []).forEach((row, r) => {
+    for (const ch of 'DS') if (r < HUD_FREE_ROW && row.includes(ch)) problems.push(`the '${ch}' at col ${row.indexOf(ch)}, row ${r} is drawn under the HUD: put it on row ${HUD_FREE_ROW} or lower`);
+  });
+  const [lo, hi] = later ? [2, 4] : [3, 5];
+  if (count('+') < lo || count('+') > hi) problems.push(`${later ? 'a later screen' : 'the first screen of a room'} needs ${lo}-${hi} small stars (+), found ${count('+')}`);
   return problems;
 }
 
@@ -118,9 +127,9 @@ const MOB = {
   nuan: { up: 4, dx: 5, dxUp: 4 },
 };
 
-export function checkReach(logic, index) {
+export function checkReach(logic, index, screen = 0) {
   const g = logic.createGame();
-  g.load(index);
+  g.load(index, screen);
   const { COLS, ROWS } = logic;
   const grid = g.grid.map(r => r.slice());
   const world = { gate: false };

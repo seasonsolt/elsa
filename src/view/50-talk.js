@@ -14,6 +14,13 @@
     const storyOpen = () => typeof story !== 'undefined' && !!story;
     const subtitlesOn = () => { try { const v = typeof setting === 'function' ? setting('subtitles') : false; return !!v && v !== 'off' && v !== 'false'; } catch (e) { return false; } };
     const curLevel = () => LEVELS[game.index] || null;
+    /* the line said when the goal of the screen being played opens: open_<lv> on the first screen, open_<lv>_<k> on screen k when the
+       room has one. A garden has no door: its open_<lv> ends the room (said on the last screen), open_<lv>_<k> as it moves on to screen k. */
+    const openKey = g => {
+      const id = (curLevel() || {}).id, k = (g.screen || 0) + 1, last = k >= (g.screens ? g.screens() : 1);
+      const n = g.goal === 'garden' ? (last ? 0 : k + 1) : (k > 1 ? k : 0), own = `open_${id}_${n}`;
+      return n && hasLine(own) ? own : 'open_' + id;
+    };
 
     /* The per-room dev counter (heardLog) lives in src/lib/heard.js next to the saved counter: noteWordHeard feeds both. */
     function countWordHeard(id) {
@@ -52,15 +59,17 @@
       if (!room) room = freshRoom();
       for (const e of events || []) {
         switch (e.type) {
-          case 'load': onLoad(g); break;
+          case 'load': if (e.screen) onScreen(); else onLoad(g); break;
           case 'collect': onCollect(e); break;
           case 'respawn': onRespawn(e, g); break;
-          case 'open': say('open_' + (curLevel() || {}).id, { tag: 'open', maxWait: 8000 }); break;
+          case 'open': say(openKey(g), { tag: 'open', maxWait: 8000 }); break;
+          // a garden screen has no door: its "everything is open" line plays as the screen is passed
+          case 'pass': if (g.goal === 'garden') say(openKey(g), { tag: 'open', maxWait: 8000 }); break;
           case 'memory': onMemory(e, g); break;
           case 'clear':
             logRoomWords(curLevel());
             // a room with no door (the garden) never emits 'open': its "everything is open" line plays as the room clears
-            if (g.goal === 'garden') say('open_' + (curLevel() || {}).id, { tag: 'open', maxWait: 8000 });
+            if (g.goal === 'garden') say(openKey(g), { tag: 'open', maxWait: 8000 });
             break;
         }
       }
@@ -74,6 +83,12 @@
       // the fragment is drawn by 10-stage.js drawFragment(); talk only narrates it (onMemory)
       hideBubble();
       if (isDev()) window.__wordStats = wordStats;
+    }
+    /* The room goes on over its next screen (PLAN-2 E1): the picks and stars counted so far stay, the next_<lv>_<n> lines play. */
+    function onScreen() {
+      Object.assign(room, { token: Math.random(), startPending: true, startAt: 0, starting: false, preloaded: false, startPrefix: `next_${(curLevel() || {}).id}_`,
+        idleT: 0, idleN: 0, idleNext: 0, sig: '', farT: 0, farSpoken: false, farNext: 0 });
+      hideBubble();
     }
     function onCollect(e) {
       if (e.kind === '+') {
@@ -127,8 +142,9 @@
       const lv = curLevel();
       if (!room.preloaded && lv && audio) {
         room.preloaded = true;
-        const keys = [...lv.words.map(w => 'word_' + w), 'open_' + lv.id, 'star_1', 'star_2', 'star_3', 'splash_1', 'splash_2'];
-        for (let n = 1; hasLine(`start_${lv.id}_${n}`); n++) keys.unshift(`start_${lv.id}_${n}`);
+        const first = room.startPrefix || `start_${lv.id}_`;
+        const keys = [...lv.words.map(w => 'word_' + w), openKey(g), 'star_1', 'star_2', 'star_3', 'splash_1', 'splash_2'];
+        for (let n = 1; hasLine(first + n); n++) keys.unshift(first + n);
         for (const w of lv.words) for (let n = 1; n <= 3; n++) if (hasLine(`pick_${w}_${n}`)) keys.push(`pick_${w}_${n}`);
         voice.preload(keys);
       }
@@ -136,8 +152,8 @@
       if (!room.startAt) room.startAt = t + .6;
       if (t < room.startAt || !lv) return;
       room.startPending = false;
-      const token = room.token, keys = [];
-      for (let n = 1; hasLine(`start_${lv.id}_${n}`); n++) keys.push(`start_${lv.id}_${n}`);
+      const token = room.token, keys = [], prefix = room.startPrefix || `start_${lv.id}_`;
+      for (let n = 1; hasLine(prefix + n); n++) keys.push(prefix + n);   // start_${lv.id}_${n} on the first screen, next_${lv.id}_${n} later
       if (!keys.length) return;
       room.starting = true;
       (async () => {
@@ -255,7 +271,7 @@
       if (!box) return;
       box.textContent = '';
       memNode = null;
-      const lv = curLevel(), mem = lv && lv.memory;
+      const lv = curLevel(), mem = lv && game.level().memory;   // the fragment of the screen being played
       if (!mem || memGot[game.index] || game.memoryFound) return;
       const [c, r] = mem;
       memNode = el('g', { 'data-x': c * T + T / 2, 'data-y': r * T + T / 2 }, box);

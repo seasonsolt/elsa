@@ -37,6 +37,19 @@ const TOYS = {
   bloomReach: 2 * T,         // Nuan's magic blooms flowers this close
 };
 
+/* A room may go on over several screens (PLAN-2 E1). The level object itself is the first screen; `more` lists the later ones in the
+   order they are played. A later screen has its own map, guide and assists, and optionally a melody, a memory fragment, glows and a goal
+   (default 'door'); everything else (id, name, words, music, bg, memoryId) belongs to the room. screenOf gives screen k as one level
+   object, so the readers of map / guide / assists / memory / melody / goal / glows need not know about screens. */
+function screenOf(lv, k) {
+  if (!k) return lv;
+  const s = lv.more[k - 1];
+  return Object.assign({}, lv, { map: s.map, guide: s.guide || [], assists: s.assists || [], melody: s.melody, memory: s.memory,
+    goal: s.goal || 'door', glows: s.glows || lv.glows });
+}
+const screenCount = lv => 1 + ((lv && lv.more) || []).length;
+const PASS_TIME = 0.6;   // s between reaching a screen's goal and the next screen (the view fades over it)
+
 /* Solid for walking: walls, ice, the spring mushroom and the note steps, and an iron gate while it is shut.
    (Slopes are not solid, they are a surface; floes are entities. Both have their own rules in createGame.) */
 function isSolidTile(ch, gatesOpen) {
@@ -45,7 +58,7 @@ function isSolidTile(ch, gatesOpen) {
 
 function createGame() {
   const g = {
-    state: 'title', index: 0, grid: [], items: [], blocks: [], events: [],
+    state: 'title', index: 0, screen: 0, grid: [], items: [], blocks: [], events: [],
     sisters: {}, plates: [], gates: [], gatesOpen: false, door: null, goal: 'door',
     doorOpen: false, clearT: 0, time: 0,
     input: { frost: { l: 0, r: 0, d: 0 }, nuan: { l: 0, r: 0, d: 0 } },
@@ -53,7 +66,8 @@ function createGame() {
        Set mode before g.start / g.load. */
     mode: 'solo', player: 'frost',
     progress: 0,                       // counts real progress (the view's stuck timer watches it)
-    stars: { total: 0, got: 0 },       // small decorative '+' stars of the room
+    passT: 0,                          // > 0: the screen's goal is reached, the next screen of the room loads when it runs out
+    stars: { total: 0, got: 0 },       // small decorative '+' stars of the room (all its screens)
     memory: null, memoryFound: false,  // hidden memory fragment: { c, r, x, y } of LEVELS[i].memory
     guideDone: [],
     /* S3 toys (CONTRACT section 9). Rebuilt by g.load. */
@@ -76,13 +90,22 @@ function createGame() {
       slide: 0, slope: 0, slackT: 0, noteAt: null };   // slide: px/s of ramp momentum; slope: +1 / -1 while standing on a ramp (downhill direction); noteAt: the note step she stands on
   }
 
-  g.load = i => {
-    const lv = LEVELS[i];
-    g.index = i; g.items = []; g.blocks = []; g.plates = []; g.gates = [];
+  let entry = { got: 0, memory: false };   // the room's stars and memory when the current screen began (g.restart goes back to them)
+
+  /* Load screen k (default 0, a fresh room) of room i. A fresh room counts the small stars of all its screens; a later screen keeps
+     what was found so far. */
+  g.load = (i, k = 0) => {
+    const room = LEVELS[i], lv = screenOf(room, k);
+    if (!k) {
+      g.stars = { total: 0, got: 0 }; g.memoryFound = false;
+      for (let n = 0; n < screenCount(room); n++) g.stars.total += screenOf(room, n).map.join('').split('+').length - 1;
+    }
+    entry = { got: g.stars.got, memory: g.memoryFound };
+    g.index = i; g.screen = k; g.passT = 0; g.items = []; g.blocks = []; g.plates = []; g.gates = [];
     g.gatesOpen = false; g.doorOpen = false; g.goal = lv.goal || 'door'; g.door = null;
     g.floes = []; g.bunnies = []; g.bunniesHome = 0; g.flowers = []; nests = [];
     g.melody = lv.melody && lv.melody.length ? { seq: lv.melody.slice(), pos: 0, done: false } : null;
-    g.progress = 0; g.stars = { total: 0, got: 0 }; g.memoryFound = false; g.guideDone = (lv.guide || []).map(() => false);
+    g.progress = 0; g.guideDone = (lv.guide || []).map(() => false);
     g.memory = lv.memory ? { c: lv.memory[0], r: lv.memory[1], x: lv.memory[0] * T + T / 2, y: lv.memory[1] * T + T / 2 } : null;
     g.grid = lv.map.map((row, r) => row.split('').map((ch, c) => {
       if (ch === 'R') { addBunny(c, r); return '.'; }
@@ -93,7 +116,6 @@ function createGame() {
       if (ch === 'A') { g.sisters.nuan = makeSister('nuan', c, r); return '.'; }
       if (ch === '*' || ch === 'h' || ch === 'o' || ch === '+') {
         g.items.push({ kind: ch, c, r, x: c * T + T / 2, y: r * T + T / 2, got: false });
-        if (ch === '+') g.stars.total++;
         return '.';
       }
       if (ch === 'D' || ch === 'S') { g.door = { c, r, x: c * T + T / 2, bottom: (r + 1) * T }; return '.'; }
@@ -106,7 +128,16 @@ function createGame() {
         g.floes.push({ id: g.floes.length, x: m.index * T, y: r * T, w: m[0].length * T, vx: TOYS.floeSpeed, paused: false, pauseT: 0, dir: 1 });
       }
     });
-    emit('load');
+    if (k) emit('load', { screen: k }); else emit('load');
+  };
+  /* this screen's own level object (screenOf): map, guide, assists, melody, memory, goal and glows of the screen being played */
+  g.level = () => screenOf(LEVELS[g.index], g.screen);
+  g.screens = () => screenCount(LEVELS[g.index]);
+  /* Start the current screen again (the HUD's restart button): what was found on it is lost, what earlier screens gave is kept. */
+  g.restart = () => {
+    g.stars.got = entry.got; g.memoryFound = entry.memory;
+    g.load(g.index, g.screen);
+    g.state = 'play';
   };
 
   /* A lost snow bunny. Bodies of bunnies use the same moveX / moveY as the sisters. */
@@ -645,7 +676,7 @@ function createGame() {
   /* Guide (PLAN A3): LEVELS[i].guide is the order a stuck player is led through. An entry is done when the item standing there is
      collected, or, for a plain spot (plate, door, snowman), when a sister reaches it (the door only once it is open). */
   function updateGuide() {
-    const list = LEVELS[g.index].guide || [];
+    const list = g.level().guide || [];
     list.forEach((e, i) => {
       if (g.guideDone[i]) return;
       // a bunny: done once it follows (or is home); a note: once the melody went past it; a flower: once it bloomed; a nest: once all bunnies are home
@@ -666,10 +697,17 @@ function createGame() {
     });
   }
 
+  /* The screen's goal is reached: the room is cleared on its last screen; on an earlier one the next screen follows after PASS_TIME. */
+  function reachGoal() {
+    if (g.screen + 1 < g.screens()) { g.passT = PASS_TIME; emit('pass', { screen: g.screen }); return; }
+    g.state = 'clear'; g.clearT = 1.5;
+    emit('clear');
+  }
+
   function checkGoal() {
     const list = Object.values(g.sisters);
-    if (g.goal === 'garden') {                     // no door: every flower open clears the room
-      if (g.flowers.length && g.flowers.every(f => f.open)) { g.state = 'clear'; g.clearT = 1.5; emit('clear'); }
+    if (g.goal === 'garden') {                     // no door: every flower open clears the room (or leads on to its next screen)
+      if (g.flowers.length && g.flowers.every(f => f.open)) reachGoal();
       return;
     }
     if (!g.door) return;                           // a room without a door or a snowman cannot be left through one
@@ -685,10 +723,7 @@ function createGame() {
         if (g.blink(other.id, g.door.x + side * 22, g.door.bottom)) { other.ground = true; other.atGoal = atDoor(other); }
       }
     }
-    if (list.every(s => s.atGoal)) {
-      g.state = 'clear'; g.clearT = 1.5;
-      emit('clear');
-    }
+    if (list.every(s => s.atGoal)) reachGoal();
   }
 
   g.start = i => { g.load(i); g.state = 'play'; };
@@ -740,7 +775,7 @@ function createGame() {
   };
 
   g.guide = () => {
-    const list = LEVELS[g.index].guide || [];
+    const list = g.level().guide || [];
     const i = list.findIndex((e, k) => !g.guideDone[k]);
     if (i < 0) return null;
     const e = list[i];
@@ -761,6 +796,11 @@ function createGame() {
       return;
     }
     if (g.state !== 'play') return;
+    if (g.passT > 0) {                             // between two screens: nothing moves, then the next screen is there
+      g.passT -= dt;
+      if (g.passT <= 0) g.load(g.index, g.screen + 1);
+      return;
+    }
     updateFloes(dt);
     updateSister(g.sisters.frost, dt);
     updateSister(g.sisters.nuan, dt);

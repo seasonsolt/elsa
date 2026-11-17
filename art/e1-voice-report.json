@@ -1,0 +1,214 @@
+{
+ "date": "2026-11-17",
+ "request": "PLAN-2 E1: lines of the ten rooms' second screens (next_*, guide_* continued, open_<room>_2)",
+ "voice": {
+  "nuan": "elevenlabs:BT0SH7Hb8NRPpT5xbCgg eleven_v4 (Lulu)",
+  "frost": "edge-tts zh-CN-XiaoxiaoNeural"
+ },
+ "new_clips": 84,
+ "asr": {
+  "tool": "art/asr_check.py (faster-whisper small); mixed lines: zh pass for Chinese, zh+en passes for English words",
+  "verdicts": {
+   "zh": {
+    "OK": 9
+   },
+   "mix": {
+    "OK": 47,
+    "DIFF": 25,
+    "NEAR": 3
+   }
+  },
+  "english_words_not_heard_in_lines": {
+   "up": 4,
+   "bunny": 2,
+   "ball": 4,
+   "down": 2,
+   "flower": 6,
+   "door": 2,
+   "high": 2,
+   "home": 2
+  },
+  "notes": [
+   "Every DIFF was read: homophones of whisper small (浮冰/伏兵, 河上/和尚, 往上/网上, 弹/谈), English words written as their Chinese translation in the zh pass (flower -> 花花, down -> 下), and the words this voice is already known to lose to the recogniser (up, high, ball, home; see anna-elevenlabs-voice-report.json). No clip reads a wrong sentence.",
+   "The DIFF rate (25 of 84 mixed segments) matches the accepted Lulu run (61 of 239)."
+  ],
+  "diff": [
+   {
+    "clip": [
+     "next_spring_1"
+    ],
+    "text": "看，这里有滑梯，还有蘑菇！蘑菇把我们弹 up，滑梯带我们滑下来。",
+    "heard": "看,这里有滑梯,还有蘑菇。蘑菇把我们弹二,滑梯带我们滑下来。 / en: 看,这里有滑梯,还有蘑菇, 蘑菇把我们弹二滑梯带我们滑下来。"
+   },
+   {
+    "clip": [
+     "next_floe_1"
+    ],
+    "text": "看，小 bunny 也要过河！它的 home 在河中间的小岛上，我们坐浮冰往 right 走。",
+    "heard": "看,小邦尼也要过河,他的home在河中间的小岛上,我们做伏兵往right走。 / en: 看,小邦尼也要过河,他的home在河中间的小岛上,我们做伏兵往right走。"
+   },
+   {
+    "clip": [
+     "next_ballroom_1"
+    ],
+    "text": "哇，舞厅高高的架子上，还有好多 ball！踩上蘑菇，弹上去拿！",
+    "heard": "哇! 五天高高的架子上还有好多布! 踩上蘑菇,弹上去拿! / en: Wow, there's a lot of balls on top of the high-heeled shelf! Guess where the mushrooms are!"
+   },
+   {
+    "clip": [
+     "next_garden_1"
+    ],
+    "text": "这里是冰做的花房。有的 flower，被粉色的冰关起来啦！",
+    "heard": "这里是冰座的花房,有的花园被粉色的冰关起来了。 / en: 这里是冰座的花房,有的Flower被粉色的冰关起来了。"
+   },
+   {
+    "clip": [
+     "guide_lake_6"
+    ],
+    "text": "右边岸上有个 heart，爱心！再搭一条 ice 路吧。",
+    "heard": "右边按上有个heart﹑爱心﹑再打一条ice路吧。 / en: 右边按上有个heart,爱心。再打一条ice路吧。"
+   },
+   {
+    "clip": [
+     "guide_slope_8"
+    ],
+    "text": "回到山顶，从左边往 down 滑！高高的地方有个 heart。",
+    "heard": "回到身顶,从左边往下滑。高高的地方有个Heart。 / en: 回到身顶,从左边往下滑,高高的地方有个heart。"
+   },
+   {
+    "clip": [
+     "guide_tower_11"
+    ],
+    "text": "再往上跳，那里有一片 snowflake，雪花！",
+    "heard": "在网上跳,那里有一片Snowflake,雪花。 / en: There is a snowflake, Snowflake."
+   },
+   {
+    "clip": [
+     "guide_spring_12"
+    ],
+    "text": "door，门在右边的小山上。再滑一次，再弹一次！",
+    "heard": "Door 门在右边的小山上。再划一次,再谈一次。 / en: Door, 門在右邊的小山上。再滑一次再彈一次。"
+   },
+   {
+    "clip": [
+     "guide_bunny_12"
+    ],
+    "text": "带 bunny 回 home，爬上左边的小山，兔窝里有 carrot！",
+    "heard": "带邦尼回 home 爬上左边的小山,to wolly your carrot。 / en: 帶 Bunny 回 Home 爬上左邊的小山 To Wally 有 Carrot"
+   },
+   {
+    "clip": [
+     "guide_floe_7"
+    ],
+    "text": "浮冰来啦，wait，等它靠岸，带小雪兔一起上去，河上有 heart！",
+    "heard": "伏兵来了﹐Wait﹐等他靠岸﹐带小雪兔一起上去﹐和尚有Heart。 / en: 伏兵来了! Wait! 等他靠岸, 带小雪兔一起上去。 和尚有Heart!"
+   },
+   {
+    "clip": [
+     "guide_floe_8"
+    ],
+    "text": "对岸门后面，还有一只迷路的 bunny！往 right 去找它。",
+    "heard": "对暗门后面还有一只迷路的Bunny,往Right去找他。 / en: Behind the door, there's a lost bunny! Let's go to the right to find it!"
+   },
+   {
+    "clip": [
+     "guide_floe_9"
+    ],
+    "text": "第二条河上漂着 snowflake，雪花，坐浮冰去拿！",
+    "heard": "第二条,和尚敲着Snowflake,雪花,坐伏兵去拿。 / en: 第二条,和尚敲着Snowflake,雪花,做伏兵去拿。"
+   },
+   {
+    "clip": [
+     "guide_floe_11"
+    ],
+    "text": "小雪兔都回家啦！再往 right 坐一次浮冰，door，门在那边！",
+    "heard": "小雪兔都回家啦﹐再往Right做一次扶兵﹐Doer﹐门在那边。 / en: 小雪兔都回家啦。再往Right做一次浮冰。Door, 门在那边。"
+   },
+   {
+    "clip": [
+     "guide_music_7"
+    ],
+    "text": "往右跑到头，踩 blue，蓝色的台阶！",
+    "heard": "网右跑道头踩 Blue 蓝色的台阶。 / en: 網右跑到頭採 Blue 藍色的台階"
+   },
+   {
+    "clip": [
+     "guide_ballroom_7"
+    ],
+    "text": "左边角落里有一片 snowflake！先踩蘑菇弹上阳台，再跳下去拿。",
+    "heard": "左边角落里有一片Snowflake。仙彩蘑菇探上阳台,再跳下去拿。 / en: On the left corner, there is a snowflake. Take the mushroom on the balcony and jump down."
+   },
+   {
+    "clip": [
+     "guide_ballroom_8"
+    ],
+    "text": "左边最高的架子上，有一个 ball，雪球！",
+    "heard": "左边最高的架子上有一个 bow ﹑ 雪球。 / en: On the highest shelf on the left, there is a bow, a snowball."
+   },
+   {
+    "clip": [
+     "guide_ballroom_12"
+    ],
+    "text": "雪球都齐啦！快上舞台，堆 snowman！",
+    "heard": "雪仇都齐啦!快上舞台,Dwayne Snowman! / en: 雪稠都齊了!快上舞台!Bway Snowman!"
+   },
+   {
+    "clip": [
+     "guide_garden_10"
+    ],
+    "text": "把水塘冻上，粉色的冰后面，还有一朵 flower！",
+    "heard": "把水糖冻上,粉色的冰后面还有一朵花花。 / en: 把水糖冻上,粉色的冰后面还有一朵花花。"
+   },
+   {
+    "clip": [
+     "guide_garden_11"
+    ],
+    "text": "跳上右边的台阶，楼上也有一朵 flower！",
+    "heard": "跳上右边的台阶,楼上也有一朵花儿。 / en: 跳上右边的台阶,楼上也有一朵花儿。"
+   },
+   {
+    "clip": [
+     "guide_garden_12"
+    ],
+    "text": "用 warm 的光化开粉色的冰，里面有一朵 flower！",
+    "heard": "用温暖的光画开粉色的冰,里面有一朵花花。 / en: 用 warm的光化開粉色的冰,裡面有一朵flour。"
+   },
+   {
+    "clip": [
+     "guide_garden_13"
+    ],
+    "text": "再往上跳一层，最高的地方也有 flower！",
+    "heard": "在网上跳一层,最高的地方也有Flower。 / en: On the top floor, there is also a flower in the highest place."
+   },
+   {
+    "clip": [
+     "open_hall_2"
+    ],
+    "text": "宝贝都找到啦，door 开了！还有好多亮亮的 star，真好看。",
+    "heard": "宝贝都找到了! 兜耳开了! 还有好多亮亮的star! 真好看! / en: 寶貝都找到啦! 兜耳開了! 還有好多亮亮的Star! 真好看!"
+   },
+   {
+    "clip": [
+     "open_spring_2"
+    ],
+    "text": "门开啦！滑下去，再 jump，弹 up，弹得好 high！",
+    "heard": "门开啦,滑下去再jump,彈out,彈的好嗨! / en: 門開啦!滑下去再jump!彈out!彈的好嗨!"
+   },
+   {
+    "clip": [
+     "open_floe_2"
+    ],
+    "text": "两只 bunny 都回 home 啦！门开啦，往 right 走，浮冰来了先 wait，等一等！",
+    "heard": "两只Bunny都回哄啦﹐门开啦﹐往Right走﹐扶兵来了﹐先Wait﹐等一等。 / en: 两只蚂蚁都回哄啦!门开啦!往 right 走!扶兵来了!先 wait 等一等!"
+   },
+   {
+    "clip": [
+     "open_ballroom_2"
+    ],
+    "text": "雪球都找到啦！舞台上的 snowman，在等它的 hat，帽子呢！",
+    "heard": "雪球都找到了!舞台上的Snowman在等他的Hat,帽子呢? / en: 雪球都找到了!舞台上的Snowman在等他的Hat,帽子呢?"
+   }
+  ]
+ },
+ "human_listening_performed": false
+}

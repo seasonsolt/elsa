@@ -67,10 +67,12 @@ All keys live in `lines.json` → `lines`. `<lv>` is the level id (`hall`, `lake
 | `learn_<w>` | Anna | chapter card word intro and speaking together (view then waits 1.5 s with ear/mouth anim) |
 | `recall_<w>` | Anna | next room start: 「还记得 door 吗？」 for previous room's 3 words |
 | `start_<lv>_<n>` | either | lines at room start, played in order |
+| `next_<lv>_<n>` | either | lines when a room's next screen starts (PLAN-2 E1), played in order; the stars and picks of the room carry on |
 | `guide_<lv>_<n>` | Anna | stuck hint for guide entry n (matches levels.js guide `say`), embeds the target's word |
 | `pick_<w>_<n>` | Anna | variations after picking an item of word w (「又一个 heart！」), n = 1..3 |
 | `star_<n>` | either | small star count, n = 1..5: `[{"en":"Star!"}, {"en":"One!"}]` style |
-| `open_<lv>` | either | door / gate opens |
+| `open_<lv>` | either | door / gate opens (the first screen's, and any later screen without its own) |
+| `open_<lv>_<k>` | either | the goal of screen k (1-based, k ≥ 2) opens; garden (no door): said as the room moves on to screen k, and the room's `open_<lv>` is said when the last screen's flowers are all open |
 | `clear_<lv>` | Anna | clear page sentence |
 | `quiz_<w>` | Anna | 「哪个是 heart？点一点！」 |
 | `quiz_right_<n>` `quiz_wrong_<n>` | Anna | n = 1..3 variations |
@@ -261,3 +263,6 @@ Agents edit only the files their package lists; a change needed elsewhere goes i
 
 **Audio suspend (D6).** `voice.suspend()` (`src/lib/voice.js`) ends the current job and drops the queue as `'interrupted'` (no word counted, music level restored); `40-audio.js` calls it and suspends the audio context when the page is hidden or the context leaves `running`, and resumes (also from `'interrupted'`) on return. A clip that starts on a suspended context has a watchdog (clip length + 1.5 s). The decoded-clip cache holds 24 clips.
 
+## 19. Phase two, step 2E: rooms with more than one screen (PLAN-2 E1)
+
+A level may have `more: [screen, ...]`: the level object itself is screen 0, each entry of `more` a later screen with its own `map`, `guide`, `assists`, `melody`, `goal` (default `'door'`) and optionally `glows`; `memory` belongs to screen 0 only. `screenOf(level, k)` in `logic.js` merges a screen over its level, so `g.level()` is always the screen being played and its readers (guide, companion assists, glows, memory) need not know about screens. `g.screen` is the 0-based screen, `g.screens()` their number. Reaching the goal of a screen that is not the last emits `{type:'pass', screen}`, freezes play for 0.6 s (`passT`) and then loads the next screen, which emits `{type:'load', screen: k}` (screen 0 emits a plain `'load'`); only the last screen emits `'clear'`. Small stars count for the whole room (`g.stars.total` is the sum of all screens at screen 0's load) and `g.memoryFound` carries over; water respawn points are per screen. `g.restart()` starts the current screen again and gives back only what was found on it. The view darkens the stage with `#veil` during the pass, talks `next_<lv>_<n>` instead of `start_<lv>_<n>` on a later screen (`onScreen` in `50-talk.js`) and plays `open_<lv>_<k>` when it exists. `test/lock.mjs` records every room's first screen played by its solutions; `behavior-lock.test.mjs` replays it, so a change to the engine that moves anything on the first screens fails. Drafts of new screens are tried with `LEVEL_PATCH=draft.json node test/run.mjs --only <lv>` (`test/harness.mjs`).

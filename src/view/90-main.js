@@ -133,10 +133,11 @@
     if (typeof startMusic === 'function') guarded('startMusic', () => startMusic(LEVELS[i].music));
     roomIntro(i, tok);
   }
+  /* The HUD's restart: the screen being played starts again (a room with several screens keeps what its earlier screens gave). */
   function restartRoom() {
     if (playFlow.phase !== 'play') return;
     clearInput();
-    game.start(game.index);
+    game.restart();
     if (companion) companion.reset();
     handleEvents();
     flashPlayerMark(2);

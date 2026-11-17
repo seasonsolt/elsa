@@ -237,6 +237,7 @@
           else tones(e.kind === 'h' ? [659, 880] : e.kind === 'o' ? [392, 494, 587] : [988, 1319], 'triangle', .12);
           break;
         case 'open': tones([523, 659, 784, 1047], 'triangle', .16); break;
+        case 'pass': tones([659, 784, 988], 'triangle', .14); break;
         case 'gate': tones(e.open ? [330, 440] : [440, 330], 'square', .08, .02); break;
         case 'memory': tones([784, 988, 1175, 1568], 'sine', .2, .05); break;
         case 'blink': sfx('blink'); break;

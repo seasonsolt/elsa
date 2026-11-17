@@ -29,37 +29,37 @@ word, not a context; PLAN-2 C1 removes it), word-book taps.
 
 | room | word | learn | chapter | start | open | clear | card | in-context | +pickup | +toy | all | recall | |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| hall | heart | 3 | 0 | 2 | 0 | 1 | 1 | 7 | 4 | 0 | 11 | 2 |  |
-| hall | star | 3 | 0 | 2 | 0 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| hall | door | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| lake | water | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
-| lake | ice | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| lake | fish | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| slope | slide | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
-| slope | fast | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| hall | heart | 3 | 0 | 3 | 0 | 1 | 1 | 8 | 8 | 0 | 16 | 2 |  |
+| hall | star | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| hall | door | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| lake | water | 3 | 0 | 3 | 2 | 1 | 1 | 10 | 0 | 0 | 10 | 2 |  |
+| lake | ice | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| lake | fish | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 0 | 9 | 2 |  |
+| slope | slide | 3 | 0 | 4 | 2 | 1 | 1 | 11 | 0 | 0 | 11 | 2 |  |
+| slope | fast | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 0 | 9 | 2 |  |
 | slope | down | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| tower | push | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| tower | open | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| tower | gate | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
-| spring | jump | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| spring | up | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| spring | high | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| bunny | bunny | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 4 | 11 | 2 |  |
-| bunny | home | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 3 | 10 | 2 |  |
-| bunny | carrot | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 1 | 9 | 2 |  |
+| tower | push | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 0 | 9 | 2 |  |
+| tower | open | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 0 | 9 | 2 |  |
+| tower | gate | 3 | 0 | 4 | 2 | 1 | 1 | 11 | 0 | 0 | 11 | 2 |  |
+| spring | jump | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| spring | up | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 0 | 9 | 2 |  |
+| spring | high | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| bunny | bunny | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 8 | 17 | 2 |  |
+| bunny | home | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 6 | 15 | 2 |  |
+| bunny | carrot | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 2 | 11 | 2 |  |
 | floe | left | 3 | 0 | 2 | 0 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| floe | right | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| floe | wait | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| music | red | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 1 | 9 | 2 |  |
-| music | yellow | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 1 | 9 | 2 |  |
-| music | blue | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 1 | 9 | 2 |  |
-| ballroom | snowman | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| ballroom | ball | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 6 | 0 | 13 | 2 |  |
-| ballroom | hat | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 0 | 7 | 2 |  |
-| garden | flower | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 0 | 6 | 14 | 0 |  |
-| garden | warm | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 2 | 9 | 0 |  |
+| floe | right | 3 | 0 | 2 | 2 | 1 | 1 | 9 | 0 | 0 | 9 | 2 |  |
+| floe | wait | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| music | red | 3 | 0 | 4 | 3 | 1 | 1 | 12 | 0 | 3 | 15 | 2 |  |
+| music | yellow | 3 | 0 | 4 | 3 | 1 | 1 | 12 | 0 | 3 | 15 | 2 |  |
+| music | blue | 3 | 0 | 3 | 2 | 1 | 1 | 10 | 0 | 2 | 12 | 2 |  |
+| ballroom | snowman | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| ballroom | ball | 3 | 0 | 2 | 1 | 1 | 1 | 8 | 12 | 0 | 20 | 2 |  |
+| ballroom | hat | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 0 | 8 | 2 |  |
+| garden | flower | 3 | 0 | 3 | 2 | 1 | 1 | 10 | 0 | 6 | 16 | 0 |  |
+| garden | warm | 3 | 0 | 1 | 2 | 1 | 1 | 8 | 0 | 2 | 10 | 0 |  |
 | garden | spring | 3 | 0 | 1 | 1 | 1 | 1 | 7 | 0 | 1 | 8 | 0 |  |
 
 ## Summary
 
-0 of 30 core words are below 6 in-context hearings (0 when pickups and toy lines all play); below 8: 21 (15 with pickups and toy lines); in-context ranges 7..8.
+0 of 30 core words are below 6 in-context hearings (0 when pickups and toy lines all play); below 8: 3 (2 with pickups and toy lines); in-context ranges 7..12.

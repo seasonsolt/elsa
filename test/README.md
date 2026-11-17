@@ -29,7 +29,13 @@ The solo column is `solo/frost`: Elsa is the only solo player, Anna is the compa
 ## What runs
 
 Per room (`src/levels.js`): map is 13 x 24, every tile character is registered (`TILE_CHARS` in `logic.js`), one spawn each and the goal tile that matches `goal` (`door`, `snowman`, or `garden`: no door, at least one `F`), bunnies need a nest, a `melody` needs its steps, a floe needs water under it, an item reachability smoke check, the `duo` solution and
-the `solo` solution (Elsa drives, the companion Anna does the rest). Then every test in `test/unit/*.test.mjs`.
+the `solo` solution (Elsa drives, the companion Anna does the rest). A room with more screens (`more`, PLAN-2 E1) has every screen
+checked (a later screen: 2-4 small stars), and each of its solutions must play for at least 30 s. Then every test in `test/unit/*.test.mjs`.
+
+Behaviour lock: `test/lock/rooms.json` holds every room's first screen as its solutions played it (the keys on every step, the events,
+where the sisters stand every quarter second); `behavior-lock.test.mjs` replays it without the later screens and must get the same.
+Rewrite it (`node test/lock.mjs --write`) only for an intended change to a first screen. Drafting a screen without touching
+`src/levels.js`: `LEVEL_PATCH=draft.json node test/run.mjs --only <room>` merges `{ "<room>": { field: value } }` into the room.
 
 The reachability check (`checks.mjs`) is deliberately generous: a grid search with approximate jump reach, Frost's ice
 and Nuan's melting. It catches sealed-off items and missing plates, it does not prove a room is solvable. The solutions
@@ -70,13 +76,15 @@ export const solo = async (h, me) => {   // drives only `me` (always 'frost', El
 - Every step ends with the game stepped at 1/120 s through `g.input` / `g.press` only. A step that cannot finish
   throws with the room id, step name, step number and the sister's position. Falling in the water is an error.
 - The solution ends when both are at the goal (the step loop stops once the state is `clear`). `run.mjs` then asserts
-  `clear`, or `win` on the last room.
+  `clear`, or `win` on the last room. A room with more screens: the goal of a screen that is not the last passes to the next one;
+  `h.nextScreen()` waits until it has loaded and both sisters stand on it, then the solution goes on there.
 - `solo` runs in solo mode (`g.mode = 'solo'`, `KID_PHYS`, the companion stepped before every `g.step`) with Elsa (`frost`) as `me`. It
   may only drive `me`; the harness throws if it touches Anna. In solo both sisters collect everything and both double jump, so
   `hop(me, col, true)` works for Elsa. Elsa freezes water herself; Anna melts a wall when Elsa comes near.
 - Solo physics are slower (180 px/s) and a hop ends at the first landing, so a landing spot that worked in duo may be a column
   deeper into the platform here. Do not stand beside the door before the last small star: reaching the door ends the room.
-- `h.expectStars()` fails the step unless every `+` is collected, which proves each small star is reachable.
+- `h.expectStars()` fails the step unless every `+` of the room (all its screens) is collected, which proves each small star is
+  reachable; call it on the last screen.
 - The file name is the room's `id` (`levels.js`).
 
 ## Hand-made rooms (S3 toys)

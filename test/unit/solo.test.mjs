@@ -6,6 +6,9 @@ import { soloGame } from '../solo-kit.mjs';
 /* objects made inside the logic's vm context have another Object.prototype: compare them as plain data */
 const plain = x => JSON.parse(JSON.stringify(x));
 const fresh = ({ loadLogic }, id, o = {}) => soloGame({ loadLogic }, id, Object.assign({ companion: false }, o));
+/* the goal of the screen being played is reached: the room is cleared, or (a room with more screens, PLAN-2 E1) the screen is passed */
+const goalReached = k => k.count('pass') + k.count('clear') > 0;
+const starsOf = sc => sc.map.join('').split('+').length - 1;
 
 /* walk `sid` to the right for `sec` seconds and return how far she went (px) */
 function distanceInHalfASecond(k, sid) {
@@ -194,7 +197,8 @@ export function smallStarsAreCountedAndNeverGateTheDoor({ loadLogic, assert }) {
     const k = fresh({ loadLogic }, 'hall', { mode });
     const stars = k.g.items.filter(i => i.kind === '+');
     assert.ok(stars.length >= 3 && stars.length <= 5, `3-5 stars per room, got ${stars.length}`);
-    assert.deepEqual(plain(k.g.stars), { total: stars.length, got: 0 });
+    const room = k.logic.levels.find(l => l.id === 'hall');
+    assert.deepEqual(plain(k.g.stars), { total: [room, ...(room.more || [])].reduce((n, sc) => n + starsOf(sc), 0), got: 0 }, 'the stars of every screen');
     // either sister takes a star, in any mode
     k.place('frost', stars[0].c, stars[0].r);
     k.place('nuan', stars[1].c, stars[1].r);
@@ -225,7 +229,9 @@ export function everyRoomHasThreeToFiveStars({ logic, assert }) {
   logic.levels.forEach((lv, i) => {
     const g = logic.createGame();
     g.load(i);
-    assert.ok(g.stars.total >= 3 && g.stars.total <= 5, `${lv.id}: ${g.stars.total} stars`);
+    assert.ok(starsOf(lv) >= 3 && starsOf(lv) <= 5, `${lv.id}: ${starsOf(lv)} stars on the first screen`);
+    for (const sc of lv.more || []) assert.ok(starsOf(sc) >= 2 && starsOf(sc) <= 4, `${lv.id}: ${starsOf(sc)} stars on a later screen`);
+    assert.equal(g.stars.total, [lv, ...(lv.more || [])].reduce((n, sc) => n + starsOf(sc), 0), `${lv.id}: the room counts every screen's stars`);
     assert.equal(g.grid.flat().includes('+'), false, 'a star is an item, not a tile in the grid');
   });
 }
@@ -269,18 +275,18 @@ export function inSoloTheCompanionJoinsThePlayerAtTheDoor({ loadLogic, assert })
   assert.ok(Math.abs(k.col('nuan') - 20.5) > 3, 'Anna is far from the door');
   k.log.length = 0;
   k.place('frost', 20, 11);
-  assert.equal(k.g.state, 'clear', 'Elsa alone at the door is enough');
+  assert.ok(goalReached(k), 'Elsa alone at the door is enough');
   const blink = k.log.find(e => e.type === 'blink' && e.who === 'nuan');
   assert.equal(blink.who, 'nuan', 'Anna is carried by magic');
   assert.ok(Math.abs(blink.to.x - k.g.door.x) < 44);
-  assert.equal(k.count('clear'), 1);
+  assert.equal(k.count('pass') + k.count('clear'), 1);
   // duo: both have to be there
   const d = fresh({ loadLogic }, 'hall', { mode: 'duo' });
   for (const it of d.g.items.filter(i => i.kind !== '+')) d.place(it.kind === '*' ? 'frost' : 'nuan', it.c, it.r);
   d.place('nuan', 20, 11);
-  assert.equal(d.g.state, 'play');
+  assert.ok(!goalReached(d));
   d.place('frost', 20, 11);
-  assert.equal(d.g.state, 'clear');
+  assert.ok(goalReached(d));
 }
 
 export function theDoorWaitsForTheCompanionToSurface({ loadLogic, assert }) {
@@ -289,11 +295,11 @@ export function theDoorWaitsForTheCompanionToSurface({ loadLogic, assert }) {
   k.g.sisters.nuan.splash = 0.3;                     // the companion is in the middle of falling in the water
   k.place('frost', 20, 11);
   k.g.sisters.nuan.splash = 0.3;
-  assert.equal(k.g.state, 'play');
+  assert.ok(!goalReached(k));
   k.run(0.1);
-  assert.equal(k.g.state, 'play', 'not while she is in the water');
+  assert.ok(!goalReached(k), 'not while she is in the water');
   k.run(1);
-  assert.equal(k.g.state, 'clear');
+  assert.ok(goalReached(k));
 }
 
 export function theDuoRoomsPlayLikeTheOriginals({ loadLogic, assert }) {

@@ -29,12 +29,12 @@ FRAMES_ALL = ('idle', 'blink', 'jump', 'fall', 'cast', 'cheer', 'run1', 'run2', 
 # smin: saturation ramp start (full at smin+sramp). vmin: value ramp start (full at vmin+.08). island: min mask-island size in px.
 # center: the dress's average hue (used to keep a fraction `keep` of the painted hue wander).
 PARAMS = {
-    'frost': dict(hue=(185, 235), feather=6, smin=0.14, sramp=0.05, vmin=0.22, island=30, center=210,
+    'frost': dict(hue=(178, 242), feather=9, smin=0.09, sramp=0.04, vmin=0.18, island=30, center=210,
                   colours={
                       'd1': dict(name='mint',  hue=156, sat=0.85, keep=0.30, lum=0.35, vgain=1.30),
                       'd2': dict(name='rose',  hue=346, sat=1.30, keep=0.30, lum=0.35, vgain=1.35),
                   }),
-    'nuan':  dict(hue=(204, 246), feather=5, smin=0.22, sramp=0.06, vmin=0.16, island=30, center=222,
+    'nuan':  dict(hue=(200, 248), feather=7, smin=0.18, sramp=0.06, vmin=0.15, island=30, center=222,
                   colours={
                       'd1': dict(name='teal',  hue=178, sat=0.80, keep=0.30, lum=0.80),
                       'd2': dict(name='lilac', hue=272, sat=0.62, keep=0.30, lum=0.80),
@@ -96,15 +96,19 @@ def dress_mask(rgba, p):
     mh = 1 - ramp(hue_dist_to_band(h, lo, hi), 0, p['feather'])
     ms = ramp(s, p['smin'] - p['sramp'], p['smin'] + p['sramp'])
     mv = ramp(v, p['vmin'], p['vmin'] + .08)
-    m = mh * ms * mv * (rgba[..., 3] / 255.0)
+    vis = rgba[..., 3] > 8
+    raw = mh * ms * mv
+    m = raw * vis
     # drop tiny islands (hair strands, lantern glow, speckle)
-    lab, n = ndi.label(m > .5)
+    lab, n = ndi.label(m > .45)
     if n:
         sizes = ndi.sum(np.ones_like(m), lab, index=np.arange(1, n + 1))
         keepl = np.concatenate([[False], sizes >= p['island']])
-        m = m * ndi.binary_dilation(keepl[lab], iterations=2)
-    # Feather within the colour band so the blur cannot recolour adjacent skin or hair.
-    return np.clip(ndi.gaussian_filter(m, .6), 0, 1) * mh * ms * mv * (rgba[..., 3] / 255.0)
+        keep_region = ndi.binary_dilation(keepl[lab], iterations=3)
+        m = m * keep_region
+    # Extend full recolor weight onto anti-aliased outer dress edge pixels (without touching skin/hair) so no cyan-blue halo remains
+    edge_fill = np.maximum(m, ndi.grey_dilation(m, size=(3, 3)) * np.clip(mh * 1.15, 0, 1) * (rgba[..., 3] > 2))
+    return np.clip(ndi.gaussian_filter(edge_fill, .55), 0, 1) * np.clip(mh * 1.15, 0, 1)
 
 
 def recolor(rgba, p, col):
@@ -174,18 +178,27 @@ HAT_ANCHOR = {'crown': (1, 0.55), 'bow': (-2, 0.60), 'wreath': (1, 0.80), 'clip'
 
 
 def key_cutout(path):
-    """magenta -> alpha (same recipe as slice.py cutout, which cannot be imported: it executes on import)"""
+    """magenta -> alpha with interior colour propagation so inner crown/clip rims have zero #FF00FF fringe"""
     KEY = np.array([255, 0, 255], float)
     a = np.asarray(Image.open(path).convert('RGB'), float)
     keyness = np.clip((np.minimum(a[..., 0], a[..., 2]) - a[..., 1]) / 255, 0, 1)
     d = np.linalg.norm(a - KEY, axis=2)
-    alpha = np.clip((d - 60) / 110, 0, 1)
-    alpha = np.where(keyness > .75, 0, alpha)
+    alpha = np.clip((d - 72) / 115, 0, 1)
+    alpha = np.where(keyness > .68, 0, alpha)
+    alpha = np.where(alpha < .06, 0, alpha)
     al = alpha[..., None]
-    rgb = np.clip(np.where(al > .02, (a - (1 - al) * KEY) / np.maximum(al, .02), a), 0, 255)
-    spill = np.clip(np.minimum(rgb[..., 0], rgb[..., 2]) - rgb[..., 1] - 40, 0, None)
-    fringe = alpha < .95
-    rgb[..., 0] -= spill * fringe; rgb[..., 2] -= spill * fringe
+    rgb = np.clip(np.where(al > .08, (a - (1 - al) * KEY) / np.maximum(al, .22), a), 0, 255)
+    spill = np.clip(np.minimum(rgb[..., 0], rgb[..., 2]) - rgb[..., 1] - 18, 0, None)
+    fringe = (alpha < .96) | (keyness > .28)
+    rgb[..., 0] -= spill * fringe
+    rgb[..., 2] -= spill * fringe
+    clean = (alpha > .94) & (keyness < .22)
+    if np.any(clean):
+        dist, nearest = ndi.distance_transform_edt(~clean, return_indices=True)
+        near_rgb = rgb[tuple(nearest)]
+        edge = (alpha > 0) & ((alpha < .82) | (keyness > .30)) & (dist <= 6)
+        w = np.clip(np.maximum((.82 - alpha) / .76, (keyness - .22) / .45), 0, 1)[..., None]
+        rgb = np.where(edge[..., None], rgb * (1 - w) + near_rgb * w, rgb)
     return np.dstack([np.clip(rgb, 0, 255), alpha * 255]).astype(np.uint8)
 
 

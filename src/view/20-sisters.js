@@ -65,8 +65,15 @@
     const lookAt = !steered && (v.idleT > 2.5 || reunited()) && v.castT <= 0 && other ? (other.x > s.x ? 1 : -1) : s.dir;
     const dir = game.state === 'win' ? (Math.sin(now * 3 + (id === 'nuan' ? 1.5 : 0)) >= 0 ? 1 : -1) : lookAt;
     v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${dir} ${breath.toFixed(3)})`);
+    const gY = typeof groundYBelow === 'function' ? groundYBelow(cx, feet) : feet;
+    const airDrop = Math.max(0, (gY - (feet - bob)));
+    const shScale = Math.max(.38, 1 - airDrop / 250);
+    const fadeK = v.fadeIn > 0 ? (1 - v.fadeIn / BLINK_FADE) : 1;
     v.shadow.setAttribute('cx', cx.toFixed(1));
-    v.shadow.setAttribute('cy', (feet + 2).toFixed(1));
+    v.shadow.setAttribute('cy', (gY + 2).toFixed(1));
+    v.shadow.setAttribute('rx', (22 * shScale).toFixed(1));
+    v.shadow.setAttribute('ry', (5 * shScale).toFixed(1));
+    v.shadow.setAttribute('opacity', (fadeK * .34 * Math.max(.18, 1 - airDrop / 220)).toFixed(2));
     /* a small golden marker above the sister the player steers: always on touch, and for a moment after a room starts */
     const mine = playerId() === id;
     v.mark.setAttribute('visibility', game.state === 'play' && mine && (isTouch || v.markT > 0) ? 'visible' : 'hidden');

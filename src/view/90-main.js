@@ -267,6 +267,7 @@
       frostGlow.setAttribute('visibility', fr.splash > 0 ? 'hidden' : 'visible');
       drawItemBob(now);
       drawFishFrame(now, dt);
+      if (typeof updateAmbient === 'function') updateAmbient(now, dt);
       if (typeof updateToys === 'function') guarded('toys', () => updateToys(dt, now));   // 15-toys (+ 75-rewards tick)
       updateFragment(now);
       fxFrame(dt, now, live);

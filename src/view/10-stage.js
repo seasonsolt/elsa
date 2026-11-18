@@ -2,6 +2,26 @@
   const isSolid = ch => '#XIB'.includes(ch);
   const cellAt = (c, r) => (r < 0 || r >= ROWS || c < 0 || c >= COLS) ? '#' : game.grid[r][c];
 
+  /* Nearest ground / platform / ramp / floe surface directly beneath (x, feetY), so shadows stay on the floor when jumping. */
+  function groundYBelow(x, feetY) {
+    let best = ROWS * T;
+    if (Array.isArray(game.floes)) {
+      for (const fl of game.floes) if (x >= fl.x - 4 && x <= fl.x + fl.w + 4 && fl.y >= feetY - 8 && fl.y < best) best = fl.y;
+    }
+    const c = Math.max(0, Math.min(COLS - 1, Math.floor(x / T)));
+    const r0 = Math.max(0, Math.floor((feetY - 6) / T));
+    for (let r = r0; r < ROWS; r++) {
+      const ch = cellAt(c, r);
+      let y = -1;
+      if (ch === '\\') y = r * T + Math.max(0, Math.min(T, x - c * T));
+      else if (ch === '/') y = (r + 1) * T - Math.max(0, Math.min(T, x - c * T));
+      else if ('#XIB=J12345'.includes(ch) || (ch === 'G' && !game.gatesOpen)) y = r * T;
+      else if (ch === '~') y = r * T + 8;
+      if (y >= feetY - 8 && y < best) { best = y; break; }
+    }
+    return best;
+  }
+
   function runs(test) {
     const out = [];
     for (let r = 0; r < ROWS; r++) {
@@ -188,6 +208,60 @@
     }
   }
 
+  /* Ambient room life & subtle stage background parallax: golden light-butterflies in garden, drifting chime-motes in music. */
+  const ambientSwarm = [];
+  let bgParallaxX = 0;
+  function drawAmbient() {
+    ambientSwarm.length = 0;
+    const lv = LEVELS[game.index];
+    if (!lv) return;
+    const box = layer('ambient', 'shadows');
+    box.textContent = '';
+    if (lv.id === 'garden') {
+      const spots = [[190, 175], [370, 210], [560, 155], [750, 195], [470, 290]];
+      spots.forEach(([x, y], i) => {
+        const g = el('g', { opacity: .88 }, box);
+        el('circle', { r: 12, fill: 'url(#warm)', opacity: .65 }, g);
+        const wL = el('path', { d: 'M0 0C-9 -9 -12 -1 -4 4C-10 8 -5 12 0 5Z', fill: i % 2 ? '#ffe699' : '#ffc6dc', opacity: .92 }, g);
+        const wR = el('path', { d: 'M0 0C9 -9 12 -1 4 4C10 8 5 12 0 5Z', fill: i % 2 ? '#fff2bf' : '#ffdbe9', opacity: .92 }, g);
+        ambientSwarm.push({ kind: 'butterfly', g, wL, wR, x0: x, y0: y, ph: i * 1.4 });
+      });
+    } else if (lv.id === 'music') {
+      const spots = [[180, 165], [340, 130], [510, 150], [670, 135], [810, 170]];
+      const cols = ['#ff8aa8', '#ffd27a', '#8be0ff', '#a8f0c6', '#d4b8ff'];
+      spots.forEach(([x, y], i) => {
+        const g = el('g', { opacity: .72 }, box);
+        el('circle', { r: 10, fill: 'url(#cool)', opacity: .55 }, g);
+        el('path', { d: 'M-2 3a3.2 2.4 -20 1 0 4 0V-7l5 1.8v2.6l-5-1.6', fill: cols[i % cols.length], stroke: cols[i % cols.length], 'stroke-width': 1.2, 'stroke-linecap': 'round' }, g);
+        ambientSwarm.push({ kind: 'note', g, x0: x, y0: y, ph: i * 1.25 });
+      });
+    }
+  }
+  function updateAmbient(now, dt) {
+    const lead = game.sisters[game.mode === 'solo' ? 'frost' : (game.active || 'frost')] || game.sisters.frost;
+    const targetPx = lead ? (480 - (lead.x + lead.w / 2)) / 480 * 7.5 : 0;
+    bgParallaxX += (targetPx - bgParallaxX) * Math.min(1, dt * 4);
+    const px = bgParallaxX.toFixed(2);
+    $('bg').setAttribute('transform', `translate(${px} 0)`);
+    $('glows').setAttribute('transform', `translate(${px} 0)`);
+    for (const a of ambientSwarm) {
+      if (a.kind === 'butterfly') {
+        const x = a.x0 + Math.sin(now * .75 + a.ph) * 42 + Math.cos(now * 1.6 + a.ph) * 12;
+        const y = a.y0 + Math.cos(now * 1.1 + a.ph) * 22 + Math.sin(now * 2.3 + a.ph) * 6;
+        const flap = (.32 + Math.abs(Math.sin(now * 9.5 + a.ph)) * .68).toFixed(2);
+        const tilt = (Math.cos(now * .75 + a.ph) * 14).toFixed(1);
+        a.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tilt})`);
+        a.wL.setAttribute('transform', `scale(${flap} 1)`);
+        a.wR.setAttribute('transform', `scale(${flap} 1)`);
+      } else {
+        const x = a.x0 + Math.sin(now * .6 + a.ph) * 18;
+        const y = a.y0 + Math.cos(now * .9 + a.ph) * 14;
+        const pulse = (.85 + Math.sin(now * 2.4 + a.ph) * .15).toFixed(2);
+        a.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${pulse})`);
+      }
+    }
+  }
+
   /* The memory fragment: a glowing star that waits at level.memory until the logic reports it found (event 'memory'). */
   let fragNode = null;
   function drawFragment() {
@@ -218,7 +292,7 @@
   function rebuild() {
     const lv = LEVELS[game.index];
     $('bg').setAttribute('href', SRC(lv.bg));
-    drawTiles(); drawGlows(); drawItems(); drawGoal(); drawGates(true); drawFish(); drawFragment();
+    drawTiles(); drawGlows(); drawItems(); drawGoal(); drawGates(true); drawFish(); drawAmbient(); drawFragment();
     if (typeof drawToys === 'function') drawToys();   // 15-toys
     clearFx();
     guideReset();

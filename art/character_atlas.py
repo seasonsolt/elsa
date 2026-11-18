@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
+from repair_sprites import apply_all_repairs, remove_green_clean
 
 ART = Path(__file__).resolve().parent
 ROOT = ART.parent
@@ -23,13 +24,7 @@ CELLS = {
 
 
 def remove_green(image):
-    rgb = np.asarray(image.convert('RGB'), dtype=np.float32)
-    # Blue cloth, pale hair and skin have no dominant green. Feather only the key edge.
-    excess = rgb[..., 1] - np.maximum(rgb[..., 0], rgb[..., 2])
-    alpha = np.clip((100 - excess) / 65, 0, 1)
-    # Suppress JPEG green spill on partially covered edge pixels.
-    rgb[..., 1] -= np.maximum(excess, 0) * (1 - alpha)
-    return Image.fromarray(np.dstack((rgb, alpha * 255)).clip(0, 255).astype('uint8'))
+    return remove_green_clean(image)
 
 
 def upscale4(image):
@@ -110,6 +105,7 @@ def extract_frames():
         bbox = cell.getchannel('A').point(lambda a: 255 if a > 40 else 0).getbbox()
         extracted.append(cell.crop(bbox))
     frames = {who: {pose: extracted[index] for pose, index in cells.items()} for who, cells in CELLS.items()}
+    apply_all_repairs(frames)
     return frames, image
 
 
@@ -139,20 +135,6 @@ def import_atlas(sizes, game_dir=None):
         portrait.save(game_dir / f'portrait_{who}.webp', lossless=True)
         sizes[f'portrait_{who}'] = [312, 416]
     word_fast(frames['frost']['run4'], game_dir, sizes)
-    # The title previously contained the original sisters, so replace its figures too.
-    cover = Image.open(game_dir / 'bg0.webp').convert('RGBA').resize((960, 520), Image.Resampling.LANCZOS)
-    for who, cx, target_h in [('frost', 330, 390), ('nuan', 700, 320)]:
-        figure = frames[who]['idle'].copy()
-        scale = target_h / figure.height
-        figure = figure.resize((round(figure.width * scale), target_h), Image.Resampling.LANCZOS)
-        cover.alpha_composite(figure, (round(cx - figure.width / 2), 520 - target_h))
-    cover.convert('RGB').save(game_dir / 'key.webp', quality=90)
-    meet = Image.new('RGBA', (256, 256))
-    for who, x in [('frost', 0), ('nuan', 128)]:
-        portrait = Image.open(game_dir / f'portrait_{who}.webp')
-        portrait = portrait.resize((128, 171), Image.Resampling.LANCZOS)
-        meet.alpha_composite(portrait, (x, 43))
-    meet.save(game_dir / 'ui_meet.webp', lossless=True)
     sizes['ui_meet'] = [256, 256]
     image.save(ART / 'raw/elsa-anna-atlas.png')
 

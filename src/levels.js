@@ -210,7 +210,7 @@ const LEVELS = [
     music: 4,
     memoryId: 'm5',
     bg: 'bg_slope',
-    glows: [],
+    glows: [[166, 114, 52, 'warm'], [794, 114, 52, 'warm'], [42, 224, 44, 'warm'], [918, 224, 44, 'warm'], [495, 290, 120, 'warm']],
     more: [
       {
         map: [
@@ -336,7 +336,7 @@ const LEVELS = [
     music: 5,
     memoryId: 'm6',
     bg: 'bg_spring',
-    glows: [],
+    glows: [[135, 62, 54, 'warm'], [825, 62, 54, 'warm'], [262, 166, 40, 'warm'], [706, 166, 40, 'warm'], [46, 340, 52, 'warm'], [912, 340, 52, 'warm']],
     more: [
       {
         map: [
@@ -399,7 +399,7 @@ const LEVELS = [
     music: 6,
     memoryId: 'm7',
     bg: 'bg_bunny',
-    glows: [],
+    glows: [[150, 32, 52, 'warm'], [843, 44, 52, 'warm'], [150, 122, 46, 'warm'], [780, 130, 46, 'warm'], [688, 22, 78, 'cool']],
     more: [
       {
         map: [
@@ -462,7 +462,7 @@ const LEVELS = [
     music: 7,
     memoryId: 'm8',
     bg: 'bg_floe',
-    glows: [],
+    glows: [[40, 108, 48, 'warm'], [274, 96, 52, 'warm'], [686, 96, 52, 'warm'], [920, 108, 48, 'warm'], [778, 104, 72, 'cool']],
     more: [
       {
         map: [
@@ -523,7 +523,7 @@ const LEVELS = [
     music: 8,
     memoryId: 'm9',
     bg: 'bg_music',
-    glows: [],
+    glows: [[58, 228, 50, 'warm'], [98, 140, 46, 'warm'], [318, 114, 44, 'warm'], [480, 40, 110, 'warm'], [650, 114, 44, 'warm'], [862, 140, 46, 'warm'], [904, 228, 50, 'warm'], [790, 128, 60, 'cool']],
     more: [
       {
         map: [
@@ -653,7 +653,7 @@ const LEVELS = [
     music: 9,
     memoryId: 'm10',
     bg: 'bg_garden',
-    glows: [],
+    glows: [[480, 36, 115, 'warm'], [180, 188, 52, 'warm'], [780, 188, 52, 'warm'], [530, 260, 130, 'warm']],
     more: [
       {
         goal: 'garden',

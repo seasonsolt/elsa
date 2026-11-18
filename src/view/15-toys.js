@@ -463,9 +463,9 @@
         const live = layer('toysLive', 'shadows');
         const g = el('g', {}, live);
         const halo = el('circle', { r: 26, cy: -12, fill: 'url(#cool)' }, g);
-        el('ellipse', { rx: 11, ry: 3, cy: 1, fill: '#10184a', opacity: .28 }, g);
+        const shadow = el('ellipse', { rx: 11, ry: 3, cy: 1, fill: '#10184a', opacity: .28 }, g);
         const body = el('g', {}, g);
-        v = { g, halo, body, frames: tyBunnyFrames(body), prevX: fx, prevY: fy, phase: 0, state: b.state, shown: 0, shake: Math.random() * 5 };
+        v = { g, halo, shadow, body, frames: tyBunnyFrames(body), prevX: fx, prevY: fy, phase: 0, state: b.state, shown: 0, shake: Math.random() * 5 };
         tyState.bunnies.set(b.id, v);
       }
       if (b.state !== v.state) {   // a change of state is always worth a sparkle
@@ -487,6 +487,12 @@
       const breath = f === 0 ? 1 + Math.sin(now * 2.6 + v.shake) * .025 : 1;
       v.g.setAttribute('transform', `translate(${(fx + shiver).toFixed(1)} ${fy.toFixed(1)})`);
       v.body.setAttribute('transform', `scale(${(b.dir < 0 ? -1 : 1)} ${breath.toFixed(3)})`);
+      const bgY = typeof groundYBelow === 'function' ? groundYBelow(fx, fy) : fy;
+      const bDrop = Math.max(0, bgY - fy);
+      const bScale = Math.max(.45, 1 - bDrop / 160);
+      v.shadow.setAttribute('cy', (bgY - fy + 1).toFixed(1));
+      v.shadow.setAttribute('rx', (11 * bScale).toFixed(1));
+      v.shadow.setAttribute('opacity', (.28 * Math.max(.2, 1 - bDrop / 140)).toFixed(2));
       v.halo.setAttribute('visibility', lost ? 'visible' : 'hidden');
       v.halo.setAttribute('opacity', (.55 + Math.sin(now * 3 + v.shake) * .3).toFixed(2));
     }

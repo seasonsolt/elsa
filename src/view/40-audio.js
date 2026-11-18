@@ -8,10 +8,20 @@
     1: { bpm: 76, beats: 4, key: 57, minor: true, prog: [[0, 'm'], [-4, 'M'], [3, 'M'], [-2, 'M']], seed: 23 },
     2: { bpm: 96, beats: 4, key: 64, minor: true, prog: [[0, 'm'], [-4, 'M'], [3, 'M'], [-2, 'M'], [0, 'm'], [5, 'm'], [-5, 'M'], [-5, 'M']], seed: 31 },
     3: { bpm: 132, beats: 3, key: 65, minor: false, prog: [[0, 'M'], [-3, 'm'], [5, 'M'], [7, 'M']], seed: 47 },
+    // 4 slope: brisk cheerful G-major snow-slide waltz
+    4: { bpm: 114, beats: 3, key: 67, minor: false, prog: [[0, 'M'], [5, 'M'], [7, 'M'], [0, 'M'], [-3, 'm'], [2, 'm'], [7, 'M'], [0, 'M']], seed: 169 },
+    // 5 spring: bouncy playful F-major mushroom theme
+    5: { bpm: 108, beats: 4, key: 65, minor: false, prog: [[0, 'M'], [5, 'M'], [2, 'm'], [7, 'M'], [0, 'M'], [-3, 'm'], [5, 'M'], [7, 'M']], seed: 186 },
+    // 6 bunny: cozy warm D-major pastoral lullaby
+    6: { bpm: 86, beats: 4, key: 62, minor: false, prog: [[0, 'M'], [-5, 'M'], [-3, 'm'], [-7, 'M'], [5, 'M'], [0, 'M'], [-5, 'M'], [0, 'M']], seed: 203 },
+    // 7 floe: flowing moonlit river waltz
+    7: { bpm: 84, beats: 3, key: 64, minor: true, prog: [[0, 'm'], [3, 'M'], [7, 'm'], [-2, 'M'], [0, 'm'], [-4, 'M'], [3, 'M'], [-2, 'M']], seed: 220 },
+    // 8 music: gentle C-major accompaniment so C5-D5-E5-G5-A5 note steps are 100% consonant
+    8: { bpm: 88, beats: 4, key: 60, minor: false, prog: [[0, 'M'], [-3, 'm'], [5, 'M'], [7, 'M'], [0, 'M'], [4, 'm'], [5, 'M'], [7, 'M']], seed: 237 },
+    // 9 garden: luminous warm spring-thaw harp/celesta score
+    9: { bpm: 92, beats: 4, key: 62, minor: false, prog: [[0, 'M'], [7, 'M'], [-3, 'm'], [-5, 'M'], [5, 'M'], [0, 'M'], [2, 'm'], [7, 'M']], seed: 254 },
     end: { bpm: 72, beats: 4, key: 62, minor: false, prog: [[0, 'M'], [7, 'M'], [-3, 'm'], [5, 'M']], seed: 59 },
   };
-  // Rooms past the first four reuse a base tune with its own seed, so every room still has its own melody.
-  for (let n = 4; n < 10; n++) THEMES[n] = Object.assign({}, THEMES[n % 4], { seed: 101 + n * 17 });
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
   function rng(seed) { return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   // Each theme gets a fixed eight-bar tune, so every room has its own recognisable melody.
@@ -157,7 +167,7 @@
   /* The wind swells when the sisters drift apart (50-talk); m is 0..1. */
   function windMood(m) { if (audio) bus.wind.gain.setTargetAtTime(windBase() + m * .24, audio.currentTime, .5); }
   const musicLevel = () => voiceOn ? .3 : 1;
-  const windBase = () => song === 'end' ? 0 : song === 1 ? .1 : .07;
+  const windBase = () => (song === 'end' || song === 9 || song === 8) ? 0 : song === 1 || song === 7 ? .09 : .06;
   function schedule() {
     if (!audio || song === null || audio.state !== 'running') return;
     const th = THEMES[song], e8 = 30 / th.bpm, per = th.beats * 2;
@@ -217,6 +227,24 @@
       case 'quiz_wrong': tones([392, 330], 'sine', .14, .035); break;
       case 'page': { const f = noise(t, .25, .06, 'bandpass', 900, bus.sfx, 1); f.frequency.exponentialRampToValueAtTime(2600, t + .2); break; }
       case 'unlock': tones([523, 659, 784, 1047, 1319], 'sine', .1, .05); break;
+      case 'slide': {
+        const f = noise(t, .38, .055, 'bandpass', 1500, bus.sfx, 1.3);
+        f.frequency.exponentialRampToValueAtTime(880, t + .34);
+        bell(1319, t + .04, .18, .016, bus.sfx, 'sine');
+        break;
+      }
+      case 'bunny': {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(780, t + .09);
+        g.gain.setValueAtTime(.065, t); g.gain.exponentialRampToValueAtTime(.0006, t + .13);
+        o.connect(g).connect(bus.sfx); o.start(t); o.stop(t + .15);
+        break;
+      }
+      case 'bloom': {
+        const root = [523.25, 587.33, 659.25, 698.46, 783.99, 880][Math.max(0, Math.min(5, (n | 0) - 1))];
+        [1, 1.25, 1.5, 2].forEach((m, i) => bell(root * m, t + i * .055, .45, .042, bus.sfx, 'sine'));
+        break;
+      }
     }
   }
   /* The frame's game events -> sounds (90-main calls this before talkOnEvents). Also keeps the music on the room's `music` key. */
@@ -226,8 +254,14 @@
     for (const e of events) {
       switch (e.type) {
         case 'load': { const lv = LEVELS[g.index]; if (lv && lv.music !== undefined) startMusic(lv.music); break; }
-        case 'freeze': tones([880, 1175], 'sine', .14); break;
-        case 'block': tones([660, 990], 'triangle', .12); break;
+        case 'freeze':
+          noise(audio ? audio.currentTime : 0, .14, .035, 'bandpass', 3200, bus ? bus.sfx : null, 2);
+          tones([880, 1175, 1568, 2093], 'sine', .085, .045);
+          break;
+        case 'block':
+          crunch(.85);
+          tones([660, 990, 1319], 'triangle', .09, .048);
+          break;
         case 'melt': whoosh(false); tones([392, 523, 659], 'sine', .18); break;
         case 'fizz': tones([220], 'sine', .1, .03); break;
         case 'jump': whoosh(true); tones([e.who === 'frost' ? 440 : 494], 'sine', .08, .02); break;
@@ -239,7 +273,10 @@
           break;
         case 'open': tones([523, 659, 784, 1047], 'triangle', .16); break;
         case 'pass': tones([659, 784, 988], 'triangle', .14); break;
-        case 'gate': tones(e.open ? [330, 440] : [440, 330], 'square', .08, .02); break;
+        case 'gate':
+          if (audio && bus) noise(audio.currentTime, .22, .05, 'lowpass', 320, bus.sfx, .9);
+          tones(e.open ? [196, 294] : [294, 196], 'triangle', .11, .035);
+          break;
         case 'memory': tones([784, 988, 1175, 1568], 'sine', .2, .05); break;
         case 'blink': sfx('blink'); break;
         case 'clear': tones([523, 659, 784, 659, 784, 1047], 'triangle', .17); break;

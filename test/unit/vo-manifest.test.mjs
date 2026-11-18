@@ -112,8 +112,11 @@ export function voiceRatePitchAndPunctuationDecideTheHash({ assert }) {
     assert.equal(r.status, 0, r.stderr);
     assert.ok(rows(r).length > 0, 'an en rate change redoes something');
     assert.ok(rows(r).every(x => x[1] === 'changed' && /\ben:/.test(x[2])), 'only clips with English segments: ' + rows(r).filter(x => !/\ben:/.test(x[2])).map(x => x[0]).join(','));
-    /* Elsa's pitch changes: every Elsa clip and no Anna clip */
-    const pitch = editedLines(fx.dir, d => { d.voices.frost.zh[2] = '-9Hz'; });
+    /* Elsa's rate/model changes: every Elsa clip and no Anna clip */
+    const pitch = editedLines(fx.dir, d => {
+      if (String(d.voices.frost.zh[0]).startsWith('elevenlabs:')) d.voices.frost.zh[1] = '-9%';
+      else d.voices.frost.zh[2] = '-9Hz';
+    });
     const p = rows(narration(['--dry-run', '--lines', pitch, '--out', fx.dir]));
     assert.ok(p.length > 0 && p.every(x => x[2].startsWith('zh:') || x[2].includes('zh:')), 'Elsa pitch redoes Chinese clips');
     assert.ok(p.every(x => !x[0].includes('__nuan') && !x[0].startsWith('word_')), 'never an Anna-only clip');

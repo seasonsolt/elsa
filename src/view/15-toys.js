@@ -297,7 +297,7 @@
         if (t - (tyState.lines[k] || -1e9) < 1000) break;
         tyState.lines[k] = t;
         if (who) tyPuff('dust', who.x + who.w / 2, who.y + who.h, 44, .45);
-        try { if (typeof whoosh === 'function') whoosh(false); } catch (err) {}
+        tySfx('slide');
         tyToyLine('slide');
         break;
       }
@@ -331,7 +331,7 @@
       case 'bloom': {
         const f = tyState.flowers.find(x => x.c === e.c && x.r === e.r);
         if (f) { f.target = 2; f.celebrated = true; tyBurst((f.c + .5) * T, (f.r + .4) * T, 'heart', 5, 90); tyPuff('ring', (f.c + .5) * T, (f.r + .5) * T, 60, .55); }
-        tySfx('star', e.n);
+        tySfx('bloom', e.n);
         if (e.total && e.n >= e.total) {
           for (const x of tyState.flowers) tyBurst((x.c + .5) * T, (x.r + .4) * T, 'star', 4, 120);
           tySfx('unlock');
@@ -340,8 +340,8 @@
         break;
       }
       case 'bunny':
-        if (e.state === 'follow') { tySfx('pick'); tyToyLine('bunny'); }
-        else if (e.state === 'home') { tySfx('unlock'); tyToyLine('bunny_home'); }
+        if (e.state === 'follow') { tySfx('bunny'); tySfx('pick'); tyToyLine('bunny'); }
+        else if (e.state === 'home') { tySfx('bunny'); tySfx('unlock'); tyToyLine('bunny_home'); }
         break;
       case 'bunnysplash': tyPuff('splash', e.x, e.y, 46, .5); tySfx('splash'); break;
       case 'bunnyblink':

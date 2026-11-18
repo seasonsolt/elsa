@@ -80,10 +80,11 @@ SPEAKERS = ('frost', 'nuan')
 EL_PREFIX = 'elevenlabs:'
 EL_API = 'https://api.elevenlabs.io'
 EL_SPEED = (0.7, 1.2)   # what the API accepts for voice_settings.speed
-ANNA_EL = EL_PREFIX + 'BT0SH7Hb8NRPpT5xbCgg'   # ElevenLabs voice library "Lulu - Cute Little Witch": a playful Mandarin girl, one voice for zh and en
+ELSA_EL = EL_PREFIX + 'hkfHEbBvdQFNX4uWHqRF'   # ElevenLabs "Stacy": warm, gentle Mandarin elder-sister storytelling voice
+ANNA_EL = EL_PREFIX + 'BT0SH7Hb8NRPpT5xbCgg'   # ElevenLabs "Lulu - Cute Little Witch": playful Mandarin younger sister, zh + en
 # Used when lines.json carries no "voices" block; mirrors lines.json.
 DEFAULT_VOICES = {
-    'frost': {'zh': ['zh-CN-XiaoxiaoNeural', '-6%', '-4Hz']},   # Elsa speaks Chinese only
+    'frost': {'zh': [ELSA_EL, '-5%', 'eleven_v4']},   # Elsa speaks Chinese only
     'nuan': {'zh': [ANNA_EL, '+0%', 'eleven_v4'], 'en': [ANNA_EL, '-15%', 'eleven_v4']},
 }
 MANIFEST_NAME = 'vo_manifest.json'
@@ -149,11 +150,12 @@ class Content:
                 if is_el(v[0]):
                     if not (EL_SPEED[0] <= rate_factor(v[1]) <= EL_SPEED[1]) or not str(v[2]).startswith('eleven_'):
                         raise Fail(f'voices.{who}.{lang}: an ElevenLabs entry is ["elevenlabs:<id>", rate within {EL_SPEED}, "eleven_<model>"]')
-            zh, en = self.voices[who]['zh'], self.voices[who].get('en')
-            if is_el(zh[0]) and en and (en[0], en[2]) != (zh[0], zh[2]):
-                raise Fail(f'voices.{who}: an ElevenLabs speaker reads whole mixed sentences, so zh and en must name the same voice and model')
         if self.voices['nuan']['zh'][0] == self.voices['frost']['zh'][0]:
             raise Fail('Anna and Elsa must not share a Chinese voice: a child tells the sisters apart by ear')
+        for who in SPEAKERS:
+            zh, en = self.voices[who]['zh'], self.voices[who].get('en')
+            if who == 'nuan' and is_el(zh[0]) and en and (en[0], en[2]) != (zh[0], zh[2]):
+                raise Fail(f'voices.{who}: an ElevenLabs speaker reads whole mixed sentences, so zh and en must name the same voice and model')
         self.lines = dict(doc.get('pages') or {})
         self.lines.update(doc['lines'])
         words = load_json(words_path, 'words')
@@ -195,7 +197,7 @@ class Content:
             return segs
         langs = {s['lang'] for s in segs if s['voice']}
         lang = langs.pop() if len(langs) == 1 else 'mix'
-        return [{'text': join_spoken(s['text'] for s in segs), 'lang': lang, 'en': lang == 'en', 'voice': self.voice(who, 'zh')}]
+        return [{'text': join_spoken(s['text'] for s in segs if s['voice']), 'lang': lang, 'en': lang == 'en', 'voice': self.voice(who, 'zh')}]
 
     def segments(self, key, who, words_only=False):
         """-> [{text, lang, voice, en}] where en marks English for the subtitle. Punctuation-only text is kept for the

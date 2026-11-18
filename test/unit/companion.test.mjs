@@ -36,6 +36,40 @@ export function lookAtThePlayerWhenThereIsNothingToDo({ assert, ...ctx }) {
   assert.equal(n.dir, Math.sign(f.x - n.x) || n.dir, 'she faces the player');
 }
 
+/* drive the player with keys(t) (-1 / 0 / 1) for `secs` and measure how far and how jerkily the companion walks */
+function pace(k, keys, secs, from = 0) {
+  const n = k.g.sisters.nuan, f = k.g.sisters.frost, step = 1 / 120;
+  let lastX = n.x, lastF = f.x, travel = 0, revs = 0, lastSign = 0, fTravel = 0;
+  for (let t = 0; t < secs; t += step) {
+    const key = keys(t);
+    k.run(step, g => { g.input.frost.l = key < 0 ? 1 : 0; g.input.frost.r = key > 0 ? 1 : 0; });
+    if (t < from) { lastX = n.x; lastF = f.x; continue; }
+    const d = n.x - lastX;
+    if (Math.abs(d) > 0.01) { travel += Math.abs(d); const sg = Math.sign(d); if (lastSign && sg !== lastSign) revs++; lastSign = sg; }
+    fTravel += Math.abs(f.x - lastF);
+    lastX = n.x; lastF = f.x;
+  }
+  return { travel, revs, fTravel };
+}
+
+export function standsStillOnceSheHasTurnedToThePlayer({ assert, ...ctx }) {
+  const k = mk(ctx, 'hall');
+  k.place('frost', 6, 11); k.run(1.5);
+  // walk right, stop, glance back for a moment: she settles and then must not step to and fro at the edge of her place
+  const m = pace(k, t => (t < 1 ? 1 : t > 3 && t < 3.15 ? -1 : 0), 8, 4);
+  assert.ok(m.travel < 2 && m.revs === 0, `still after settling (travel ${m.travel.toFixed(1)} px, reversals ${m.revs})`);
+}
+
+export function aChildsKeyMashingDoesNotSendHerRunningToAndFro({ assert, ...ctx }) {
+  const k = mk(ctx, 'hall');
+  k.place('frost', 6, 11); k.run(1.5);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const plan = Array.from({ length: 40 }, () => [-1, 0, 1][Math.floor(rnd() * 3)]);
+  const m = pace(k, t => plan[Math.floor(t / 0.2) % 40], 8);
+  assert.ok(m.travel < 0.7 * m.fTravel, `she walks less than the player (${m.travel.toFixed(0)} vs ${m.fTravel.toFixed(0)} px)`);
+  assert.ok(m.revs <= 30, `few turns (${m.revs})`);
+}
+
 export function idleCountsTheSecondsThePlayerStandsStill({ assert, ...ctx }) {
   const k = mk(ctx, 'hall');
   k.run(3.5);

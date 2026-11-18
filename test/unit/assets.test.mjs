@@ -1,6 +1,7 @@
 /* Lazy picture loading (PLAN-2 D4). The plan is the pure src/lib/assets.js: this file adds up real file sizes against the 2 MB budget
    (3.9 row "D4"), checks that every picture a list names exists and that no picture of game/ is left out of the story without being
    named as on-demand here, and runs the real 00-core / 90-main in a fake page to see which pictures are requested when. */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { viewEnv } from './input-safety.test.mjs';
@@ -84,6 +85,33 @@ export function everyPictureInGameIsInThePlanOrNamedOnDemandHere({ assert, ROOT,
   const spare = new Set(['floe', 'tile_slope_l']);   // painted, but no code or map uses them (tile_slope_l: no room has a '/' ramp yet; roomArt would load it)
   const loose = fs.readdirSync(path.join(ROOT, 'game')).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).filter(n => !named.has(n) && !onDemand.test(n) && !spare.has(n));
   assert.deepEqual(loose, [], 'a picture that no list names and that is not an on-demand kind: add it to src/lib/assets.js (or to the on-demand kinds in this test)');
+}
+
+/* The large copies for big screens (art/hd.py): every copy belongs to a picture of game/, was made from its current bytes (art/hd.json
+   keeps a hash of the source) and is exactly twice its size; a picture changed without redoing its copy would show the old one. */
+function webpSize(file) {
+  const b = fs.readFileSync(file);
+  const chunk = b.toString('ascii', 12, 16);
+  if (chunk === 'VP8X') return [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)];
+  if (chunk === 'VP8L') { const v = b.readUInt32LE(21); return [1 + (v & 0x3fff), 1 + ((v >> 14) & 0x3fff)]; }
+  if (chunk === 'VP8 ') return [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff];
+  throw new Error(`${file}: not a webp`);
+}
+export function everyLargeCopyMatchesItsPictureAtTwiceTheSize({ assert, ROOT }) {
+  const index = JSON.parse(fs.readFileSync(path.join(ROOT, 'art', 'hd.json'), 'utf8'));
+  const dir = path.join(ROOT, 'game', 'hd');
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).sort();
+  assert.deepEqual(files, Object.keys(index).sort(), 'game/hd holds exactly the pictures art/hd.json lists');
+  const stale = [], wrong = [];
+  for (const [name, sha] of Object.entries(index)) {
+    const src = path.join(ROOT, 'game', `${name}.webp`);
+    if (crypto.createHash('sha256').update(fs.readFileSync(src)).digest('hex').slice(0, 12) !== sha) stale.push(name);
+    const [w, h] = webpSize(src), [W, H] = webpSize(path.join(dir, `${name}.webp`));
+    if (W !== 2 * w || H !== 2 * h) wrong.push(`${name} ${w}x${h} -> ${W}x${H}`);
+  }
+  assert.deepEqual(stale, [], 'pictures changed since their large copy was made: run art/hd.py');
+  assert.deepEqual(wrong, [], 'a large copy is twice its picture');
+  assert.ok(files.length >= 100, `the stage pictures have large copies (${files.length})`);
 }
 
 /* ---------- the real 00-core and 90-main in a fake page ---------- */

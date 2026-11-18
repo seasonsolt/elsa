@@ -15,6 +15,7 @@
                            one scope, so a file may use names from earlier files at load time and from any file
                            inside functions. Each file must end with a newline.
   art/sizes.json           replaces /*SIZES*/{} in view/00-core.js
+  art/hd.json              its names replace /*HD*/[] in view/00-core.js: the pictures with a large copy in game/hd/ (art/hd.py)
   src/content/lines.json   replaces /*LINES*/{} in view/00-core.js
   src/content/words.json   replaces /*WORDS*/[] in view/00-core.js
   art/sw.template.js       the offline worker (PLAN-2 D5). Stamped with the asset version, a hash of the built page and the precache list
@@ -68,16 +69,20 @@ view = join(lib_files) + join(view_files)
 MANIFEST = ROOT / 'manifest.webmanifest'
 SW_TEMPLATE = ART / 'sw.template.js'
 asset_hash = hashlib.sha256()
-for asset in sorted((ROOT / 'game').iterdir()):
+GAME = ROOT / 'game'
+for asset in sorted(list(GAME.iterdir()) + list((GAME / 'hd').glob('*.webp'))):
     if asset.suffix not in ('.webp', '.mp3', '.json', '.png'):
         continue
-    asset_hash.update(asset.name.encode())
+    asset_hash.update(asset.relative_to(GAME).as_posix().encode())
     asset_hash.update(hashlib.sha256(asset.read_bytes()).digest())
 asset_hash.update(b'manifest.webmanifest')
 asset_hash.update(hashlib.sha256(MANIFEST.read_bytes()).digest())
 asset_version = asset_hash.hexdigest()[:12]
 view = once(view, "/*ASSET_VERSION*/'dev'", json.dumps(asset_version), 'view')
 view = once(view, '/*SIZES*/{}', json.dumps(json.load(open(ART / 'sizes.json', encoding='utf8')), separators=(',', ':')), 'view')
+HD_INDEX = ART / 'hd.json'
+hd_names = sorted(json.loads(HD_INDEX.read_text(encoding='utf8'))) if HD_INDEX.exists() else []
+view = once(view, '/*HD*/[]', json.dumps(hd_names, separators=(',', ':')), 'view')
 view = once(view, '/*LINES*/{}', json.dumps(json.load(open(SRC / 'content' / 'lines.json', encoding='utf8')), ensure_ascii=False, separators=(',', ':')), 'view')
 view = once(view, '/*WORDS*/[]', json.dumps(json.load(open(SRC / 'content' / 'words.json', encoding='utf8')), ensure_ascii=False, separators=(',', ':')), 'view')
 for name, text in (('logic', logic), ('view', view)):

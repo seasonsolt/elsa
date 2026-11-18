@@ -53,7 +53,10 @@ export async function recordRoom(logic, id, mode, solution) {
   };
   /* presses made between the last step and the solution's end never reach the game: they are not part of the run */
   const before = h.log.length;
-  await solution(h, mode === 'solo' ? 'frost' : undefined);
+  /* only the first screen is recorded: a solution stops where it would walk on to the next one */
+  const firstScreenDone = new Error('first screen done');
+  h.nextScreen = () => { throw firstScreenDone; };
+  try { await solution(h, mode === 'solo' ? 'frost' : undefined); } catch (e) { if (e !== firstScreenDone) throw e; }
   h.finish();
   if (h.log.length < before) throw new Error('lost events');
   return { tape: { keys, presses, ticks: tick }, events, end: endState(g) };

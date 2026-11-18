@@ -29,6 +29,7 @@ def package(out):
     jobs = plan(content, None, True, str(ROOT / 'game'), None)
     files = {p.name: p for p in (ROOT / 'game').glob('*.webp')}
     files.update({p.name: p for p in (ROOT / 'game').glob('*.png')})   # the app icons (art/make_icons.py)
+    files.update({f'hd/{p.name}': p for p in (ROOT / 'game/hd').glob('*.webp')})   # the large copies for big screens (art/hd.py)
     files.update({j.name: ROOT / 'game' / j.name for j in jobs})
     files['subs.json'] = ROOT / 'game/subs.json'
     payload = {'index.html': page, 'ice-castle.html': page, 'sw.js': (ROOT / 'sw.js').read_bytes(), 'manifest.webmanifest': (ROOT / 'manifest.webmanifest').read_bytes()}
@@ -38,8 +39,8 @@ def package(out):
             raise ValueError(f'Empty release asset: {name}')
         payload['game/' + name] = data
     total = sum(map(len, payload.values()))
-    if total > 40_000_000:
-        raise ValueError(f'Release exceeds 40 MB: {total}')
+    if total > 60_000_000:
+        raise ValueError(f'Release exceeds 60 MB: {total}')
     version = re.search(rb'const ASSET_VERSION = "([a-f0-9]+)"', page)
     if not version:
         raise ValueError('Build the page with asset fingerprints before packaging')

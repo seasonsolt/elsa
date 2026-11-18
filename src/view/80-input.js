@@ -333,6 +333,7 @@
     if (!st || !body) return;
     root.style.overflow = 'hidden';
     body.style.overflow = 'hidden';
+    let w = 0;
     for (let pass = 0; pass < 2; pass++) {
       const cs = getComputedStyle(body);
       const px = k => parseFloat(cs[k]) || 0;
@@ -347,12 +348,13 @@
       }
       const availW = root.clientWidth - px('paddingLeft') - px('paddingRight');
       const availH = root.clientHeight - px('paddingTop') - px('paddingBottom') - others - gap * count;
-      const w = layoutStageWidth(availW, availH);
+      w = layoutStageWidth(availW, availH);
       st.style.width = w + 'px';
       st.style.height = layoutStageHeight(w) + 'px';
       const info = $('info');
       if (info) info.style.width = w + 'px';
     }
+    hdFit(w);
   }
   addEventListener('resize', fitStage);
   addEventListener('orientationchange', fitStage);

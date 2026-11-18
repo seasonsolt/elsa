@@ -60,7 +60,9 @@
     const breath = !moving && s.ground && !party ? 1 + Math.sin(now * 2.2 + (id === 'nuan' ? 1 : 0)) * .012 : 1;
     v.idleT = s.ground && Math.abs(s.vx) < 1 && game.state === 'play' ? v.idleT + dt : 0;
     const other = game.sisters[id === 'frost' ? 'nuan' : 'frost'];
-    const lookAt = (v.idleT > 2.5 || reunited()) && v.castT <= 0 && other ? (other.x > s.x ? 1 : -1) : s.dir;
+    /* only the companion turns to her sister on her own: a sister the child steers keeps the way she was steered (her magic goes that way too) */
+    const steered = game.mode !== 'solo' || playerId() === id;
+    const lookAt = !steered && (v.idleT > 2.5 || reunited()) && v.castT <= 0 && other ? (other.x > s.x ? 1 : -1) : s.dir;
     const dir = game.state === 'win' ? (Math.sin(now * 3 + (id === 'nuan' ? 1.5 : 0)) >= 0 ? 1 : -1) : lookAt;
     v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${dir} ${breath.toFixed(3)})`);
     v.shadow.setAttribute('cx', cx.toFixed(1));

@@ -23,7 +23,9 @@
    Positions: `cx` is the horizontal centre of a sister in pixels, her "feet" are s.y + s.h; a tile is T px. */
 function createCompanion(g, opts) {
   const FOLLOW = 36;            // px behind the player
-  const DEAD = 10;              // px: close enough to the follow point to stand still
+  const DEAD = 10;              // px: close enough to the follow point to stand still ...
+  const GO = 20;                // ... and she sets off again only when it is farther than this (no stepping back and forth at the edge)
+  const TURN_T = 0.6;           // s the player has to head the other way before her follow side flips (a child's quick taps do not)
   const FAR = 6 * T;            // blink when farther than this ...
   const HIGH = 3 * T;           // ... or when the height difference is larger than this ...
   const STUCK = 2;              // ... or when she has not got closer for this many seconds
@@ -50,7 +52,8 @@ function createCompanion(g, opts) {
     return {
       items: g.items, player: g.player,
       px: 0, py: 0, idle: 0, pMoved: false,
-      dir: 1, runT: 0,              // the way the player is heading (stable: a short tap the other way does not flip it)
+      dir: 1, runT: 0, runDir: 0,   // the way the player is heading (stable: a short tap the other way does not flip it), s she has held runDir
+      walking: false,               // following: on the way to her place (until within DEAD of it)
       blinkCool: 0, helpCool: 0, jumpCool: 0,
       best: Infinity, stuckT: 0,
       hold: null,                   // standing on a plate: { plate, gate, side }
@@ -274,7 +277,8 @@ function createCompanion(g, opts) {
 
     // 3. follow
     const want = tx - ccx;
-    let mv = Math.abs(want) > DEAD ? sign(want) : 0;
+    st.walking = Math.abs(want) > (st.walking ? DEAD : GO);
+    let mv = st.walking ? sign(want) : 0;
     let hop = false;                                        // a floe is within reach: jump onto it
     if (mv && waterAhead(c, mv)) {                          // wait at the water, unless a floe comes by
       if (c.ground) { const f = floeStep(c, mv); mv = f.mv; hop = f.jump; if (hop) st.hopT = 0.8; }
@@ -392,7 +396,8 @@ function createCompanion(g, opts) {
 
     // the way the player is heading, and how long she has been standing still
     const pin = g.input[pid], heading = (pin.r ? 1 : 0) - (pin.l ? 1 : 0);
-    if (heading) { st.runT += dt; if (st.runT > 0.25 || st.dir === heading) st.dir = heading; } else st.runT = 0;
+    if (heading) { st.runT = heading === st.runDir ? st.runT + dt : dt; if (st.runT > TURN_T || st.dir === heading) st.dir = heading; } else st.runT = 0;
+    st.runDir = heading;
     st.pMoved = Math.abs(p.x - st.px) + Math.abs(p.y - st.py) >= 0.5;
     if (!st.pMoved && !heading) st.idle += dt; else st.idle = 0;
     st.px = p.x; st.py = p.y;

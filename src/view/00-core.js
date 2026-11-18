@@ -110,7 +110,41 @@
   const SIZES = /*SIZES*/{};
   const ASSET_VERSION = /*ASSET_VERSION*/'dev';
   const assetURL = file => `game/${file}?v=${ASSET_VERSION}`;
-  const SRC = n => assetURL(`${n}.webp`);
+
+  /* Sharp pictures on a big screen (fullscreen, a Retina display): art/hd.py keeps a copy of every stage picture at twice the size in
+     game/hd/ (Real-ESRGAN). Once the stage is wider than HD_FROM device pixels, a picture switches to its large copy as soon as that copy
+     has decoded: SRC hands it out from then on and hdUpgrade replaces it where it is already shown. Until then, offline, or when the copy
+     fails to load, the normal picture stays. Once on it stays on (a large copy also looks right on a smaller stage). */
+  const HD_NAMES = new Set(/*HD*/[]);
+  const HD_FROM = 1700;
+  const hd = { on: false, ready: new Set(), asked: new Set(), live: new Set(), timer: 0 };
+  function hdWant(n) {
+    if (!hd.on || !HD_NAMES.has(n) || hd.asked.has(n)) return;
+    hd.asked.add(n);
+    const im = new Image();
+    hd.live.add(im);
+    // onload, not decode(): a page in a hidden or background tab may never settle decode(), and the copy only has to have arrived
+    im.onload = () => { hd.live.delete(im); hd.ready.add(n); hdUpgradeSoon(); };
+    im.onerror = () => { hd.live.delete(im); hd.asked.delete(n); };
+    im.src = assetURL(`hd/${n}.webp`);
+  }
+  const SRC = n => { hdWant(n); return assetURL(`${hd.ready.has(n) ? 'hd/' : ''}${n}.webp`); };
+  function hdUpgrade() {
+    hd.timer = 0;
+    for (const node of document.querySelectorAll('image, img')) {
+      const attr = node.tagName === 'IMG' ? 'src' : 'href';
+      const m = /^game\/([\w-]+)\.webp\?/.exec(node.getAttribute(attr) || '');
+      if (m && hd.ready.has(m[1])) node.setAttribute(attr, assetURL(`hd/${m[1]}.webp`));
+      else if (m) hdWant(m[1]);
+    }
+  }
+  function hdUpgradeSoon() { if (!hd.timer) hd.timer = setTimeout(hdUpgrade, 120); }
+  /** called with the stage's width in CSS pixels whenever it is fitted (80-input) */
+  function hdFit(cssWidth) {
+    if (hd.on || !HD_NAMES.size || cssWidth * (window.devicePixelRatio || 1) <= HD_FROM) return;
+    hd.on = true;
+    hdUpgrade();
+  }
 
   /* Pictures load by group (PLAN-2 D4, plan in src/lib/assets.js): the title set first, a room's set while its recall / chapter cards are
      up. loadArt starts every picture of `names` that is not loading or loaded yet, decodes it, and resolves when all are decoded or

@@ -219,9 +219,13 @@ function createCompanion(g, opts) {
     }
     if (g.gatesOpen || !g.gates.length || !g.plates.length || st.helpCool > 0 || st.holdCool > 0) return false;
     const pcx = cxOf(p), pr = rowOf(p);
-    // a gate close by that the player is heading for (not one she has just come through)
-    const near = g.gates.some(gt => Math.abs(gt.c * T + T / 2 - pcx) < GATE_NEAR && Math.abs(gt.r - pr) <= 4
-      && sign(gt.c * T + T / 2 - pcx) === st.dir);
+    // a gate close by on the player's floor level that she is heading for (not while climbing upper platforms far above the gate passage)
+    const near = g.gates.some(gt => {
+      if (Math.abs(gt.c * T + T / 2 - pcx) >= GATE_NEAR || sign(gt.c * T + T / 2 - pcx) !== st.dir) return false;
+      let gBottom = gt.r;
+      for (const o of g.gates) if (o.c === gt.c && o.r > gBottom) gBottom = o.r;
+      return Math.abs(gBottom - pr) <= 2;
+    });
     return near && startHold(p, cid, null);
   }
 

@@ -115,7 +115,7 @@
     const root = uxPaint(`<g class="page"><image href="${SRC(uxLineArt('ch_' + lv.id, lv.bg))}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
       <rect y="220" width="960" height="300" fill="url(#bottomFade)"/>
       ${uxCardRow(words, 296, cw, 190, gap)}
-      <g id="uxCue" opacity="0" class="ux-soft"><g id="uxEar">${uxIcon('ear', 30)}</g><g id="uxMouth" visibility="hidden" class="ux-bounce">${uxIcon('mouth', 30)}</g></g>
+      <g id="uxCue" opacity="0" class="ux-soft"><g id="uxEar">${uxIcon('ear', 30)}</g><g id="uxMouth" visibility="hidden" class="ux-bounce"><circle class="ux-ripple" r="28" fill="none" stroke="#ffd27a" stroke-width="3.5"/><circle class="ux-ripple ux-ripple2" r="28" fill="none" stroke="#fff3c9" stroke-width="2.5"/>${uxIcon('mouth', 30)}</g></g>
       ${uxButton({ act: 'go', ui: 'next', icon: 'next', x: 886, y: 452, r: 38, plate: 'gold' })}</g>`);
     const finish = () => uxEnd(s, done);
     s.onKey = finish;
@@ -137,6 +137,8 @@
         setCue(k, 'mouth');
         await uxWait(1500);
         if (!uxAlive(s)) return;
+        uxSfx('star');
+        uxConfetti(root.querySelector('.page'), x0 + k * (cw + gap) + cw / 2, 262, 8);
         setCue(k, null);
         await uxWait(250);
       }
@@ -374,4 +376,63 @@
       uxLine('cheer_' + (1 + (storyDraws % 4)));
       uxConfetti(root.querySelector('.page'), 480, 200, 24);
     })();
+  }
+
+  /* ---------- grand finale keepsake album: spring petals, dressed-up sisters & visual adventure badges ---------- */
+  function showFinale(done) {
+    const s = uxScreen('finale', true);
+    uxInputReset();
+    const finish = () => uxEnd(s, done);
+    s.onKey = finish;
+    let totalStars = 0;
+    for (const lv of LEVELS) {
+      const r = save.rooms && save.rooms[lv.id];
+      if (r && Array.isArray(r.stars)) totalStars += r.stars.filter(Boolean).length;
+    }
+    const stickerCount = Array.isArray(save.stickers) ? save.stickers.length : 0;
+    const wordCount = Object.values(save.words || {}).filter(w => w && ((w.heard || 0) > 0 || w.seen)).length;
+    const badge = (cx, cy, iconHtml, num) => `<g transform="translate(${cx} ${cy})">
+      <rect x="-78" y="-26" width="156" height="52" rx="26" fill="#141c52" opacity=".86" stroke="#ffd27a" stroke-width="2.5"/>
+      <g transform="translate(-44 0)">${iconHtml}</g>
+      <text class="latin" x="16" y="8" text-anchor="middle" font-size="25" fill="#fff3c9">${num}</text></g>`;
+    const petals = Array.from({ length: 18 }, (_, i) => {
+      const px = 45 + ((i * 53) % 870), delay = -(i * .37).toFixed(2), col = ['#ffc2d9', '#ffe699', '#d8c2ff', '#ffd6b0'][i % 4];
+      return `<g transform="translate(${px} 0)"><ellipse class="fin-petal" rx="${6 + (i % 3) * 2}" ry="${3.5 + (i % 2) * 1.5}" fill="${col}" style="animation-delay:${delay}s"/></g>`;
+    }).join('');
+    if (typeof loadArt === 'function') loadArt(['bg_garden']);
+    const root = uxPaint(`<g class="page">
+      <image href="${SRC('bg_garden')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
+      <rect width="960" height="520" fill="#0d1438" opacity=".38"/>
+      <g pointer-events="none">${petals}</g>
+      <rect x="210" y="38" width="540" height="316" rx="34" fill="#fffaf0" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
+      <rect x="224" y="52" width="512" height="288" rx="24" fill="#27357f" opacity=".12" stroke="#d9c69e" stroke-width="2"/>
+      <circle cx="385" cy="195" r="95" fill="url(#cool)"/><circle cx="575" cy="200" r="90" fill="url(#warm)"/>
+      <g id="finFrost" transform="translate(385 322) scale(2.45)"></g>
+      <g id="finNuan" transform="translate(575 322) scale(-2.45 2.45)"></g>
+      ${badge(284, 396, uxPic('fx_star', -18, -18, 36, 36, `<path d="${UX_STAR_D}" transform="scale(18)" fill="#ffd27a"/>`), `${totalStars}/${LEVELS.length * 3}`)}
+      ${badge(480, 396, uxIcon('sticker', 20, '#ffd27a'), String(stickerCount))}
+      ${badge(676, 396, uxIcon('book', 20, '#cfe6ff'), String(wordCount))}
+      ${uxButton({ act: 'wardrobe', ui: 'wardrobe', icon: 'wardrobe', x: 356, y: 468, r: 34 })}
+      ${uxButton({ act: 'stickers', ui: 'stickers', icon: 'sticker', x: 452, y: 468, r: 34 })}
+      ${uxButton({ act: 'done', ui: 'back', icon: 'home', x: 584, y: 464, r: 42, plate: 'gold', cls: 'ux-pulse' })}</g>`);
+    [['frost', '#finFrost'], ['nuan', '#finNuan']].forEach(([who, sel]) => {
+      const box = root.querySelector(sel);
+      if (!box || typeof SIZES === 'undefined') return;
+      const o = (save.outfit && save.outfit[who]) || { dress: 0, hat: null };
+      const k = o.dress && typeof rwDressReady === 'function' && rwDressReady(who, o.dress) ? o.dress : 0;
+      const fname = k ? `${who}_cheer_d${k}` : `${who}_cheer`;
+      const sz = SIZES[`${who}_cheer`] || [80, 168, 40];
+      if (typeof img === 'function' && typeof SPRITE === 'number') {
+        img(fname, -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, box);
+        if (typeof rwPlaceHat === 'function') rwPlaceHat(box, who, 'cheer', o.hat);
+      }
+    });
+    uxBind(root, {
+      done: finish,
+      wardrobe: () => { uxEnd(s, null); if (typeof showWardrobe === 'function') showWardrobe(false); else finish(); },
+      stickers: () => { uxEnd(s, null); if (typeof showStickers === 'function') showStickers(); else finish(); },
+    });
+    uxSfx('unlock');
+    uxConfetti(root.querySelector('.page'), 480, 180, 36);
+    uxLine('cheer_' + (1 + (storyDraws % 4)));
   }

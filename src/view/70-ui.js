@@ -668,7 +668,9 @@
           <circle r="29" fill="${'#ffd27a'}" stroke="#fff" stroke-width="3" filter="url(#softShadow)"/>
           <clipPath id="uxClipA"><circle r="25"/></clipPath>
           <g clip-path="url(#uxClipA)"><rect x="-25" y="-25" width="50" height="50" fill="#cfe0ff"/><image id="uxAvImg" x="-25" y="-25" width="50" height="50" preserveAspectRatio="xMidYMin slice"/></g>
+          <image id="uxAvHat" x="-16" y="-42" width="32" height="24" preserveAspectRatio="xMidYMax meet" visibility="hidden" pointer-events="none"/>
           <g id="uxAvOther" transform="translate(30 20)"><circle r="14" fill="#cfe0ff" stroke="#fff" stroke-width="2" opacity=".95"/><clipPath id="uxClipB"><circle r="12"/></clipPath><image id="uxAvImg2" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMin slice" clip-path="url(#uxClipB)"/></g>
+          <g id="uxScreenDots" transform="translate(-4 38)" pointer-events="none"></g>
         </g></g></g>
       <g id="uxPills" transform="translate(98 19)">${pills}</g>
       ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: UX_HUD_X.restart, y: 38, r: 30, plate: 'dark', keep: false, ring: true, cls: 'ux-minor' }) : ''}
@@ -715,6 +717,21 @@
       $('uxAvImg').setAttribute('href', SRC('portrait_' + me));
       $('uxAvImg2').setAttribute('href', SRC('portrait_' + other));
       $('uxAv').setAttribute('pointer-events', 'none');
+    }
+    const wornHat = save && save.outfit && save.outfit[me] && save.outfit[me].hat;
+    const avHat = $('uxAvHat');
+    if (avHat && uxState.avHat !== (wornHat || '')) {
+      uxState.avHat = wornHat || '';
+      if (wornHat) { avHat.setAttribute('href', SRC('hat_' + wornHat)); avHat.setAttribute('visibility', 'visible'); }
+      else avHat.setAttribute('visibility', 'hidden');
+    }
+    const nScreens = typeof g.screens === 'function' ? g.screens() : 1, curScr = g.screen || 0;
+    const scrSig = nScreens + ':' + curScr, dotsEl = $('uxScreenDots');
+    if (dotsEl && uxState.scrSig !== scrSig) {
+      uxState.scrSig = scrSig;
+      dotsEl.innerHTML = nScreens > 1 ? Array.from({ length: nScreens }, (_, k) =>
+        `<circle cx="${(k - (nScreens - 1) / 2) * 14}" cy="0" r="${k === curScr ? 4.8 : 3.8}" fill="${k <= curScr ? '#ffd27a' : '#27357f'}" stroke="#fff3c9" stroke-width="1.5"/>`
+      ).join('') : '';
     }
     /* counters with icons; only the kinds this room has, laid out left to right */
     const items = g.items || [];

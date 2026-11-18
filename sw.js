@@ -13,7 +13,7 @@
    offline they fail and the page falls back to the system fonts. */
 /* global self, caches, fetch, URL, Request, Response */
 const ASSET_VERSION = "7e3f0dfa7457";
-const PAGE_HASH = "2eba00c0f862";
+const PAGE_HASH = "f1efb64d2285";
 const PRECACHE = [
   "ice-castle.html",
   "manifest.webmanifest",

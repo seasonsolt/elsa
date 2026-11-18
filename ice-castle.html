@@ -155,6 +155,11 @@ body.touch .keys { display: none; }
 /* ---- Gamepad focus ring (80-input.js moves it over the button the D-pad picked; a picture, no text) ---- */
 #padFocus rect { fill: none; stroke: var(--gold); stroke-width: 6; animation: padRing .8s ease-in-out infinite alternate; }
 @keyframes padRing { from { stroke-opacity: .55; } to { stroke-opacity: 1; } }
+.ux-ripple { transform-box: fill-box; transform-origin: center; animation: uxRipple 1.2s ease-out infinite; }
+.ux-ripple2 { animation-delay: .55s; }
+@keyframes uxRipple { 0% { transform: scale(.75); opacity: .9; } 100% { transform: scale(1.75); opacity: 0; } }
+.fin-petal { animation: finPetal 5.2s ease-in-out infinite; }
+@keyframes finPetal { 0% { transform: translateY(-25px) rotate(0deg); opacity: 0; } 18% { opacity: .92; } 85% { opacity: .92; } 100% { transform: translateY(540px) rotate(220deg); opacity: 0; } }
 
 /* ---- Portrait: the game is landscape. Only a picture asks for the tablet to be turned; the stage, the touch pad and the parent strip are gone ---- */
 #turn { display: none; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center; background: var(--night); }
@@ -458,9 +463,13 @@ function createCompanion(g, opts) {
     }
     if (g.gatesOpen || !g.gates.length || !g.plates.length || st.helpCool > 0 || st.holdCool > 0) return false;
     const pcx = cxOf(p), pr = rowOf(p);
-    // a gate close by that the player is heading for (not one she has just come through)
-    const near = g.gates.some(gt => Math.abs(gt.c * T + T / 2 - pcx) < GATE_NEAR && Math.abs(gt.r - pr) <= 4
-      && sign(gt.c * T + T / 2 - pcx) === st.dir);
+    // a gate close by on the player's floor level that she is heading for (not while climbing upper platforms far above the gate passage)
+    const near = g.gates.some(gt => {
+      if (Math.abs(gt.c * T + T / 2 - pcx) >= GATE_NEAR || sign(gt.c * T + T / 2 - pcx) !== st.dir) return false;
+      let gBottom = gt.r;
+      for (const o of g.gates) if (o.c === gt.c && o.r > gBottom) gBottom = o.r;
+      return Math.abs(gBottom - pr) <= 2;
+    });
     return near && startHold(p, cid, null);
   }
 
@@ -951,7 +960,7 @@ const LEVELS = [
           '########################',
         ],
         guide: [
-          { c: 5, r: 8, say: 'guide_tower_7' },
+          { c: 8, r: 8, say: 'guide_tower_7' },
           { c: 22, r: 5, say: 'guide_tower_8' },
           { c: 13, r: 3, say: 'guide_tower_9' },
           { c: 1, r: 6, say: 'guide_tower_10' },
@@ -1520,6 +1529,14 @@ function createGame() {
     if (!dx) return;
     const hit = hits(s, s.x + dx, s.y, rampSlack(s), s.rampRow);
     if (!hit) { s.x += dx; return; }
+    // Solo kid forgiveness: if toes miss a ledge top by <= 4 px near the top/descent of a jump, step smoothly onto it.
+    if (g.mode === 'solo' && s.id === g.player && !s.ground && s.vy >= -40) {
+      const top = hit.r * T, over = (s.y + s.h) - top;
+      if (over > 0 && over <= 4 && !hits(s, s.x + dx, top - s.h)) {
+        s.x += dx; s.y = top - s.h - 0.01; s.vy = Math.max(s.vy, 1);
+        return;
+      }
+    }
     s.x = dx > 0 ? hit.c * T - s.w : (hit.c + 1) * T;
     s.vx = 0; s.slide = 0;
   }
@@ -1548,7 +1565,17 @@ function createGame() {
       s.y += dy;
     } else if (dy < 0) {
       const hit = hits({ w: s.w, h: -dy }, s.x, s.y + dy);          // only what is above the head can stop a rising body
-      if (hit) { s.y = (hit.r + 1) * T; s.vy = 0; return; }
+      if (hit) {
+        // Solo kid forgiveness: upward head-bonk corner correction (<= 7 px nudge past an overhead block corner).
+        if (g.mode === 'solo' && s.id === g.player) {
+          for (let d = 1; d <= 7; d++) {
+            for (const sgn of [s.dir || 1, -(s.dir || 1)]) {
+              if (!hits(s, s.x + d * sgn, s.y + dy)) { s.x += d * sgn; s.y += dy; return; }
+            }
+          }
+        }
+        s.y = (hit.r + 1) * T; s.vy = 0; return;
+      }
       s.y += dy;
     }
   }
@@ -1802,7 +1829,8 @@ function createGame() {
 
     const prev = { x: s.x, feet: s.y + s.h, ground: s.ground };
     const wasSlope = s.slope;
-    s.vy = Math.min(P.maxFall, s.vy + P.gravity * dt);
+    const grav = (!s.ground && g.mode === 'solo' && s.id === g.player && Math.abs(s.vy) < 70) ? P.gravity * 0.86 : P.gravity;
+    s.vy = Math.min(P.maxFall, s.vy + grav * dt);
     moveX(s, s.vx * dt);
     moveY(s, s.vy * dt);
     rampSnap(s, prev, dt);
@@ -2949,7 +2977,17 @@ function createGame() {
     im.onerror = () => { hd.live.delete(im); hd.asked.delete(n); };
     im.src = assetURL(`hd/${n}.webp`);
   }
-  const SRC = n => { hdWant(n); return assetURL(`${hd.ready.has(n) ? 'hd/' : ''}${n}.webp`); };
+  const SRC = n => {
+    hdWant(n);
+    const useHd = hd.ready.has(n) || (artWait.has(n) && hd.asked.has(n));
+    return assetURL(`${useHd ? 'hd/' : ''}${n}.webp`);
+  };
+  function hdDowngrade(name) {
+    for (const node of document.querySelectorAll('image, img')) {
+      const attr = node.tagName === 'IMG' ? 'src' : 'href';
+      if ((node.getAttribute(attr) || '').startsWith(`game/hd/${name}.webp`)) node.setAttribute(attr, assetURL(`${name}.webp`));
+    }
+  }
   function hdUpgrade() {
     hd.timer = 0;
     for (const node of document.querySelectorAll('image, img')) {
@@ -2993,6 +3031,7 @@ function createGame() {
         p = im.decode().then(() => finishOk(wantHd), () => {
           if (!wantHd) { finishFail(); return; }
           hd.asked.delete(n);
+          hdDowngrade(n);
           const sd = new Image();
           artLive.add(sd);
           sd.src = assetURL(`${n}.webp`);
@@ -3900,7 +3939,19 @@ function createGame() {
       frames[f] = img(`${id}_${f}`, -ax * SPRITE, 3 - h * SPRITE, w * SPRITE, h * SPRITE, root, { visibility: 'hidden' });
     }
     const mark = el('path', { d: 'M-8-104H8L0-93Z', fill: '#ffd27a', visibility: 'hidden' }, root);
-    view[id] = { root, shadow, frames, mark, shown: null, castT: 0, stride: 0, airT: 0, idleT: 0, fadeIn: 0, markT: 0 };
+    view[id] = { root, shadow, frames, mark, shown: null, castT: 0, cheerT: 0, sqX: 1, sqY: 1, turnX: 1, stride: 0, airT: 0, idleT: 0, fadeIn: 0, markT: 0 };
+    root.addEventListener('pointerdown', ev => {
+      if (game.state !== 'play' || (typeof storyIsOpen === 'function' && storyIsOpen())) return;
+      ev.stopPropagation();
+      const s = game.sisters[id], v = view[id];
+      if (!s || s.splash > 0) return;
+      v.cheerT = .65; v.sqX = .9; v.sqY = 1.12;
+      if (typeof burst === 'function') burst(s.x + s.w / 2, s.y + 8, 'heart', 6, 85);
+      if (typeof sfx === 'function') sfx('pick');
+      if (typeof voice !== 'undefined' && voice && !voice.busy && typeof voice.line === 'function') {
+        voice.line('cheer_' + (1 + Math.floor(Math.random() * 4)), { priority: 0, tag: 'cheer', maxWait: 600 });
+      }
+    });
   }
   const lanternGlow = el('circle', { r: 62, fill: 'url(#warm)' }, $('shadows'));
   const frostGlow = el('circle', { r: 58, fill: 'url(#cool)', opacity: .7 }, $('shadows'));
@@ -3914,7 +3965,7 @@ function createGame() {
   const playerId = () => (game.mode === 'solo' ? 'frost' : null);
 
   function pickFrame(id, s, v, now) {
-    if (celebrating()) return 'cheer';
+    if (celebrating() || v.cheerT > 0) return 'cheer';
     if (v.castT > 0) return 'cast';
     if (!s.ground) return s.vy < 0 ? 'jump' : 'fall';
     if (Math.abs(s.vx) > 1) return RUN[Math.floor(v.stride / 15) % RUN.length];
@@ -3924,27 +3975,38 @@ function createGame() {
     const s = game.sisters[id], v = view[id];
     if (!s) return;
     v.castT = Math.max(0, v.castT - dt);
+    v.cheerT = Math.max(0, v.cheerT - dt);
     v.fadeIn = Math.max(0, v.fadeIn - dt);
     v.markT = Math.max(0, v.markT - dt);
+    const recover = Math.min(1, dt * 15);
+    v.sqX += (1 - v.sqX) * recover;
+    v.sqY += (1 - v.sqY) * recover;
     v.stride = s.ground && Math.abs(s.vx) > 1 ? v.stride + Math.abs(s.vx) * dt : 0;
     const hidden = s.splash > 0;
     v.root.setAttribute('visibility', hidden ? 'hidden' : 'visible');
     v.root.setAttribute('opacity', v.fadeIn > 0 ? (1 - v.fadeIn / BLINK_FADE).toFixed(2) : '1');
     v.shadow.setAttribute('visibility', hidden ? 'hidden' : 'visible');
-    v.shadow.setAttribute('opacity', v.fadeIn > 0 ? ((1 - v.fadeIn / BLINK_FADE) * .34).toFixed(2) : '.34');
     const f = pickFrame(id, s, v, now);
     if (f !== v.shown && (f === 'run1' || f === 'run4') && typeof crunch === 'function') crunch(id === 'nuan' ? .8 : 1);
+    const cx = s.x + s.w / 2, feet = s.y + s.h;
     if (!s.ground) v.airT += dt;
-    else { if (v.airT > .18 && game.state === 'play' && !s.splash && typeof thud === 'function') thud(); v.airT = 0; }
+    else {
+      if (v.airT > .12 && game.state === 'play' && !s.splash) {
+        const imp = Math.min(1, v.airT / .45);
+        v.sqX = 1 + .15 * imp; v.sqY = 1 - .13 * imp;
+        if (typeof puff === 'function') puff('dust', cx, feet - 1, 28 + 10 * imp, .34, 6);
+        if (v.airT > .18 && typeof thud === 'function') thud();
+      }
+      v.airT = 0;
+    }
     if (f !== v.shown) {
       if (v.shown) v.frames[v.shown].setAttribute('visibility', 'hidden');
       v.frames[f].removeAttribute('visibility');
       v.shown = f;
     }
-    const cx = s.x + s.w / 2, feet = s.y + s.h;
     const moving = Math.abs(s.vx) > 1 && s.ground;
     const party = celebrating();
-    const bob = moving ? 0 : party ? Math.abs(Math.sin(now * 5 + (id === 'nuan' ? 1 : 0))) * 12 : 0;
+    const bob = moving ? 0 : party ? Math.abs(Math.sin(now * 5 + (id === 'nuan' ? 1 : 0))) * 12 : v.cheerT > 0 ? Math.sin((v.cheerT / .65) * Math.PI) * 9 : 0;
     const breath = !moving && s.ground && !party ? 1 + Math.sin(now * 2.2 + (id === 'nuan' ? 1 : 0)) * .012 : 1;
     v.idleT = s.ground && Math.abs(s.vx) < 1 && game.state === 'play' ? v.idleT + dt : 0;
     const other = game.sisters[id === 'frost' ? 'nuan' : 'frost'];
@@ -3952,7 +4014,10 @@ function createGame() {
     const steered = game.mode !== 'solo' || playerId() === id;
     const lookAt = !steered && (v.idleT > 2.5 || reunited()) && v.castT <= 0 && other ? (other.x > s.x ? 1 : -1) : s.dir;
     const dir = game.state === 'win' ? (Math.sin(now * 3 + (id === 'nuan' ? 1.5 : 0)) >= 0 ? 1 : -1) : lookAt;
-    v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${dir} ${breath.toFixed(3)})`);
+    v.turnX += (dir - v.turnX) * Math.min(1, dt * 20);
+    const flipX = (v.turnX >= 0 ? Math.max(.28, v.turnX) : Math.min(-.28, v.turnX)) * v.sqX;
+    const scaleY = breath * v.sqY;
+    v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${flipX.toFixed(3)} ${scaleY.toFixed(3)})`);
     const gY = typeof groundYBelow === 'function' ? groundYBelow(cx, feet) : feet;
     const airDrop = Math.max(0, (gY - (feet - bob)));
     const shScale = Math.max(.38, 1 - airDrop / 250);
@@ -4132,7 +4197,91 @@ function createGame() {
       return Object.assign({}, tg, { x: Number.isFinite(tg.x) ? tg.x : tg.c * T + T / 2, y: Number.isFinite(tg.y) ? tg.y : tg.r * T + T / 2 });
     } catch (e) { return null; }
   }
+  /* 24x13 grid BFS pathfinder so the 20s stuck sparkle trail flows around '#' walls and closed 'G' gates instead of piercing stone. */
+  const guideBfs = { sig: '', pts: null };
+  function guidePathPoints(sx, sy, ex, ey, count) {
+    const clampC = c => Math.max(1, Math.min(COLS - 2, c)), clampR = r => Math.max(1, Math.min(ROWS - 2, r));
+    const sc = clampC(Math.floor(sx / T)), sr = clampR(Math.floor(sy / T));
+    let ec = clampC(Math.floor(ex / T)), er = clampR(Math.floor(ey / T));
+    const sig = `${sc},${sr}->${ec},${er}|${game.gatesOpen ? 1 : 0}|${game.blocks.length}`;
+    let poly = guideBfs.sig === sig ? guideBfs.pts : null;
+    if (!poly) {
+      const N = COLS * ROWS, dist = new Float32Array(N).fill(1e9), prev = new Int16Array(N).fill(-1), used = new Uint8Array(N);
+      const pass = (c, r) => {
+        if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 0;
+        const ch = cellAt(c, r);
+        if (ch === '#' || (ch === 'G' && !game.gatesOpen)) return 0;
+        if (ch === 'X') return 3.5;
+        if (ch === '~') return 3.0;
+        const below = r + 1 < ROWS ? cellAt(c, r + 1) : '#';
+        return ('#XIB=J12345\\/'.includes(below) || (r + 2 < ROWS && '#=J'.includes(cellAt(c, r + 2)))) ? 1.0 : 1.55;
+      };
+      // If target is sealed behind a closed gate and a plate exists on our side, route to the plate first!
+      const startIdx = sr * COLS + sc;
+      dist[startIdx] = 0;
+      const dirs = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1.08]];
+      for (let step = 0; step < N; step++) {
+        let u = -1, best = 1e9;
+        for (let k = 0; k < N; k++) if (!used[k] && dist[k] < best) { best = dist[k]; u = k; }
+        if (u < 0) break;
+        used[u] = 1;
+        const uc = u % COLS, ur = (u / COLS) | 0;
+        for (const [dc, dr, w] of dirs) {
+          const nc = uc + dc, nr = ur + dr;
+          const cost = pass(nc, nr);
+          if (!cost) continue;
+          const v = nr * COLS + nc, nd = best + w * cost;
+          if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
+        }
+      }
+      let goalIdx = er * COLS + ec;
+      if (dist[goalIdx] >= 1e8 && !game.gatesOpen && Array.isArray(game.plates) && game.plates.length) {
+        const pl = game.plates.find(p => !p.down && dist[p.r * COLS + p.c] < 1e8);
+        if (pl) { ec = pl.c; er = pl.r; ex = ec * T + T / 2; ey = er * T + T / 2; goalIdx = er * COLS + ec; }
+      }
+      if (dist[goalIdx] < 1e8) {
+        const cells = [];
+        for (let cur = goalIdx; cur >= 0 && cells.length <= N; cur = prev[cur]) cells.push([(cur % COLS) * T + T / 2, ((cur / COLS) | 0) * T + T / 2]);
+        cells.reverse();
+        cells[0] = [sx, sy]; cells[cells.length - 1] = [ex, ey];
+        // Gentle single-pass corner rounding (0.84 / 0.16) keeps the ribbon smooth while staying >= 13 px clear of every # corner
+        let pts = cells;
+        if (pts.length >= 3) {
+          const next = [pts[0]];
+          for (let i = 0; i < pts.length - 1; i++) {
+            const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+            next.push([x0 * .84 + x1 * .16, y0 * .84 + y1 * .16], [x0 * .16 + x1 * .84, y0 * .16 + y1 * .84]);
+          }
+          next.push(pts[pts.length - 1]);
+          pts = next;
+        }
+        poly = pts;
+      } else {
+        const cx = (sx + ex) / 2, cy = Math.min(sy, ey) - 46;
+        poly = Array.from({ length: 12 }, (_, k) => {
+          const u = k / 11, a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u;
+          return [a * sx + b * cx + c * ex, a * sy + b * cy + c * ey];
+        });
+      }
+      guideBfs.sig = sig; guideBfs.pts = poly;
+    } else if (poly.length >= 2) {
+      poly = poly.slice();
+      poly[0] = [sx, sy]; poly[poly.length - 1] = [ex, ey];
+    }
+    const lens = [0];
+    for (let i = 1; i < poly.length; i++) lens.push(lens[i - 1] + Math.hypot(poly[i][0] - poly[i - 1][0], poly[i][1] - poly[i - 1][1]));
+    const total = Math.max(1, lens[lens.length - 1]), out = [];
+    for (let i = 0; i < count; i++) {
+      const u = (i + 1) / (count + 1), d = u * total;
+      let seg = 1;
+      while (seg < lens.length - 1 && lens[seg] < d) seg++;
+      const l0 = lens[seg - 1], l1 = lens[seg], t = l1 > l0 ? (d - l0) / (l1 - l0) : 0;
+      out.push([poly[seg - 1][0] + (poly[seg][0] - poly[seg - 1][0]) * t, poly[seg - 1][1] + (poly[seg][1] - poly[seg - 1][1]) * t, u]);
+    }
+    return out;
+  }
   function guideReset() {
+    guideBfs.sig = ''; guideBfs.pts = null;
     guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; guideFx.key = ''; guideFx.fade = 0;
     guideFx.beam.setAttribute('visibility', 'hidden');
     guideFx.arrow.setAttribute('visibility', 'hidden');
@@ -4176,16 +4325,14 @@ function createGame() {
       guideFx.arrow.setAttribute('visibility', 'visible');
       guideFx.arrow.setAttribute('transform', `translate(${ax.toFixed(1)} ${ay.toFixed(1)}) rotate(${(ang * 180 / Math.PI).toFixed(1)})`);
     } else guideFx.arrow.setAttribute('visibility', 'hidden');
-    /* sparkle trail from the player to the target: an arc, with a bright wave running towards the target */
+    /* sparkle trail from the player to the target: BFS-routed around walls, with a bright wave running towards the target */
     if (pathOn) {
       const from = guideFrom(tg);
       if (from) {
         const sx = from.x + from.w / 2, sy = from.y + from.h / 2, ex = tg.x, ey = tg.y;
-        const cx = (sx + ex) / 2, cy = Math.min(sy, ey) - 50 - Math.abs(ex - sx) * .08;
-        const n = guideFx.nodes.length;
+        const pts = guidePathPoints(sx, sy, ex, ey, guideFx.nodes.length);
         guideFx.nodes.forEach((node, i) => {
-          const u = (i + 1) / (n + 1), a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u;
-          const px = a * sx + b * cx + c * ex, py = a * sy + b * cy + c * ey;
+          const [px, py, u] = pts[i];
           const wave = .5 + .5 * Math.sin((now * 1.6 - u * 1.4) * Math.PI * 2);
           node.setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)}) scale(${(.55 + wave * .6).toFixed(2)})`);
           node.setAttribute('opacity', (.3 + wave * .7).toFixed(2));
@@ -4213,7 +4360,18 @@ function createGame() {
         case 'unblock': tiles = true; puff('dust', e.c * T + 20, e.r * T + 30, 44, .5); break;
         case 'melt': tiles = true; puff('glow', e.c * T + 20, e.r * T + 20, 96, .7); puff('steam', e.c * T + 20, e.r * T + 4, 70, 1.1, 40); burst(e.c * T + 20, e.r * T + 20, 'heart', 5); view.nuan.castT = .3; break;
         case 'fizz': burst(e.x, e.y + 20, e.who === 'frost' ? 'flake' : 'heart', 3, 70); view[e.who].castT = .22; break;
-        case 'doublejump': puff('dust', e.x, e.y + 4, 36, .4); burst(e.x, e.y, 'star', 5, 90); break;
+        case 'jump': {
+          const s = game.sisters[e.who], v = view[e.who];
+          if (v) { v.sqX = .89; v.sqY = 1.13; }
+          if (s) puff('dust', s.x + s.w / 2, s.y + s.h - 1, 26, .3, 6);
+          break;
+        }
+        case 'bounce': {
+          const v = view[e.who];
+          if (v) { v.sqX = .84; v.sqY = 1.20; }
+          break;
+        }
+        case 'doublejump': puff('dust', e.x, e.y + 4, 36, .4); burst(e.x, e.y, 'star', 5, 90); if (view.frost) { view.frost.sqX = .88; view.frost.sqY = 1.14; } break;
         case 'splash': puff('splash', e.x, e.y - 14, 70, .6); break;
         case 'respawn': { const s = game.sisters[e.who]; if (s) { puff('glow', s.x + s.w / 2, s.y + s.h / 2, 80, .5); burst(s.x + s.w / 2, s.y + s.h / 2, 'star', 4, 80); } break; }
         case 'collect':
@@ -4573,7 +4731,7 @@ function createGame() {
     let room = null, clock = 0, snowExtra = null;
     const freshRoom = () => ({
       token: Math.random(), picks: {}, stars: 0, loadedAt: performance.now() / 1000, startPending: true, startAt: 0, starting: false, preloaded: false,
-      idleT: 0, idleN: 0, idleNext: 0, sig: '', farT: 0, farSpoken: false, farNext: 0, splashAt: -99, splashN: 0, togetherN: 0, spokeAt: -99,
+      idleT: 0, idleN: 0, idleNext: 0, sig: '', farT: 0, farSpoken: false, farNext: 0, splashAt: -99, splashN: 0, fizzAt: -99, fizzN: 0, togetherN: 0, spokeAt: -99,
     });
     const hasLine = key => !!(typeof LINES === 'object' && LINES && LINES.lines && LINES.lines[key]);
     const nowSec = () => performance.now() / 1000;
@@ -4593,6 +4751,7 @@ function createGame() {
           case 'load': if (e.screen) onScreen(); else onLoad(g); break;
           case 'collect': onCollect(e); break;
           case 'respawn': onRespawn(e, g); break;
+          case 'fizz': onFizz(e, g); break;
           case 'open': say(openKey(g), { tag: 'open', maxWait: 8000 }); break;
           // a garden screen has no door: its "everything is open" line plays as the screen is passed
           case 'pass': if (g.goal === 'garden') say(openKey(g), { tag: 'open', maxWait: 8000 }); break;
@@ -4641,6 +4800,18 @@ function createGame() {
       room.splashAt = t;
       const k = pickN('splash_', room.splashN);
       if (k) { room.splashN = k; say('splash_' + k, { interrupt: true, tag: 'splash', maxWait: 2000 }); }
+    }
+    function onFizz(e, g) {
+      if (g.mode === 'solo' && e.who !== g.player) return;
+      const t = nowSec();
+      room.fizzN = t - room.fizzAt < 5 ? room.fizzN + 1 : 1;
+      room.fizzAt = t;
+      if (room.fizzN >= 2 && !room.starting && !voice.busy && t - room.spokeAt > 6) {
+        room.fizzN = 0;
+        const tg = typeof g.guide === 'function' ? g.guide() : null;
+        if (tg && tg.say && hasLine(tg.say)) say(tg.say, { priority: 0, tag: 'fizzhint', maxWait: 1200 });
+        if (tg && typeof puff === 'function') puff('ring', tg.c * T + T / 2, tg.r * T + T / 2, 72, .55);
+      }
     }
     function onMemory(e, g) {
       memGot[g.index] = true;
@@ -4940,7 +5111,7 @@ function createGame() {
     const root = uxPaint(`<g class="page"><image href="${SRC(uxLineArt('ch_' + lv.id, lv.bg))}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
       <rect y="220" width="960" height="300" fill="url(#bottomFade)"/>
       ${uxCardRow(words, 296, cw, 190, gap)}
-      <g id="uxCue" opacity="0" class="ux-soft"><g id="uxEar">${uxIcon('ear', 30)}</g><g id="uxMouth" visibility="hidden" class="ux-bounce">${uxIcon('mouth', 30)}</g></g>
+      <g id="uxCue" opacity="0" class="ux-soft"><g id="uxEar">${uxIcon('ear', 30)}</g><g id="uxMouth" visibility="hidden" class="ux-bounce"><circle class="ux-ripple" r="28" fill="none" stroke="#ffd27a" stroke-width="3.5"/><circle class="ux-ripple ux-ripple2" r="28" fill="none" stroke="#fff3c9" stroke-width="2.5"/>${uxIcon('mouth', 30)}</g></g>
       ${uxButton({ act: 'go', ui: 'next', icon: 'next', x: 886, y: 452, r: 38, plate: 'gold' })}</g>`);
     const finish = () => uxEnd(s, done);
     s.onKey = finish;
@@ -4962,6 +5133,8 @@ function createGame() {
         setCue(k, 'mouth');
         await uxWait(1500);
         if (!uxAlive(s)) return;
+        uxSfx('star');
+        uxConfetti(root.querySelector('.page'), x0 + k * (cw + gap) + cw / 2, 262, 8);
         setCue(k, null);
         await uxWait(250);
       }
@@ -5199,6 +5372,65 @@ function createGame() {
       uxLine('cheer_' + (1 + (storyDraws % 4)));
       uxConfetti(root.querySelector('.page'), 480, 200, 24);
     })();
+  }
+
+  /* ---------- grand finale keepsake album: spring petals, dressed-up sisters & visual adventure badges ---------- */
+  function showFinale(done) {
+    const s = uxScreen('finale', true);
+    uxInputReset();
+    const finish = () => uxEnd(s, done);
+    s.onKey = finish;
+    let totalStars = 0;
+    for (const lv of LEVELS) {
+      const r = save.rooms && save.rooms[lv.id];
+      if (r && Array.isArray(r.stars)) totalStars += r.stars.filter(Boolean).length;
+    }
+    const stickerCount = Array.isArray(save.stickers) ? save.stickers.length : 0;
+    const wordCount = Object.values(save.words || {}).filter(w => w && ((w.heard || 0) > 0 || w.seen)).length;
+    const badge = (cx, cy, iconHtml, num) => `<g transform="translate(${cx} ${cy})">
+      <rect x="-78" y="-26" width="156" height="52" rx="26" fill="#141c52" opacity=".86" stroke="#ffd27a" stroke-width="2.5"/>
+      <g transform="translate(-44 0)">${iconHtml}</g>
+      <text class="latin" x="16" y="8" text-anchor="middle" font-size="25" fill="#fff3c9">${num}</text></g>`;
+    const petals = Array.from({ length: 18 }, (_, i) => {
+      const px = 45 + ((i * 53) % 870), delay = -(i * .37).toFixed(2), col = ['#ffc2d9', '#ffe699', '#d8c2ff', '#ffd6b0'][i % 4];
+      return `<g transform="translate(${px} 0)"><ellipse class="fin-petal" rx="${6 + (i % 3) * 2}" ry="${3.5 + (i % 2) * 1.5}" fill="${col}" style="animation-delay:${delay}s"/></g>`;
+    }).join('');
+    if (typeof loadArt === 'function') loadArt(['bg_garden']);
+    const root = uxPaint(`<g class="page">
+      <image href="${SRC('bg_garden')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
+      <rect width="960" height="520" fill="#0d1438" opacity=".38"/>
+      <g pointer-events="none">${petals}</g>
+      <rect x="210" y="38" width="540" height="316" rx="34" fill="#fffaf0" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
+      <rect x="224" y="52" width="512" height="288" rx="24" fill="#27357f" opacity=".12" stroke="#d9c69e" stroke-width="2"/>
+      <circle cx="385" cy="195" r="95" fill="url(#cool)"/><circle cx="575" cy="200" r="90" fill="url(#warm)"/>
+      <g id="finFrost" transform="translate(385 322) scale(2.45)"></g>
+      <g id="finNuan" transform="translate(575 322) scale(-2.45 2.45)"></g>
+      ${badge(284, 396, uxPic('fx_star', -18, -18, 36, 36, `<path d="${UX_STAR_D}" transform="scale(18)" fill="#ffd27a"/>`), `${totalStars}/${LEVELS.length * 3}`)}
+      ${badge(480, 396, uxIcon('sticker', 20, '#ffd27a'), String(stickerCount))}
+      ${badge(676, 396, uxIcon('book', 20, '#cfe6ff'), String(wordCount))}
+      ${uxButton({ act: 'wardrobe', ui: 'wardrobe', icon: 'wardrobe', x: 356, y: 468, r: 34 })}
+      ${uxButton({ act: 'stickers', ui: 'stickers', icon: 'sticker', x: 452, y: 468, r: 34 })}
+      ${uxButton({ act: 'done', ui: 'back', icon: 'home', x: 584, y: 464, r: 42, plate: 'gold', cls: 'ux-pulse' })}</g>`);
+    [['frost', '#finFrost'], ['nuan', '#finNuan']].forEach(([who, sel]) => {
+      const box = root.querySelector(sel);
+      if (!box || typeof SIZES === 'undefined') return;
+      const o = (save.outfit && save.outfit[who]) || { dress: 0, hat: null };
+      const k = o.dress && typeof rwDressReady === 'function' && rwDressReady(who, o.dress) ? o.dress : 0;
+      const fname = k ? `${who}_cheer_d${k}` : `${who}_cheer`;
+      const sz = SIZES[`${who}_cheer`] || [80, 168, 40];
+      if (typeof img === 'function' && typeof SPRITE === 'number') {
+        img(fname, -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, box);
+        if (typeof rwPlaceHat === 'function') rwPlaceHat(box, who, 'cheer', o.hat);
+      }
+    });
+    uxBind(root, {
+      done: finish,
+      wardrobe: () => { uxEnd(s, null); if (typeof showWardrobe === 'function') showWardrobe(false); else finish(); },
+      stickers: () => { uxEnd(s, null); if (typeof showStickers === 'function') showStickers(); else finish(); },
+    });
+    uxSfx('unlock');
+    uxConfetti(root.querySelector('.page'), 480, 180, 36);
+    uxLine('cheer_' + (1 + (storyDraws % 4)));
   }
   /* ===== d1 / view-ui: picture-button helpers, HUD, title, rooms, wordbook, meet-them, parent settings, subtitles =====
      Everything here is drawn as SVG strings into #hud / #overlay / #modal / #subs of the 960x520 stage.
@@ -5870,7 +6102,9 @@ function createGame() {
           <circle r="29" fill="${'#ffd27a'}" stroke="#fff" stroke-width="3" filter="url(#softShadow)"/>
           <clipPath id="uxClipA"><circle r="25"/></clipPath>
           <g clip-path="url(#uxClipA)"><rect x="-25" y="-25" width="50" height="50" fill="#cfe0ff"/><image id="uxAvImg" x="-25" y="-25" width="50" height="50" preserveAspectRatio="xMidYMin slice"/></g>
+          <image id="uxAvHat" x="-16" y="-42" width="32" height="24" preserveAspectRatio="xMidYMax meet" visibility="hidden" pointer-events="none"/>
           <g id="uxAvOther" transform="translate(30 20)"><circle r="14" fill="#cfe0ff" stroke="#fff" stroke-width="2" opacity=".95"/><clipPath id="uxClipB"><circle r="12"/></clipPath><image id="uxAvImg2" x="-12" y="-12" width="24" height="24" preserveAspectRatio="xMidYMin slice" clip-path="url(#uxClipB)"/></g>
+          <g id="uxScreenDots" transform="translate(-4 38)" pointer-events="none"></g>
         </g></g></g>
       <g id="uxPills" transform="translate(98 19)">${pills}</g>
       ${typeof restartRoomHeld === 'function' ? uxButton({ act: 'restart', ui: 'replay', icon: 'replay', x: UX_HUD_X.restart, y: 38, r: 30, plate: 'dark', keep: false, ring: true, cls: 'ux-minor' }) : ''}
@@ -5917,6 +6151,21 @@ function createGame() {
       $('uxAvImg').setAttribute('href', SRC('portrait_' + me));
       $('uxAvImg2').setAttribute('href', SRC('portrait_' + other));
       $('uxAv').setAttribute('pointer-events', 'none');
+    }
+    const wornHat = save && save.outfit && save.outfit[me] && save.outfit[me].hat;
+    const avHat = $('uxAvHat');
+    if (avHat && uxState.avHat !== (wornHat || '')) {
+      uxState.avHat = wornHat || '';
+      if (wornHat) { avHat.setAttribute('href', SRC('hat_' + wornHat)); avHat.setAttribute('visibility', 'visible'); }
+      else avHat.setAttribute('visibility', 'hidden');
+    }
+    const nScreens = typeof g.screens === 'function' ? g.screens() : 1, curScr = g.screen || 0;
+    const scrSig = nScreens + ':' + curScr, dotsEl = $('uxScreenDots');
+    if (dotsEl && uxState.scrSig !== scrSig) {
+      uxState.scrSig = scrSig;
+      dotsEl.innerHTML = nScreens > 1 ? Array.from({ length: nScreens }, (_, k) =>
+        `<circle cx="${(k - (nScreens - 1) / 2) * 14}" cy="0" r="${k === curScr ? 4.8 : 3.8}" fill="${k <= curScr ? '#ffd27a' : '#27357f'}" stroke="#fff3c9" stroke-width="1.5"/>`
+      ).join('') : '';
     }
     /* counters with icons; only the kinds this room has, laid out left to right */
     const items = g.items || [];
@@ -6106,12 +6355,14 @@ function createGame() {
       const tray = list.slice(page * per, page * per + per).map((it, k) => {
         const x = tx0 + (k % cols) * cell + cell / 2, y = ty0 + Math.floor(k / cols) * cell + cell / 2;
         if (!it.got) return `<g transform="translate(${x} ${y})">${rwSilhouette(52)}</g>`;
-        return `<g transform="translate(${x} ${y})"><g class="ux-btn rw-item ${rwState.fresh.has(it.id) ? 'ux-bounce' : ''}" data-id="${it.id}" data-from="tray" data-ui="" tabindex="-1">
+        return `<g transform="translate(${x} ${y})"><g class="ux-btn rw-item ${rwState.fresh.has(it.id) ? 'ux-bounce' : ''}" data-id="${it.id}" data-from="tray" data-ui="" tabindex="0">
           <circle r="31" fill="#000" fill-opacity="0" pointer-events="all"/>${rwStickerArt(it.id, 56)}</g></g>`;
       }).join('');
-      const placed = board().filter(b => rwHas(b.id)).map(b => {
+      const placed = board().filter(b => rwHas(b.id)).map((b, idx) => {
         const x = RW_BOARD.x + b.x * RW_BOARD.w, y = RW_BOARD.y + b.y * RW_BOARD.h;
-        return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g class="ux-btn rw-item" data-id="${b.id}" data-from="board" data-ui="" tabindex="-1">
+        const pose = (rwState.pose && rwState.pose[b.id]) || 0;
+        const tilt = [-5, 0, 6, -3][(idx + pose) % 4], sc = [1, 1.1, 1.04, 1.14][pose % 4];
+        return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tilt}) scale(${sc})"><g class="ux-btn rw-item" data-id="${b.id}" data-from="board" data-ui="" tabindex="0">
           <circle r="${RW_STICKER / 2 + 2}" fill="#000" fill-opacity="0" pointer-events="all"/>${rwStickerArt(b.id, RW_STICKER)}</g></g>`;
       }).join('');
       const B = RW_BOARD;
@@ -6132,7 +6383,22 @@ function createGame() {
       first = false;
       const root = uxPaint(html);
       uxBind(root, { back: () => showTitle(), prev: () => { page--; draw(); }, nextpage: () => { page++; draw(); } });
-      root.querySelectorAll('.rw-item').forEach(n => n.addEventListener('pointerdown', ev => startDrag(ev, n)));
+      const speakSticker = id => {
+        const room = String(id || '').replace(/_gold$/, '');
+        if (LEVELS.some(l => l.id === room)) uxUiVoice('room_' + room);
+      };
+      root.querySelectorAll('.rw-item').forEach(/** @param {HTMLElement} n */ n => {
+        n.addEventListener('pointerdown', ev => startDrag(ev, n));
+        n.addEventListener('keydown', /** @param {KeyboardEvent} ev */ ev => {
+          if ((ev.code === 'Enter' || ev.code === 'Space' || ev.code === 'NumpadEnter') && !ev.repeat) {
+            ev.preventDefault(); ev.stopPropagation();
+            const id = n.dataset.id;
+            if (n.dataset.from === 'tray') { const s = spot(); place(id, s.fx, s.fy); uxSfx('pick'); speakSticker(id); }
+            else { rwState.pose = rwState.pose || {}; rwState.pose[id] = ((rwState.pose[id] || 0) + 1) % 4; uxSfx('click'); }
+            uxSaveNow(); draw();
+          }
+        });
+      });
       rwState.fresh.clear();
     };
 
@@ -6188,9 +6454,19 @@ function createGame() {
         if (!cancel) {
           const p = rwPoint(e);
           if (!moved) {
-            if (from === 'tray') { const s = spot(); place(id, s.fx, s.fy); uxSfx('pick'); }
-            else { place(id, board().find(b => b.id === id).x, board().find(b => b.id === id).y); uxNudge(n.parentNode); }
-          } else if (rwInBoard(p)) { place(id, (p.x - RW_BOARD.x) / RW_BOARD.w, (p.y - RW_BOARD.y) / RW_BOARD.h); uxSfx('pick'); }
+            if (from === 'tray') {
+              const s = spot(); place(id, s.fx, s.fy); uxSfx('pick');
+              const room = String(id || '').replace(/_gold$/, '');
+              if (LEVELS.some(l => l.id === room)) uxUiVoice('room_' + room);
+            } else {
+              rwState.pose = rwState.pose || {}; rwState.pose[id] = ((rwState.pose[id] || 0) + 1) % 4;
+              place(id, board().find(b => b.id === id).x, board().find(b => b.id === id).y); uxNudge(n.parentNode);
+            }
+          } else if (rwInBoard(p)) {
+            place(id, (p.x - RW_BOARD.x) / RW_BOARD.w, (p.y - RW_BOARD.y) / RW_BOARD.h); uxSfx('pick');
+            const pg = $('overlay').querySelector('.page');
+            if (pg) uxConfetti(pg, p.x, p.y, 10);
+          }
           else if (from === 'board') { const i = board().findIndex(b => b.id === id); if (i >= 0) board().splice(i, 1); }
           uxSaveNow();
         }
@@ -6321,10 +6597,13 @@ function createGame() {
       const root = uxPaint(html);
       uxBind(root, { back: () => { if (fromMeet && typeof showMeet === 'function') showMeet(); else showTitle(); } });
       root.querySelectorAll('.rw-prev').forEach(/** @param {HTMLElement} node */ node => {
-        const who = node.dataset.who, o = outfit(who), sz = SIZES[who + '_idle'] || [80, 168, 40];
+        const who = node.dataset.who, o = outfit(who);
+        const cheering = rwState.cheerWho === who && performance.now() < (rwState.cheerUntil || 0);
+        const pose = cheering ? 'cheer' : 'idle';
+        const sz = SIZES[`${who}_${pose}`] || SIZES[who + '_idle'] || [80, 168, 40];
         const k = o.dress && rwDressReady(who, o.dress) ? o.dress : 0;
-        img(rwDressName(who, 'idle', k), -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, node);
-        rwPlaceHat(node, who, 'idle', o.hat);
+        img(rwDressName(who, pose, k), -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, node);
+        rwPlaceHat(node, who, pose, o.hat);
       });
       root.querySelectorAll('.rw-choice').forEach(/** @param {HTMLElement} n */ n => hoverable(n, '', () => {
         const who = n.dataset.who, kind = n.dataset.kind, val = n.dataset.val, state = n.dataset.state;
@@ -6332,7 +6611,12 @@ function createGame() {
         if (!uxAlive(tok)) return;
         const o = outfit(who);
         if (kind === 'dress') o.dress = +val; else o.hat = val === '' ? null : val;
+        rwState.cheerWho = who; rwState.cheerUntil = performance.now() + 900;
         uxSaveNow(); uxSfx('pick'); draw();
+        const pg = $('overlay').querySelector('.page');
+        if (pg) uxConfetti(pg, who === 'frost' ? 250 : 710, 185, 16);
+        if (typeof voice !== 'undefined' && voice && !voice.busy) uxLine('cheer_' + (1 + Math.floor(Math.random() * 4)), { priority: 0 });
+        setTimeout(() => { if (uxAlive(tok) && performance.now() >= (rwState.cheerUntil || 0) - 20) draw(); }, 920);
       }));
     };
     draw();
@@ -6873,9 +7157,13 @@ function createGame() {
   /* The start_<room>_<n> lines belong to talkOnEvents (50-talk plays them when the room goes live). Here: wait until she
      has finished talking, then (first room, first time) the keyboard lessons. The game is live meanwhile. */
   async function roomIntro(i, tok) {
+    if (i === 0 && !save.flags.tutorial && !inputSeen.move) game.kbd.teach = 'r';   // light the walking arrow immediately so the child can move right away
     await sleep(900);
     let quiet = 0;
     for (let n = 0; n < 200 && quiet < 8 && !stale(tok); n++) {   // 8 x 150 ms of silence in a row, at most 30 s
+      if (i === 0 && !save.flags.tutorial) {
+        game.kbd.teach = !inputSeen.move ? 'r' : !inputSeen.jump ? 'up' : !inputSeen.magic ? 'space' : null;
+      }
       quiet = typeof voice !== 'undefined' && voice && voice.busy ? 0 : quiet + 1;
       await sleep(150);
     }
@@ -6888,6 +7176,7 @@ function createGame() {
     const kbd = game.kbd;
     const ask = async (key, teach, done, ms) => {
       if (stale(tok)) return false;
+      if (done()) return true;   // already mastered while exploring during the room intro
       kbd.teach = teach;
       const spoke = vline(key);
       if (!hasLineKey(key)) await waitUntil(() => false, 1500, tok);
@@ -6944,7 +7233,8 @@ function createGame() {
     await art;
     if (stale(tok)) return;
     const pages = storyPages(['win', 'end']);
-    if (pages.length && typeof openStory === 'function') openStory(pages, goTitle); else goTitle();
+    const afterStory = () => { if (typeof showFinale === 'function') showFinale(goTitle); else goTitle(); };
+    if (pages.length && typeof openStory === 'function') openStory(pages, afterStory); else afterStory();
   }
 
   /* ---- frame loop ---- */
@@ -7010,7 +7300,26 @@ function createGame() {
   const ART = assetPlan(LEVELS, LINES, { wear: save.outfit });
   const titleLoad = loadArt(ART.title, ART_PATIENCE);
 
-  if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom, artStats, loadArt, ART, tyStats: typeof tyStats !== 'undefined' ? tyStats : null };
+  if (DEV) {
+    window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom, artStats, loadArt, ART, tyStats: typeof tyStats !== 'undefined' ? tyStats : null };
+    try {
+      const qa = /[?&]qa=([a-z]+)\b/.exec(location.search || '');
+      if (qa) {
+        save.unlocked.rooms = LEVELS.length;
+        save.flags.prologue = true;
+        for (const lv of LEVELS) {
+          save.rooms[lv.id] = { cleared: true, memory: true, stars: [true, true, true] };
+          for (const w of lv.words || []) save.words[w] = { heard: 8, quiz: 1, seen: true, lastSeen: 1 };
+        }
+        if (typeof awardStickers === 'function') awardStickers(null, true);
+        if (qa[1] === 'win') {
+          save.outfit.frost = { dress: 2, hat: 'crown' };
+          save.outfit.nuan = { dress: 1, hat: 'wreath' };
+          setTimeout(() => finishGame(), 400);
+        }
+      }
+    } catch (e) {}
+  }
 
   applySettings();
   game.load(0);

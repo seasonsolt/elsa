@@ -31,7 +31,7 @@ function targetsIn(html) {
 
 const FILES = ['00-core', '10-stage', '15-toys', '20-sisters', '30-fx', '60-story', '70-ui', '75-rewards', '80-input', '90-main'];
 const EXPORTS = ['LEVELS', 'WORDS', 'save', 'showTitle', 'showRooms', 'showWordbook', 'showMeet', 'showSettings', 'showStickers', 'showWardrobe', 'buildHud',
-  'showChapter', 'showRecall', 'showClear', 'showReview', 'openStory', 'get story() { return story; }'];
+  'showChapter', 'showRecall', 'showClear', 'showReview', 'showFinale', 'openStory', 'get story() { return story; }'];
 
 /** A fake page whose every painted innerHTML is recorded in `painted` ([id, html]). Restore with page.done(). */
 function page(save = {}) {
@@ -96,7 +96,7 @@ export function everyScreensButtonIsAtLeast64CssPxOnTheReferenceTablet({ assert 
 export async function theScenesButtonsAreBigEnoughToo({ assert }) {
   const L = layout(), stageW = L.layoutRefStageWidth();
   const checked = [];
-  for (const scene of ['chapter', 'recall', 'clear', 'quiz', 'review']) {
+  for (const scene of ['chapter', 'recall', 'clear', 'quiz', 'review', 'finale']) {
     const p = page();
     try {
       const { x, env } = p;
@@ -104,6 +104,7 @@ export async function theScenesButtonsAreBigEnoughToo({ assert }) {
       if (scene === 'chapter') x.showChapter(x.LEVELS[1], none);
       else if (scene === 'recall') x.showRecall(x.LEVELS[0], none);
       else if (scene === 'review') x.showReview(none);
+      else if (scene === 'finale') x.showFinale(none);
       else x.showClear(x.LEVELS[1], none);
       await env.clock.advance(300);
       if (scene === 'quiz') {
@@ -121,7 +122,7 @@ export async function theScenesButtonsAreBigEnoughToo({ assert }) {
       checked.push(scene);
     } finally { p.done(); }
   }
-  assert.equal(checked.length, 5);
+  assert.equal(checked.length, 6);
 }
 
 export function theHudButtonsDoNotCrowdEachOther({ assert }) {

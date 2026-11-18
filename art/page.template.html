@@ -147,6 +147,11 @@ body.touch .keys { display: none; }
 /* ---- Gamepad focus ring (80-input.js moves it over the button the D-pad picked; a picture, no text) ---- */
 #padFocus rect { fill: none; stroke: var(--gold); stroke-width: 6; animation: padRing .8s ease-in-out infinite alternate; }
 @keyframes padRing { from { stroke-opacity: .55; } to { stroke-opacity: 1; } }
+.ux-ripple { transform-box: fill-box; transform-origin: center; animation: uxRipple 1.2s ease-out infinite; }
+.ux-ripple2 { animation-delay: .55s; }
+@keyframes uxRipple { 0% { transform: scale(.75); opacity: .9; } 100% { transform: scale(1.75); opacity: 0; } }
+.fin-petal { animation: finPetal 5.2s ease-in-out infinite; }
+@keyframes finPetal { 0% { transform: translateY(-25px) rotate(0deg); opacity: 0; } 18% { opacity: .92; } 85% { opacity: .92; } 100% { transform: translateY(540px) rotate(220deg); opacity: 0; } }
 
 /* ---- Portrait: the game is landscape. Only a picture asks for the tablet to be turned; the stage, the touch pad and the parent strip are gone ---- */
 #turn { display: none; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center; background: var(--night); }

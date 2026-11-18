@@ -158,7 +158,91 @@
       return Object.assign({}, tg, { x: Number.isFinite(tg.x) ? tg.x : tg.c * T + T / 2, y: Number.isFinite(tg.y) ? tg.y : tg.r * T + T / 2 });
     } catch (e) { return null; }
   }
+  /* 24x13 grid BFS pathfinder so the 20s stuck sparkle trail flows around '#' walls and closed 'G' gates instead of piercing stone. */
+  const guideBfs = { sig: '', pts: null };
+  function guidePathPoints(sx, sy, ex, ey, count) {
+    const clampC = c => Math.max(1, Math.min(COLS - 2, c)), clampR = r => Math.max(1, Math.min(ROWS - 2, r));
+    const sc = clampC(Math.floor(sx / T)), sr = clampR(Math.floor(sy / T));
+    let ec = clampC(Math.floor(ex / T)), er = clampR(Math.floor(ey / T));
+    const sig = `${sc},${sr}->${ec},${er}|${game.gatesOpen ? 1 : 0}|${game.blocks.length}`;
+    let poly = guideBfs.sig === sig ? guideBfs.pts : null;
+    if (!poly) {
+      const N = COLS * ROWS, dist = new Float32Array(N).fill(1e9), prev = new Int16Array(N).fill(-1), used = new Uint8Array(N);
+      const pass = (c, r) => {
+        if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return 0;
+        const ch = cellAt(c, r);
+        if (ch === '#' || (ch === 'G' && !game.gatesOpen)) return 0;
+        if (ch === 'X') return 3.5;
+        if (ch === '~') return 3.0;
+        const below = r + 1 < ROWS ? cellAt(c, r + 1) : '#';
+        return ('#XIB=J12345\\/'.includes(below) || (r + 2 < ROWS && '#=J'.includes(cellAt(c, r + 2)))) ? 1.0 : 1.55;
+      };
+      // If target is sealed behind a closed gate and a plate exists on our side, route to the plate first!
+      const startIdx = sr * COLS + sc;
+      dist[startIdx] = 0;
+      const dirs = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1.08]];
+      for (let step = 0; step < N; step++) {
+        let u = -1, best = 1e9;
+        for (let k = 0; k < N; k++) if (!used[k] && dist[k] < best) { best = dist[k]; u = k; }
+        if (u < 0) break;
+        used[u] = 1;
+        const uc = u % COLS, ur = (u / COLS) | 0;
+        for (const [dc, dr, w] of dirs) {
+          const nc = uc + dc, nr = ur + dr;
+          const cost = pass(nc, nr);
+          if (!cost) continue;
+          const v = nr * COLS + nc, nd = best + w * cost;
+          if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
+        }
+      }
+      let goalIdx = er * COLS + ec;
+      if (dist[goalIdx] >= 1e8 && !game.gatesOpen && Array.isArray(game.plates) && game.plates.length) {
+        const pl = game.plates.find(p => !p.down && dist[p.r * COLS + p.c] < 1e8);
+        if (pl) { ec = pl.c; er = pl.r; ex = ec * T + T / 2; ey = er * T + T / 2; goalIdx = er * COLS + ec; }
+      }
+      if (dist[goalIdx] < 1e8) {
+        const cells = [];
+        for (let cur = goalIdx; cur >= 0 && cells.length <= N; cur = prev[cur]) cells.push([(cur % COLS) * T + T / 2, ((cur / COLS) | 0) * T + T / 2]);
+        cells.reverse();
+        cells[0] = [sx, sy]; cells[cells.length - 1] = [ex, ey];
+        // Gentle single-pass corner rounding (0.84 / 0.16) keeps the ribbon smooth while staying >= 13 px clear of every # corner
+        let pts = cells;
+        if (pts.length >= 3) {
+          const next = [pts[0]];
+          for (let i = 0; i < pts.length - 1; i++) {
+            const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+            next.push([x0 * .84 + x1 * .16, y0 * .84 + y1 * .16], [x0 * .16 + x1 * .84, y0 * .16 + y1 * .84]);
+          }
+          next.push(pts[pts.length - 1]);
+          pts = next;
+        }
+        poly = pts;
+      } else {
+        const cx = (sx + ex) / 2, cy = Math.min(sy, ey) - 46;
+        poly = Array.from({ length: 12 }, (_, k) => {
+          const u = k / 11, a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u;
+          return [a * sx + b * cx + c * ex, a * sy + b * cy + c * ey];
+        });
+      }
+      guideBfs.sig = sig; guideBfs.pts = poly;
+    } else if (poly.length >= 2) {
+      poly = poly.slice();
+      poly[0] = [sx, sy]; poly[poly.length - 1] = [ex, ey];
+    }
+    const lens = [0];
+    for (let i = 1; i < poly.length; i++) lens.push(lens[i - 1] + Math.hypot(poly[i][0] - poly[i - 1][0], poly[i][1] - poly[i - 1][1]));
+    const total = Math.max(1, lens[lens.length - 1]), out = [];
+    for (let i = 0; i < count; i++) {
+      const u = (i + 1) / (count + 1), d = u * total;
+      let seg = 1;
+      while (seg < lens.length - 1 && lens[seg] < d) seg++;
+      const l0 = lens[seg - 1], l1 = lens[seg], t = l1 > l0 ? (d - l0) / (l1 - l0) : 0;
+      out.push([poly[seg - 1][0] + (poly[seg][0] - poly[seg - 1][0]) * t, poly[seg - 1][1] + (poly[seg][1] - poly[seg - 1][1]) * t, u]);
+    }
+    return out;
+  }
   function guideReset() {
+    guideBfs.sig = ''; guideBfs.pts = null;
     guideFx.t = 0; guideFx.nextSay = GUIDE_SAY_AT; guideFx.key = ''; guideFx.fade = 0;
     guideFx.beam.setAttribute('visibility', 'hidden');
     guideFx.arrow.setAttribute('visibility', 'hidden');
@@ -202,16 +286,14 @@
       guideFx.arrow.setAttribute('visibility', 'visible');
       guideFx.arrow.setAttribute('transform', `translate(${ax.toFixed(1)} ${ay.toFixed(1)}) rotate(${(ang * 180 / Math.PI).toFixed(1)})`);
     } else guideFx.arrow.setAttribute('visibility', 'hidden');
-    /* sparkle trail from the player to the target: an arc, with a bright wave running towards the target */
+    /* sparkle trail from the player to the target: BFS-routed around walls, with a bright wave running towards the target */
     if (pathOn) {
       const from = guideFrom(tg);
       if (from) {
         const sx = from.x + from.w / 2, sy = from.y + from.h / 2, ex = tg.x, ey = tg.y;
-        const cx = (sx + ex) / 2, cy = Math.min(sy, ey) - 50 - Math.abs(ex - sx) * .08;
-        const n = guideFx.nodes.length;
+        const pts = guidePathPoints(sx, sy, ex, ey, guideFx.nodes.length);
         guideFx.nodes.forEach((node, i) => {
-          const u = (i + 1) / (n + 1), a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u;
-          const px = a * sx + b * cx + c * ex, py = a * sy + b * cy + c * ey;
+          const [px, py, u] = pts[i];
           const wave = .5 + .5 * Math.sin((now * 1.6 - u * 1.4) * Math.PI * 2);
           node.setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)}) scale(${(.55 + wave * .6).toFixed(2)})`);
           node.setAttribute('opacity', (.3 + wave * .7).toFixed(2));
@@ -239,7 +321,18 @@
         case 'unblock': tiles = true; puff('dust', e.c * T + 20, e.r * T + 30, 44, .5); break;
         case 'melt': tiles = true; puff('glow', e.c * T + 20, e.r * T + 20, 96, .7); puff('steam', e.c * T + 20, e.r * T + 4, 70, 1.1, 40); burst(e.c * T + 20, e.r * T + 20, 'heart', 5); view.nuan.castT = .3; break;
         case 'fizz': burst(e.x, e.y + 20, e.who === 'frost' ? 'flake' : 'heart', 3, 70); view[e.who].castT = .22; break;
-        case 'doublejump': puff('dust', e.x, e.y + 4, 36, .4); burst(e.x, e.y, 'star', 5, 90); break;
+        case 'jump': {
+          const s = game.sisters[e.who], v = view[e.who];
+          if (v) { v.sqX = .89; v.sqY = 1.13; }
+          if (s) puff('dust', s.x + s.w / 2, s.y + s.h - 1, 26, .3, 6);
+          break;
+        }
+        case 'bounce': {
+          const v = view[e.who];
+          if (v) { v.sqX = .84; v.sqY = 1.20; }
+          break;
+        }
+        case 'doublejump': puff('dust', e.x, e.y + 4, 36, .4); burst(e.x, e.y, 'star', 5, 90); if (view.frost) { view.frost.sqX = .88; view.frost.sqY = 1.14; } break;
         case 'splash': puff('splash', e.x, e.y - 14, 70, .6); break;
         case 'respawn': { const s = game.sisters[e.who]; if (s) { puff('glow', s.x + s.w / 2, s.y + s.h / 2, 80, .5); burst(s.x + s.w / 2, s.y + s.h / 2, 'star', 4, 80); } break; }
         case 'collect':

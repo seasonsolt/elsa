@@ -146,9 +146,13 @@
   /* The start_<room>_<n> lines belong to talkOnEvents (50-talk plays them when the room goes live). Here: wait until she
      has finished talking, then (first room, first time) the keyboard lessons. The game is live meanwhile. */
   async function roomIntro(i, tok) {
+    if (i === 0 && !save.flags.tutorial && !inputSeen.move) game.kbd.teach = 'r';   // light the walking arrow immediately so the child can move right away
     await sleep(900);
     let quiet = 0;
     for (let n = 0; n < 200 && quiet < 8 && !stale(tok); n++) {   // 8 x 150 ms of silence in a row, at most 30 s
+      if (i === 0 && !save.flags.tutorial) {
+        game.kbd.teach = !inputSeen.move ? 'r' : !inputSeen.jump ? 'up' : !inputSeen.magic ? 'space' : null;
+      }
       quiet = typeof voice !== 'undefined' && voice && voice.busy ? 0 : quiet + 1;
       await sleep(150);
     }
@@ -161,6 +165,7 @@
     const kbd = game.kbd;
     const ask = async (key, teach, done, ms) => {
       if (stale(tok)) return false;
+      if (done()) return true;   // already mastered while exploring during the room intro
       kbd.teach = teach;
       const spoke = vline(key);
       if (!hasLineKey(key)) await waitUntil(() => false, 1500, tok);
@@ -217,7 +222,8 @@
     await art;
     if (stale(tok)) return;
     const pages = storyPages(['win', 'end']);
-    if (pages.length && typeof openStory === 'function') openStory(pages, goTitle); else goTitle();
+    const afterStory = () => { if (typeof showFinale === 'function') showFinale(goTitle); else goTitle(); };
+    if (pages.length && typeof openStory === 'function') openStory(pages, afterStory); else afterStory();
   }
 
   /* ---- frame loop ---- */
@@ -283,7 +289,26 @@
   const ART = assetPlan(LEVELS, LINES, { wear: save.outfit });
   const titleLoad = loadArt(ART.title, ART_PATIENCE);
 
-  if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom, artStats, loadArt, ART, tyStats: typeof tyStats !== 'undefined' ? tyStats : null };
+  if (DEV) {
+    window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom, artStats, loadArt, ART, tyStats: typeof tyStats !== 'undefined' ? tyStats : null };
+    try {
+      const qa = /[?&]qa=([a-z]+)\b/.exec(location.search || '');
+      if (qa) {
+        save.unlocked.rooms = LEVELS.length;
+        save.flags.prologue = true;
+        for (const lv of LEVELS) {
+          save.rooms[lv.id] = { cleared: true, memory: true, stars: [true, true, true] };
+          for (const w of lv.words || []) save.words[w] = { heard: 8, quiz: 1, seen: true, lastSeen: 1 };
+        }
+        if (typeof awardStickers === 'function') awardStickers(null, true);
+        if (qa[1] === 'win') {
+          save.outfit.frost = { dress: 2, hat: 'crown' };
+          save.outfit.nuan = { dress: 1, hat: 'wreath' };
+          setTimeout(() => finishGame(), 400);
+        }
+      }
+    } catch (e) {}
+  }
 
   applySettings();
   game.load(0);

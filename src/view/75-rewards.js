@@ -153,12 +153,14 @@
       const tray = list.slice(page * per, page * per + per).map((it, k) => {
         const x = tx0 + (k % cols) * cell + cell / 2, y = ty0 + Math.floor(k / cols) * cell + cell / 2;
         if (!it.got) return `<g transform="translate(${x} ${y})">${rwSilhouette(52)}</g>`;
-        return `<g transform="translate(${x} ${y})"><g class="ux-btn rw-item ${rwState.fresh.has(it.id) ? 'ux-bounce' : ''}" data-id="${it.id}" data-from="tray" data-ui="" tabindex="-1">
+        return `<g transform="translate(${x} ${y})"><g class="ux-btn rw-item ${rwState.fresh.has(it.id) ? 'ux-bounce' : ''}" data-id="${it.id}" data-from="tray" data-ui="" tabindex="0">
           <circle r="31" fill="#000" fill-opacity="0" pointer-events="all"/>${rwStickerArt(it.id, 56)}</g></g>`;
       }).join('');
-      const placed = board().filter(b => rwHas(b.id)).map(b => {
+      const placed = board().filter(b => rwHas(b.id)).map((b, idx) => {
         const x = RW_BOARD.x + b.x * RW_BOARD.w, y = RW_BOARD.y + b.y * RW_BOARD.h;
-        return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g class="ux-btn rw-item" data-id="${b.id}" data-from="board" data-ui="" tabindex="-1">
+        const pose = (rwState.pose && rwState.pose[b.id]) || 0;
+        const tilt = [-5, 0, 6, -3][(idx + pose) % 4], sc = [1, 1.1, 1.04, 1.14][pose % 4];
+        return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tilt}) scale(${sc})"><g class="ux-btn rw-item" data-id="${b.id}" data-from="board" data-ui="" tabindex="0">
           <circle r="${RW_STICKER / 2 + 2}" fill="#000" fill-opacity="0" pointer-events="all"/>${rwStickerArt(b.id, RW_STICKER)}</g></g>`;
       }).join('');
       const B = RW_BOARD;
@@ -179,7 +181,22 @@
       first = false;
       const root = uxPaint(html);
       uxBind(root, { back: () => showTitle(), prev: () => { page--; draw(); }, nextpage: () => { page++; draw(); } });
-      root.querySelectorAll('.rw-item').forEach(n => n.addEventListener('pointerdown', ev => startDrag(ev, n)));
+      const speakSticker = id => {
+        const room = String(id || '').replace(/_gold$/, '');
+        if (LEVELS.some(l => l.id === room)) uxUiVoice('room_' + room);
+      };
+      root.querySelectorAll('.rw-item').forEach(/** @param {HTMLElement} n */ n => {
+        n.addEventListener('pointerdown', ev => startDrag(ev, n));
+        n.addEventListener('keydown', /** @param {KeyboardEvent} ev */ ev => {
+          if ((ev.code === 'Enter' || ev.code === 'Space' || ev.code === 'NumpadEnter') && !ev.repeat) {
+            ev.preventDefault(); ev.stopPropagation();
+            const id = n.dataset.id;
+            if (n.dataset.from === 'tray') { const s = spot(); place(id, s.fx, s.fy); uxSfx('pick'); speakSticker(id); }
+            else { rwState.pose = rwState.pose || {}; rwState.pose[id] = ((rwState.pose[id] || 0) + 1) % 4; uxSfx('click'); }
+            uxSaveNow(); draw();
+          }
+        });
+      });
       rwState.fresh.clear();
     };
 
@@ -235,9 +252,19 @@
         if (!cancel) {
           const p = rwPoint(e);
           if (!moved) {
-            if (from === 'tray') { const s = spot(); place(id, s.fx, s.fy); uxSfx('pick'); }
-            else { place(id, board().find(b => b.id === id).x, board().find(b => b.id === id).y); uxNudge(n.parentNode); }
-          } else if (rwInBoard(p)) { place(id, (p.x - RW_BOARD.x) / RW_BOARD.w, (p.y - RW_BOARD.y) / RW_BOARD.h); uxSfx('pick'); }
+            if (from === 'tray') {
+              const s = spot(); place(id, s.fx, s.fy); uxSfx('pick');
+              const room = String(id || '').replace(/_gold$/, '');
+              if (LEVELS.some(l => l.id === room)) uxUiVoice('room_' + room);
+            } else {
+              rwState.pose = rwState.pose || {}; rwState.pose[id] = ((rwState.pose[id] || 0) + 1) % 4;
+              place(id, board().find(b => b.id === id).x, board().find(b => b.id === id).y); uxNudge(n.parentNode);
+            }
+          } else if (rwInBoard(p)) {
+            place(id, (p.x - RW_BOARD.x) / RW_BOARD.w, (p.y - RW_BOARD.y) / RW_BOARD.h); uxSfx('pick');
+            const pg = $('overlay').querySelector('.page');
+            if (pg) uxConfetti(pg, p.x, p.y, 10);
+          }
           else if (from === 'board') { const i = board().findIndex(b => b.id === id); if (i >= 0) board().splice(i, 1); }
           uxSaveNow();
         }
@@ -368,10 +395,13 @@
       const root = uxPaint(html);
       uxBind(root, { back: () => { if (fromMeet && typeof showMeet === 'function') showMeet(); else showTitle(); } });
       root.querySelectorAll('.rw-prev').forEach(/** @param {HTMLElement} node */ node => {
-        const who = node.dataset.who, o = outfit(who), sz = SIZES[who + '_idle'] || [80, 168, 40];
+        const who = node.dataset.who, o = outfit(who);
+        const cheering = rwState.cheerWho === who && performance.now() < (rwState.cheerUntil || 0);
+        const pose = cheering ? 'cheer' : 'idle';
+        const sz = SIZES[`${who}_${pose}`] || SIZES[who + '_idle'] || [80, 168, 40];
         const k = o.dress && rwDressReady(who, o.dress) ? o.dress : 0;
-        img(rwDressName(who, 'idle', k), -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, node);
-        rwPlaceHat(node, who, 'idle', o.hat);
+        img(rwDressName(who, pose, k), -sz[2] * SPRITE, 3 - sz[1] * SPRITE, sz[0] * SPRITE, sz[1] * SPRITE, node);
+        rwPlaceHat(node, who, pose, o.hat);
       });
       root.querySelectorAll('.rw-choice').forEach(/** @param {HTMLElement} n */ n => hoverable(n, '', () => {
         const who = n.dataset.who, kind = n.dataset.kind, val = n.dataset.val, state = n.dataset.state;
@@ -379,7 +409,12 @@
         if (!uxAlive(tok)) return;
         const o = outfit(who);
         if (kind === 'dress') o.dress = +val; else o.hat = val === '' ? null : val;
+        rwState.cheerWho = who; rwState.cheerUntil = performance.now() + 900;
         uxSaveNow(); uxSfx('pick'); draw();
+        const pg = $('overlay').querySelector('.page');
+        if (pg) uxConfetti(pg, who === 'frost' ? 250 : 710, 185, 16);
+        if (typeof voice !== 'undefined' && voice && !voice.busy) uxLine('cheer_' + (1 + Math.floor(Math.random() * 4)), { priority: 0 });
+        setTimeout(() => { if (uxAlive(tok) && performance.now() >= (rwState.cheerUntil || 0) - 20) draw(); }, 920);
       }));
     };
     draw();

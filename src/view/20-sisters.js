@@ -12,7 +12,19 @@
       frames[f] = img(`${id}_${f}`, -ax * SPRITE, 3 - h * SPRITE, w * SPRITE, h * SPRITE, root, { visibility: 'hidden' });
     }
     const mark = el('path', { d: 'M-8-104H8L0-93Z', fill: '#ffd27a', visibility: 'hidden' }, root);
-    view[id] = { root, shadow, frames, mark, shown: null, castT: 0, stride: 0, airT: 0, idleT: 0, fadeIn: 0, markT: 0 };
+    view[id] = { root, shadow, frames, mark, shown: null, castT: 0, cheerT: 0, sqX: 1, sqY: 1, turnX: 1, stride: 0, airT: 0, idleT: 0, fadeIn: 0, markT: 0 };
+    root.addEventListener('pointerdown', ev => {
+      if (game.state !== 'play' || (typeof storyIsOpen === 'function' && storyIsOpen())) return;
+      ev.stopPropagation();
+      const s = game.sisters[id], v = view[id];
+      if (!s || s.splash > 0) return;
+      v.cheerT = .65; v.sqX = .9; v.sqY = 1.12;
+      if (typeof burst === 'function') burst(s.x + s.w / 2, s.y + 8, 'heart', 6, 85);
+      if (typeof sfx === 'function') sfx('pick');
+      if (typeof voice !== 'undefined' && voice && !voice.busy && typeof voice.line === 'function') {
+        voice.line('cheer_' + (1 + Math.floor(Math.random() * 4)), { priority: 0, tag: 'cheer', maxWait: 600 });
+      }
+    });
   }
   const lanternGlow = el('circle', { r: 62, fill: 'url(#warm)' }, $('shadows'));
   const frostGlow = el('circle', { r: 58, fill: 'url(#cool)', opacity: .7 }, $('shadows'));
@@ -26,7 +38,7 @@
   const playerId = () => (game.mode === 'solo' ? 'frost' : null);
 
   function pickFrame(id, s, v, now) {
-    if (celebrating()) return 'cheer';
+    if (celebrating() || v.cheerT > 0) return 'cheer';
     if (v.castT > 0) return 'cast';
     if (!s.ground) return s.vy < 0 ? 'jump' : 'fall';
     if (Math.abs(s.vx) > 1) return RUN[Math.floor(v.stride / 15) % RUN.length];
@@ -36,27 +48,38 @@
     const s = game.sisters[id], v = view[id];
     if (!s) return;
     v.castT = Math.max(0, v.castT - dt);
+    v.cheerT = Math.max(0, v.cheerT - dt);
     v.fadeIn = Math.max(0, v.fadeIn - dt);
     v.markT = Math.max(0, v.markT - dt);
+    const recover = Math.min(1, dt * 15);
+    v.sqX += (1 - v.sqX) * recover;
+    v.sqY += (1 - v.sqY) * recover;
     v.stride = s.ground && Math.abs(s.vx) > 1 ? v.stride + Math.abs(s.vx) * dt : 0;
     const hidden = s.splash > 0;
     v.root.setAttribute('visibility', hidden ? 'hidden' : 'visible');
     v.root.setAttribute('opacity', v.fadeIn > 0 ? (1 - v.fadeIn / BLINK_FADE).toFixed(2) : '1');
     v.shadow.setAttribute('visibility', hidden ? 'hidden' : 'visible');
-    v.shadow.setAttribute('opacity', v.fadeIn > 0 ? ((1 - v.fadeIn / BLINK_FADE) * .34).toFixed(2) : '.34');
     const f = pickFrame(id, s, v, now);
     if (f !== v.shown && (f === 'run1' || f === 'run4') && typeof crunch === 'function') crunch(id === 'nuan' ? .8 : 1);
+    const cx = s.x + s.w / 2, feet = s.y + s.h;
     if (!s.ground) v.airT += dt;
-    else { if (v.airT > .18 && game.state === 'play' && !s.splash && typeof thud === 'function') thud(); v.airT = 0; }
+    else {
+      if (v.airT > .12 && game.state === 'play' && !s.splash) {
+        const imp = Math.min(1, v.airT / .45);
+        v.sqX = 1 + .15 * imp; v.sqY = 1 - .13 * imp;
+        if (typeof puff === 'function') puff('dust', cx, feet - 1, 28 + 10 * imp, .34, 6);
+        if (v.airT > .18 && typeof thud === 'function') thud();
+      }
+      v.airT = 0;
+    }
     if (f !== v.shown) {
       if (v.shown) v.frames[v.shown].setAttribute('visibility', 'hidden');
       v.frames[f].removeAttribute('visibility');
       v.shown = f;
     }
-    const cx = s.x + s.w / 2, feet = s.y + s.h;
     const moving = Math.abs(s.vx) > 1 && s.ground;
     const party = celebrating();
-    const bob = moving ? 0 : party ? Math.abs(Math.sin(now * 5 + (id === 'nuan' ? 1 : 0))) * 12 : 0;
+    const bob = moving ? 0 : party ? Math.abs(Math.sin(now * 5 + (id === 'nuan' ? 1 : 0))) * 12 : v.cheerT > 0 ? Math.sin((v.cheerT / .65) * Math.PI) * 9 : 0;
     const breath = !moving && s.ground && !party ? 1 + Math.sin(now * 2.2 + (id === 'nuan' ? 1 : 0)) * .012 : 1;
     v.idleT = s.ground && Math.abs(s.vx) < 1 && game.state === 'play' ? v.idleT + dt : 0;
     const other = game.sisters[id === 'frost' ? 'nuan' : 'frost'];
@@ -64,7 +87,10 @@
     const steered = game.mode !== 'solo' || playerId() === id;
     const lookAt = !steered && (v.idleT > 2.5 || reunited()) && v.castT <= 0 && other ? (other.x > s.x ? 1 : -1) : s.dir;
     const dir = game.state === 'win' ? (Math.sin(now * 3 + (id === 'nuan' ? 1.5 : 0)) >= 0 ? 1 : -1) : lookAt;
-    v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${dir} ${breath.toFixed(3)})`);
+    v.turnX += (dir - v.turnX) * Math.min(1, dt * 20);
+    const flipX = (v.turnX >= 0 ? Math.max(.28, v.turnX) : Math.min(-.28, v.turnX)) * v.sqX;
+    const scaleY = breath * v.sqY;
+    v.root.setAttribute('transform', `translate(${cx.toFixed(1)} ${(feet - bob).toFixed(1)}) scale(${flipX.toFixed(3)} ${scaleY.toFixed(3)})`);
     const gY = typeof groundYBelow === 'function' ? groundYBelow(cx, feet) : feet;
     const airDrop = Math.max(0, (gY - (feet - bob)));
     const shScale = Math.max(.38, 1 - airDrop / 250);

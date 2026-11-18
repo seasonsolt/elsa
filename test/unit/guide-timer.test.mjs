@@ -105,3 +105,20 @@ export function aNewRoomOrARestartClearsTheTimer({ assert }) {
   assert.equal(r.guideFx.t, 0, 'the load event resets the guide');
   assert.equal(r.guideFx.key, '');
 }
+
+export function sparkleTrailRoutesAroundSolidStoneBlocks({ assert }) {
+  const r = setup();
+  /* Hall screen 1 has a 3-tall '#' stone block in cols 7..11, rows 9..11 between Elsa (col 15, row 11) and guide_hall_1 (col 4, row 11). */
+  r.run(20.6, null);
+  assert.equal(r.guideFx.trail.getAttribute('visibility'), 'visible');
+  const coords = Array.from(r.guideFx.nodes, n => {
+    const m = /translate\(([-\d.]+)\s+([-\d.]+)\)/.exec(n.getAttribute('transform') || '');
+    return m ? [+m[1], +m[2]] : null;
+  }).filter(Boolean);
+  assert.equal(coords.length, 16);
+  const insideStone = coords.filter(([x, y]) => {
+    const c = Math.floor(x / r.T), row = Math.floor(y / r.T);
+    return r.game.grid[row] && r.game.grid[row][c] === '#';
+  });
+  assert.deepEqual(insideStone, [], 'BFS sparkle ribbon climbs over the stone pedestal instead of piercing # cells');
+}

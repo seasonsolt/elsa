@@ -311,3 +311,26 @@ export function theDuoRoomsPlayLikeTheOriginals({ loadLogic, assert }) {
   assert.equal(k.g.mode, 'duo');
   assert.ok(DT > 0);
 }
+
+export function soloPlayerNudgesPastACeilingCornerAndSnapsOntoANearLedge({ loadMap, assert }) {
+  // Overhead block at col 6, row 10: jumping straight up at x = 6*40 + 40 - 5 (5 px overlap on the right corner of col 6) nudges past in solo
+  const h = loadMap([
+    '........................',
+    '......#.................',
+    '.E.A......#.............',
+    '########################',
+  ], {}, { mode: 'solo' });
+  const s = h.g.sisters.frost;
+  s.x = 7 * 40 - 5; s.y = 12 * 40 - s.h; s.ground = true; s.dir = 1;
+  h.g.press('frost', 'jump');
+  for (let i = 0; i < 20; i++) h.g.step(DT);
+  assert.ok(s.x >= 7 * 40, `head-bonk corner correction nudged Elsa clear of col 6 (x=${s.x.toFixed(1)})`);
+  assert.ok(s.vy < -200, 'upward jump velocity was preserved instead of bonking to zero');
+
+  // Ledge-top toe-snap: falling slightly with toes 3 px below the top of block at col 10, row 11 (top = 440) steps smoothly onto it
+  s.x = 10 * 40 - s.w - 1; s.y = 11 * 40 - s.h + 3; s.vy = 20; s.ground = false;
+  h.g.input.frost.r = 1;
+  h.g.step(DT);
+  assert.equal(s.y + s.h, 11 * 40, 'toes within 4 px of ledge top snapped cleanly onto the ledge');
+  assert.equal(s.ground, true);
+}

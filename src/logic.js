@@ -173,6 +173,14 @@ function createGame() {
     if (!dx) return;
     const hit = hits(s, s.x + dx, s.y, rampSlack(s), s.rampRow);
     if (!hit) { s.x += dx; return; }
+    // Solo kid forgiveness: if toes miss a ledge top by <= 4 px near the top/descent of a jump, step smoothly onto it.
+    if (g.mode === 'solo' && s.id === g.player && !s.ground && s.vy >= -40) {
+      const top = hit.r * T, over = (s.y + s.h) - top;
+      if (over > 0 && over <= 4 && !hits(s, s.x + dx, top - s.h)) {
+        s.x += dx; s.y = top - s.h - 0.01; s.vy = Math.max(s.vy, 1);
+        return;
+      }
+    }
     s.x = dx > 0 ? hit.c * T - s.w : (hit.c + 1) * T;
     s.vx = 0; s.slide = 0;
   }
@@ -201,7 +209,17 @@ function createGame() {
       s.y += dy;
     } else if (dy < 0) {
       const hit = hits({ w: s.w, h: -dy }, s.x, s.y + dy);          // only what is above the head can stop a rising body
-      if (hit) { s.y = (hit.r + 1) * T; s.vy = 0; return; }
+      if (hit) {
+        // Solo kid forgiveness: upward head-bonk corner correction (<= 7 px nudge past an overhead block corner).
+        if (g.mode === 'solo' && s.id === g.player) {
+          for (let d = 1; d <= 7; d++) {
+            for (const sgn of [s.dir || 1, -(s.dir || 1)]) {
+              if (!hits(s, s.x + d * sgn, s.y + dy)) { s.x += d * sgn; s.y += dy; return; }
+            }
+          }
+        }
+        s.y = (hit.r + 1) * T; s.vy = 0; return;
+      }
       s.y += dy;
     }
   }
@@ -455,7 +473,8 @@ function createGame() {
 
     const prev = { x: s.x, feet: s.y + s.h, ground: s.ground };
     const wasSlope = s.slope;
-    s.vy = Math.min(P.maxFall, s.vy + P.gravity * dt);
+    const grav = (!s.ground && g.mode === 'solo' && s.id === g.player && Math.abs(s.vy) < 70) ? P.gravity * 0.86 : P.gravity;
+    s.vy = Math.min(P.maxFall, s.vy + grav * dt);
     moveX(s, s.vx * dt);
     moveY(s, s.vy * dt);
     rampSnap(s, prev, dt);

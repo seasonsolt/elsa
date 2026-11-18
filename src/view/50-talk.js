@@ -42,7 +42,7 @@
     let room = null, clock = 0, snowExtra = null;
     const freshRoom = () => ({
       token: Math.random(), picks: {}, stars: 0, loadedAt: performance.now() / 1000, startPending: true, startAt: 0, starting: false, preloaded: false,
-      idleT: 0, idleN: 0, idleNext: 0, sig: '', farT: 0, farSpoken: false, farNext: 0, splashAt: -99, splashN: 0, togetherN: 0, spokeAt: -99,
+      idleT: 0, idleN: 0, idleNext: 0, sig: '', farT: 0, farSpoken: false, farNext: 0, splashAt: -99, splashN: 0, fizzAt: -99, fizzN: 0, togetherN: 0, spokeAt: -99,
     });
     const hasLine = key => !!(typeof LINES === 'object' && LINES && LINES.lines && LINES.lines[key]);
     const nowSec = () => performance.now() / 1000;
@@ -62,6 +62,7 @@
           case 'load': if (e.screen) onScreen(); else onLoad(g); break;
           case 'collect': onCollect(e); break;
           case 'respawn': onRespawn(e, g); break;
+          case 'fizz': onFizz(e, g); break;
           case 'open': say(openKey(g), { tag: 'open', maxWait: 8000 }); break;
           // a garden screen has no door: its "everything is open" line plays as the screen is passed
           case 'pass': if (g.goal === 'garden') say(openKey(g), { tag: 'open', maxWait: 8000 }); break;
@@ -110,6 +111,18 @@
       room.splashAt = t;
       const k = pickN('splash_', room.splashN);
       if (k) { room.splashN = k; say('splash_' + k, { interrupt: true, tag: 'splash', maxWait: 2000 }); }
+    }
+    function onFizz(e, g) {
+      if (g.mode === 'solo' && e.who !== g.player) return;
+      const t = nowSec();
+      room.fizzN = t - room.fizzAt < 5 ? room.fizzN + 1 : 1;
+      room.fizzAt = t;
+      if (room.fizzN >= 2 && !room.starting && !voice.busy && t - room.spokeAt > 6) {
+        room.fizzN = 0;
+        const tg = typeof g.guide === 'function' ? g.guide() : null;
+        if (tg && tg.say && hasLine(tg.say)) say(tg.say, { priority: 0, tag: 'fizzhint', maxWait: 1200 });
+        if (tg && typeof puff === 'function') puff('ring', tg.c * T + T / 2, tg.r * T + T / 2, 72, .55);
+      }
     }
     function onMemory(e, g) {
       memGot[g.index] = true;

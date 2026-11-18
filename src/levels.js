@@ -291,7 +291,7 @@ const LEVELS = [
           '########################',
         ],
         guide: [
-          { c: 5, r: 8, say: 'guide_tower_7' },
+          { c: 8, r: 8, say: 'guide_tower_7' },
           { c: 22, r: 5, say: 'guide_tower_8' },
           { c: 13, r: 3, say: 'guide_tower_9' },
           { c: 1, r: 6, say: 'guide_tower_10' },

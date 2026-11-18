@@ -135,7 +135,17 @@
     im.onerror = () => { hd.live.delete(im); hd.asked.delete(n); };
     im.src = assetURL(`hd/${n}.webp`);
   }
-  const SRC = n => { hdWant(n); return assetURL(`${hd.ready.has(n) ? 'hd/' : ''}${n}.webp`); };
+  const SRC = n => {
+    hdWant(n);
+    const useHd = hd.ready.has(n) || (artWait.has(n) && hd.asked.has(n));
+    return assetURL(`${useHd ? 'hd/' : ''}${n}.webp`);
+  };
+  function hdDowngrade(name) {
+    for (const node of document.querySelectorAll('image, img')) {
+      const attr = node.tagName === 'IMG' ? 'src' : 'href';
+      if ((node.getAttribute(attr) || '').startsWith(`game/hd/${name}.webp`)) node.setAttribute(attr, assetURL(`${name}.webp`));
+    }
+  }
   function hdUpgrade() {
     hd.timer = 0;
     for (const node of document.querySelectorAll('image, img')) {
@@ -179,6 +189,7 @@
         p = im.decode().then(() => finishOk(wantHd), () => {
           if (!wantHd) { finishFail(); return; }
           hd.asked.delete(n);
+          hdDowngrade(n);
           const sd = new Image();
           artLive.add(sd);
           sd.src = assetURL(`${n}.webp`);

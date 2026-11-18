@@ -184,12 +184,20 @@ export function verifyManifestFailsWhenTheManifestAndLinesDisagree({ assert }) {
   } finally { fx.cleanup(); }
 }
 
-/* Stand-ins for edge-tts, ffmpeg and ffprobe so a real (non-dry) run can be exercised without the network or the encoder:
-   edge_tts.Communicate.save writes a few bytes, the fake ffmpeg writes its last argument (an output file) unless that is "-", the fake
-   ffprobe prints a duration. */
+/* Stand-ins for ElevenLabs (urllib.request.urlopen via sitecustomize.py), edge-tts, ffmpeg and ffprobe so a real (non-dry) run can be
+   exercised without the network, real credentials or the encoder: urllib and edge_tts return tiny raw mp3 bytes, the fake ffmpeg writes its last
+   argument (an output file) unless that is "-", the fake ffprobe prints a duration. */
 function fakeToolchain(dir) {
   const bin = path.join(dir, 'fakebin'), py = path.join(dir, 'fakepy');
   fs.mkdirSync(bin); fs.mkdirSync(py);
+  fs.writeFileSync(path.join(py, 'sitecustomize.py'), [
+    'import urllib.request',
+    'class _Resp:',
+    '    def __enter__(self): return self',
+    '    def __exit__(self, *a): pass',
+    '    def read(self): return b"RAW" * 50',
+    'urllib.request.urlopen = lambda req, timeout=None: _Resp()',
+    ''].join('\n'));
   fs.writeFileSync(path.join(py, 'edge_tts.py'), [
     'class Communicate:',
     '    def __init__(self, text, voice, rate=None, pitch=None): self.text = text',
@@ -199,7 +207,7 @@ function fakeToolchain(dir) {
   fs.writeFileSync(path.join(bin, 'ffmpeg'), '#!/bin/sh\nfor last; do :; done\n[ "$last" = "-" ] || head -c 600 /dev/zero | tr "\\0" "M" > "$last"\n');
   fs.writeFileSync(path.join(bin, 'ffprobe'), '#!/bin/sh\necho 1.5\n');
   fs.chmodSync(path.join(bin, 'ffmpeg'), 0o755); fs.chmodSync(path.join(bin, 'ffprobe'), 0o755);
-  return { ...process.env, PATH: bin + path.delimiter + process.env.PATH, PYTHONPATH: py };
+  return { ...process.env, ELEVENLABS_API_KEY: 'fake-key', PATH: bin + path.delimiter + process.env.PATH, PYTHONPATH: py };
 }
 
 export function aRealRunRedoesOnlyTheEditedClipAndRecordsIt({ assert }) {

@@ -9,7 +9,8 @@
 
   const TY_NOTE_COL = ['#ff6b6b', '#ffa94d', '#ffe066', '#69db7c', '#74c0fc'];   // red orange yellow green blue = do re mi so la
   const TY_NOTE_HZ = [523.25, 587.33, 659.25, 783.99, 880];
-    const tyState = { springs: [], notes: [], flowers: [], floes: new Map(), bunnies: new Map(), melodySig: '', strip: null, lines: {} };
+    const tyState = { springs: [], notes: [], flowers: [], floes: new Map(), bunnies: new Map(), melodySig: '', strip: null, lines: {},
+      demo: { active: false, idx: 0, wait: 0, chip: -1, chipT: 0 } };
   const tyQueue = [];
 
   /* ---------- pictures: probe first, draw the vector placeholder until the picture is known to load ---------- */
@@ -196,7 +197,8 @@
     tyTee();
     const base = layer('toysBase', 'goal'), flora = layer('toysFlora', 'items'), live = layer('toysLive', 'shadows'), strip = layer('toyHud', 'hud');
     for (const b of [base, flora, live, strip]) b.textContent = '';
-    Object.assign(tyState, { springs: [], notes: [], flowers: [], melodySig: '', strip: null });
+    Object.assign(tyState, { springs: [], notes: [], flowers: [], melodySig: '', strip: null,
+      demo: { active: false, idx: 0, wait: 0, chip: -1, chipT: 0 } });
     tyState.floes.clear(); tyState.bunnies.clear(); tyState.lines = {};
     tyQueue.length = 0;
     if (!game.grid || !game.grid.length) return;
@@ -235,7 +237,39 @@
       frames.forEach((f, s) => tyShow(f, s === stage));
     });
     tyBuildStrip(strip);
+    if (game.melody && Array.isArray(game.melody.seq) && game.melody.seq.length && !game.melody.done) playMelodyDemo(1.1);
     updateToys(0, performance.now() / 1000);
+  }
+
+  /* Play and light up the remaining melody steps in order (Elsa's promised demonstration at room start, and on pressing the hint bulb).
+     Player note steps immediately cancel an active demonstration. */
+  function playMelodyDemo(delay) {
+    const m = game.melody;
+    if (!m || !Array.isArray(m.seq) || m.done || m.pos >= m.seq.length) return false;
+    tyState.demo = { active: true, idx: m.pos || 0, wait: delay == null ? .2 : delay, chip: -1, chipT: 0 };
+    return true;
+  }
+  function tyStepDemo(dt) {
+    const d = tyState.demo, m = game.melody;
+    if (d.chipT > 0) d.chipT = Math.max(0, d.chipT - dt); else d.chip = -1;
+    if (!d.active) return;
+    if (!m || m.done || game.state !== 'play' || (typeof canPlay === 'function' && !canPlay())) {
+      if (!m || m.done) d.active = false;
+      return;
+    }
+    d.wait -= dt;
+    if (d.wait > 0) return;
+    if (d.idx >= m.seq.length) { d.active = false; return; }
+    const stepIdx = d.idx++, n = m.seq[stepIdx] | 0;
+    d.wait = .54; d.chip = stepIdx; d.chipT = .46;
+    const guide = (typeof game.level === 'function' && game.level() && game.level().guide) || [];
+    const gEntry = guide.find(g => g && g.note === stepIdx);
+    const hit = gEntry ? tyState.notes.filter(s => s.c === gEntry.c && s.r === gEntry.r) : [];
+    for (const s of (hit.length ? hit : tyState.notes.filter(s => s.n === n))) {
+      s.flash = .62;
+      tyBurst((s.c + .5) * T, s.r * T, 'star', 3, 64);
+    }
+    tyTone(n, false);
   }
 
   /* The melody to follow, as a row of coloured dots at the top of the room (the companion shows it too, this one stays). */
@@ -275,6 +309,7 @@
         break;
       }
       case 'note': {
+        tyState.demo.active = false;
         const n = e.n | 0;
         tyTone(n, e.ok === false);
         /* the event names the cell that was stepped on; fall back to every step of that note */
@@ -284,9 +319,11 @@
         break;
       }
       case 'melody':
+        tyState.demo.active = false;
         for (const s of tyState.notes) { s.flash = 1.4; tyBurst((s.c + .5) * T, s.r * T, 'star', 4, 100); }
         tySfx('unlock');
         tyToyLine('melody');
+        try { if (typeof voice !== 'undefined' && voice && typeof voice.word === 'function') voice.word('music', { interrupt: false, priority: 0, maxWait: 5000 }); } catch (err) {}
         break;
       case 'clear': case 'win':
         if (typeof awardStickers === 'function') awardStickers((LEVELS[game.index] || {}).id);   // markRoom has already run in this frame
@@ -462,9 +499,9 @@
     if (!m || !Array.isArray(m.seq)) return;
     const sig = m.pos + '/' + m.seq.length;
     s.chips.forEach((c, i) => {
-      const done = i < m.pos, next = i === m.pos;
-      c.setAttribute('opacity', done ? '1' : next ? '1' : '.42');
-      c.setAttribute('transform', next ? `scale(${(1.12 + Math.sin(now * 6) * .1).toFixed(3)})` : done ? 'scale(.9)' : 'scale(1)');
+      const done = i < m.pos, next = i === m.pos, demoLit = tyState.demo.chip === i && tyState.demo.chipT > 0;
+      c.setAttribute('opacity', done || next || demoLit ? '1' : '.42');
+      c.setAttribute('transform', demoLit ? 'scale(1.32)' : next ? `scale(${(1.12 + Math.sin(now * 6) * .1).toFixed(3)})` : done ? 'scale(.9)' : 'scale(1)');
     });
     tyState.melodySig = sig;
   }
@@ -473,6 +510,7 @@
     tyTee();
     while (tyQueue.length) { const e = tyQueue.shift(); try { tyHandle(e); } catch (err) { console.error('[toys]', err); } }
     if (!tyState.strip && game.melody && game.melody.seq && game.melody.seq.length) tyBuildStrip(layer('toyHud', 'hud'));
+    tyStepDemo(dt);
     tyUpdateSprings(dt);
     tyUpdateNotes(dt, now);
     tyUpdateFlowers(dt, now);

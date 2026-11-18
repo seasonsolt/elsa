@@ -3,9 +3,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>艾莎和安娜的冰堡</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Fredoka:wght@500;600&display=swap">
 <style>
+@font-face {
+  font-family: "ZCOOL KuaiLe";
+  src: url("game/font_zh.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fredoka";
+  src: url("game/font_en.woff2") format("woff2");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+}
 /* Layout: a painted picture-book page fills the screen; a quiet caption band sits under it. */
 :root {
   --night: #141c46;
@@ -169,7 +181,7 @@ body.touch .keys { display: none; }
     <linearGradient id="bottomFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1438" stop-opacity="0"/><stop offset="1" stop-color="#0d1438" stop-opacity=".78"/></linearGradient>
     <clipPath id="avatarClip"><circle r="1" cx="0" cy="0"/></clipPath>
   </defs>
-  <image id="bg" width="960" height="520" preserveAspectRatio="none"/>
+  <image id="bg" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
   <g id="glows"></g>
   <g id="snowBack" aria-hidden="true"></g>
   <g id="gates"></g>

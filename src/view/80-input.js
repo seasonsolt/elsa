@@ -43,7 +43,11 @@
      key may stay down when the screen turns. Other code may read this. */
   function isPortraitView() { return !!(portraitQuery && portraitQuery.matches); }
   watchQuery(coarseQuery, () => setTouchMode(touchWanted()));
-  watchQuery(portraitQuery, () => { clearInput(); padFocusClear(); queueFit(); });
+  watchQuery(portraitQuery, () => {
+    clearInput(); padFocusClear(); queueFit();
+    try { if (isPortraitView() && typeof voice !== 'undefined' && voice && typeof voice.stop === 'function') voice.stop(); } catch (e) {}
+    try { if (typeof syncMaster === 'function') syncMaster(); } catch (e) {}
+  });
 
   /* canPlay() (the room is live and nothing covers it) is in src/lib/play-gate.js. */
   /* The sister the arrow keys steer right now. */

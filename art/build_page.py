@@ -71,7 +71,7 @@ SW_TEMPLATE = ART / 'sw.template.js'
 asset_hash = hashlib.sha256()
 GAME = ROOT / 'game'
 for asset in sorted(list(GAME.iterdir()) + list((GAME / 'hd').glob('*.webp'))):
-    if asset.suffix not in ('.webp', '.mp3', '.json', '.png'):
+    if asset.suffix not in ('.webp', '.mp3', '.json', '.png', '.woff2'):
         continue
     asset_hash.update(asset.relative_to(GAME).as_posix().encode())
     asset_hash.update(hashlib.sha256(asset.read_bytes()).digest())
@@ -90,6 +90,7 @@ for name, text in (('logic', logic), ('view', view)):
 
 page = (ART / 'page.template.html').read_text(encoding='utf8')
 page = re.sub(r'href="(game/[^"?]+)"', lambda m: f'href="{m[1]}?v={asset_version}"', page)
+page = re.sub(r'url\("(game/[^"?]+)"\)', lambda m: f'url("{m[1]}?v={asset_version}")', page)
 page = once(page, '/*LOGIC*/\n', logic, 'template')
 page = once(page, '/*VIEW*/\n', '(() => {\n' + view + '})();\n', 'template')
 # the app head (PLAN-2 D5): manifest, icons and the colours of an installed page. Plain URLs, not fingerprinted: the manifest names its icons the same way.
@@ -118,7 +119,8 @@ def title_art():
 
 def make_sw():
     shell = ['ice-castle.html', 'manifest.webmanifest', 'game/icon-192.png', 'game/icon-512.png', 'game/icon-maskable-512.png', 'game/apple-touch-icon.png']
-    precache = shell + [f'game/subs.json?v={asset_version}'] + [f'game/{n}?v={asset_version}' for n in title_art()]
+    fonts = [f'game/{f}?v={asset_version}' for f in ('font_zh.woff2', 'font_en.woff2') if (GAME / f).is_file()]
+    precache = shell + fonts + [f'game/subs.json?v={asset_version}'] + [f'game/{n}?v={asset_version}' for n in title_art()]
     for path in precache:
         assert (ROOT / path.split('?')[0]).is_file() or path == 'ice-castle.html', f'precache entry without a file: {path}'
     sw = SW_TEMPLATE.read_text(encoding='utf8')

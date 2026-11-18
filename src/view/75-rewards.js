@@ -7,7 +7,7 @@
      The screens reuse the picture-button helpers of 70-ui (uxScreen, uxPaint, uxButton, uxBind, uxPic, ...).
      Private names carry the `rw` prefix (one shared view scope). */
 
-  const RW_UNLOCK = { dress1: 3, dress2: 6, bow: 3, clip: 6, wreath: 10, crown: 10 };   // stickers needed (PLAN B2: 3 / 6 / 10)
+  const RW_UNLOCK = { dress1: 2, bow: 5, dress2: 9, clip: 14, wreath: 19, crown: 24 };   // spread across the 27 earnable stickers so rooms 1..9 keep unlocking rewards
   const RW_HATS = ['bow', 'clip', 'wreath', 'crown'];
   const RW_DRESS_COL = { frost: ['#78bce2', '#75d8b8', '#ef6e9f'], nuan: ['#285e9b', '#2b8c89', '#8055ad'] };
   const RW_HAT_W = 28, RW_HAT_SINK = 7;   // hat width in game units, and how far its lower edge sits into the hair
@@ -52,7 +52,7 @@
       added.forEach(id => rwState.fresh.add(id));
       if (!quiet) {
         added.forEach(id => rwState.toasts.push({ id }));
-        if ([3, 6, 10].some(n => before < n && s.stickers.length >= n)) rwState.toasts.push({ wardrobe: true });
+        if ([2, 5, 9, 14, 19, 24].some(n => before < n && s.stickers.length >= n)) rwState.toasts.push({ wardrobe: true });
       }
     }
     return added;
@@ -323,10 +323,10 @@
   }
 
   /* ---------- wardrobe ---------- */
-  function showWardrobe() {
-    try { rwShowWardrobe(); } catch (e) { console.error('[wardrobe]', e); try { showTitle(); } catch (e2) {} }
+  function showWardrobe(fromMeet) {
+    try { rwShowWardrobe(!!fromMeet); } catch (e) { console.error('[wardrobe]', e); try { showTitle(); } catch (e2) {} }
   }
-  function rwShowWardrobe() {
+  function rwShowWardrobe(fromMeet) {
     const tok = uxScreen('wardrobe', false);
     awardStickers(null, true);
     let first = true;
@@ -366,7 +366,7 @@
       html += uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 }) + '</g>';
       first = false;
       const root = uxPaint(html);
-      uxBind(root, { back: () => showTitle() });
+      uxBind(root, { back: () => { if (fromMeet && typeof showMeet === 'function') showMeet(); else showTitle(); } });
       root.querySelectorAll('.rw-prev').forEach(/** @param {HTMLElement} node */ node => {
         const who = node.dataset.who, o = outfit(who), sz = SIZES[who + '_idle'] || [80, 168, 40];
         const k = o.dress && rwDressReady(who, o.dress) ? o.dress : 0;

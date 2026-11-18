@@ -82,6 +82,7 @@
   let masterOn = true;
   function soundWanted() {
     if (muted) return false;
+    try { if (typeof isPortraitView === 'function' && isPortraitView()) return false; } catch (e) {}
     try { if (typeof setting === 'function') { const v = setting('sound'); if (v === false || v === 'off' || v === 0) return false; } } catch (e) {}
     return true;
   }

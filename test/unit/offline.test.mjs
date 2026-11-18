@@ -81,7 +81,7 @@ function copyForBuild() {
   for (const rel of ['art/build_page.py', 'art/sw.template.js', 'art/sizes.json', 'art/page.template.html', 'manifest.webmanifest']) { fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true }); fs.copyFileSync(path.join(ROOT, rel), path.join(dir, rel)); }
   fs.cpSync(path.join(ROOT, 'src'), path.join(dir, 'src'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'game'));
-  const files = loadLib(['assets'], {}, 'ART_TITLE').concat(['subs.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png']);
+  const files = loadLib(['assets'], {}, 'ART_TITLE').concat(['subs.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'font_zh.woff2', 'font_en.woff2']);
   for (const f of files) fs.copyFileSync(path.join(ROOT, 'game', f), path.join(dir, 'game', f));   // the files a precache list may name (not the 800 clips)
   return dir;
 }

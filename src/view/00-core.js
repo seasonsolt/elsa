@@ -118,8 +118,15 @@
   const HD_NAMES = new Set(/*HD*/[]);
   const HD_FROM = 1700;
   const hd = { on: false, ready: new Set(), asked: new Set(), live: new Set(), timer: 0 };
+  const ART_PATIENCE = 1500;
+  const artJobs = new Map();   // name -> promise of its decode, settled (never rejected) when it is decoded or has failed
+  const artWait = new Set();
+  const artLive = new Set();   // the Image objects whose picture is still loading: held so nothing can collect them mid-load
+  const artStats = { requested: 0, decoded: 0, failed: 0 };
+  const artPending = name => artWait.has(name);
+
   function hdWant(n) {
-    if (!hd.on || !HD_NAMES.has(n) || hd.asked.has(n)) return;
+    if (!hd.on || !HD_NAMES.has(n) || hd.asked.has(n) || artWait.has(n)) return;
     hd.asked.add(n);
     const im = new Image();
     hd.live.add(im);
@@ -147,31 +154,35 @@
   }
 
   /* Pictures load by group (PLAN-2 D4, plan in src/lib/assets.js): the title set first, a room's set while its recall / chapter cards are
-     up. loadArt starts every picture of `names` that is not loading or loaded yet, decodes it, and resolves when all are decoded or
-     `patience` ms have passed (the child is never stranded behind a slow network; the pictures keep arriving afterwards).
-     artPending(name) says a picture is on its way, so a drawing routine can place it at once instead of a stand-in. */
-  const ART_PATIENCE = 1500;
-  const artJobs = new Map();   // name -> promise of its decode, settled (never rejected) when it is decoded or has failed
-  const artWait = new Set();
-  const artLive = new Set();   // the Image objects whose picture is still loading: held so nothing can collect them mid-load
-  const artStats = { requested: 0, decoded: 0, failed: 0 };
-  const artPending = name => artWait.has(name);
-  /* the toy families of rooms 3-10: slope, spring, floe, note steps, ice flower, bunny (and its nest) */
+     up. On Retina / fullscreen stages (hd.on), stage pictures fetch game/hd/<name>.webp directly in a single pass, falling back to the
+     standard copy when offline or unavailable. */
   const TOY_ART = /^(tile_slope_|spring_|floe_|note_|flower_|bunny_)/;
   function loadArt(names, patience) {
     const jobs = [];
     for (const n of names) {
       let p = artJobs.get(n);
       if (!p) {
+        const wantHd = hd.on && HD_NAMES.has(n) && !hd.ready.has(n) && (typeof navigator === 'undefined' || navigator.onLine !== false);
         const im = new Image();
-        im.src = SRC(n);
         artStats.requested++;
         artWait.add(n); artLive.add(im);
-        p = im.decode().then(() => {
+        if (wantHd) hd.asked.add(n);
+        im.src = assetURL(`${wantHd ? 'hd/' : ''}${n}.webp`);
+        const finishOk = usedHd => {
           artWait.delete(n); artLive.delete(im); artStats.decoded++;
+          if (usedHd) { hd.ready.add(n); hdUpgradeSoon(); }
           if (TOY_ART.test(n) && typeof toyImageReady === 'function') toyImageReady(n);   // 15-toys: remembers the picture exists
-        }, () => {
+        };
+        const finishFail = () => {
           artWait.delete(n); artLive.delete(im); artStats.failed++; artJobs.delete(n);     // a failed picture is asked for again next time
+        };
+        p = im.decode().then(() => finishOk(wantHd), () => {
+          if (!wantHd) { finishFail(); return; }
+          hd.asked.delete(n);
+          const sd = new Image();
+          artLive.add(sd);
+          sd.src = assetURL(`${n}.webp`);
+          return sd.decode().then(() => { artLive.delete(sd); finishOk(false); }, () => { artLive.delete(sd); finishFail(); });
         });
         artJobs.set(n, p);
       }

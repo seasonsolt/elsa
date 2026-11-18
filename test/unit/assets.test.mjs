@@ -220,3 +220,43 @@ export async function aFailedPictureIsAskedForAgainNextTime({ assert }) {
   await loadArt(['bg_music']);
   assert.equal(asked.length, 2, 'a decoded picture is not fetched again');
 }
+
+export async function retinaScreenLoadsHdDirectlyOnceAndFallsBackToSdWhenHdFails({ assert }) {
+  let rejectHd = false;
+  const asked = [];
+  class TrackedImage {
+    set src(v) { this._src = v; asked.push(v); }
+    decode() { return rejectHd && this._src.includes('hd/') ? Promise.reject(new Error('hd-offline')) : Promise.resolve(); }
+  }
+  const env = viewEnv.load(['00-core'], { exports: ['loadArt', 'hd', 'HD_NAMES', 'SRC', 'artStats'], globals: { Image: TrackedImage } });
+  const { loadArt, hd, HD_NAMES, SRC, artStats } = env.exports;
+  HD_NAMES.add('bg_music');
+  HD_NAMES.add('bg_garden');
+  hd.on = true;
+  await loadArt(['bg_music']);
+  assert.deepEqual(asked, ['game/hd/bg_music.webp?v=dev'], 'Retina stage requests only the 2x copy, not SD then HD');
+  assert.ok(SRC('bg_music').startsWith('game/hd/bg_music.webp'), 'SRC immediately serves the decoded 2x copy');
+  asked.length = 0;
+  rejectHd = true;
+  await loadArt(['bg_garden']);
+  assert.deepEqual(asked, ['game/hd/bg_garden.webp?v=dev', 'game/bg_garden.webp?v=dev'], 'when 2x fails, falls back cleanly to standard picture');
+  assert.equal(artStats.failed, 0, 'fallback succeeded without counting a failure');
+}
+
+export async function musicRoomPlaysMelodyDemoAndCancelsWhenPlayerStepsOnANote({ assert }) {
+  const env = viewEnv.load(FILES, {
+    exports: [...EXPORTS, 'playMelodyDemo', 'tyStepDemo', 'tyHandle', 'tyState'],
+    globals: { showRecall: (_, d) => d(), showChapter: (_, d) => d() },
+  });
+  const { enterRoom, tyStepDemo, tyHandle, tyState, LEVELS: levels } = env.exports;
+  await env.clock.settle();
+  const musicIdx = levels.findIndex(lv => lv.id === 'music');
+  enterRoom(musicIdx);
+  await env.clock.settle();
+  assert.equal(tyState.demo.active, true, 'entering music room queues the melody demonstration');
+  tyStepDemo(1.2);
+  assert.equal(tyState.demo.idx, 1, 'first note of the melody demo flashes after the lead-in');
+  assert.ok(tyState.notes.some(n => n.flash > 0), 'the target note step lights up');
+  tyHandle({ type: 'note', n: 1, c: 4, r: 10, ok: true });
+  assert.equal(tyState.demo.active, false, 'stepping on any note cancels the remaining demo immediately');
+}

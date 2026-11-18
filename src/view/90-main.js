@@ -277,14 +277,13 @@
     requestAnimationFrame(frame);
   }
 
-  /* Decode the title set first, so frames never flash in empty (PLAN-2 D4: the title, the UI and the first room only, src/lib/assets.js;
-     the prologue, every other room and the ending load when the flow reaches them). */
+  /* Fit the stage first so Retina / fullscreen displays (hd.on) request game/hd/ directly in a single pass, then decode the title set. */
+  fitStage();
   const ART = assetPlan(LEVELS, LINES, { wear: save.outfit });
   const titleLoad = loadArt(ART.title, ART_PATIENCE);
 
   if (DEV) window.__dbg = { voice: typeof voice !== "undefined" ? voice : null, game, save, heardLog, playFlow, companion, guideFx, startGame, enterRoom, goTitle, inputSeen, saveWrite, markRoom, artStats, loadArt, ART, tyStats: typeof tyStats !== 'undefined' ? tyStats : null };
 
-  fitStage();
   applySettings();
   game.load(0);
   handleEvents();

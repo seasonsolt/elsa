@@ -72,7 +72,11 @@
       el('ellipse', { rx: 40, ry: 7, fill: '#10184a', opacity: got ? .3 : .12 }, g);
       if (got === 1) img('ball', -24, -48, 48, 48, g);
       if (got === 2) img('two', -30, -86, 60, 86, g);
-      if (got >= 3) { el('circle', { cy: -60, r: 92, fill: 'url(#cool)' }, g); img('snowman', -46, -126, 92, 126, g); }
+      if (got >= 3) {
+        el('circle', { cy: -60, r: 92, fill: 'url(#cool)' }, g);
+        const sm = img('snowman', -46, -126, 92, 126, g, { id: 'snowmanArt' });
+        if (typeof snowmanHatFalling === 'function' && snowmanHatFalling()) sm.setAttribute('clip-path', 'inset(22% 0 0 0)');
+      }
       return;
     }
     if (game.doorOpen) el('circle', { cy: -56, r: 112, fill: 'url(#warm)', class: 'flicker' }, g);

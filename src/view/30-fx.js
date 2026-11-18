@@ -32,6 +32,41 @@
     ghosts.length = 0;
     for (const f of floaters) f.node.remove();
     floaters.length = 0;
+    for (const h of hatDrops) h.node.remove();
+    hatDrops.length = 0;
+  }
+
+  /* Ballroom snowman hat: floats gently down onto the snowman's head when the 3rd snowball completes it. */
+  const hatDrops = [];
+  const snowmanHatFalling = () => hatDrops.length > 0;
+  function dropSnowmanHat() {
+    const d = game.door;
+    if (!d || !SIZES.hat_snowman) return;
+    for (const h of hatDrops) h.node.remove();
+    hatDrops.length = 0;
+    const [w, h] = SIZES.hat_snowman, hw = 46, hh = hw * h / w;
+    const node = img('hat_snowman', -hw / 2, -hh / 2, hw, hh, $('fx'));
+    hatDrops.push({ node, x: d.x - 1, y0: d.bottom - 188, y1: d.bottom - 111, t: 0, max: .85 });
+    burst(d.x, d.bottom - 126, 'star', 8, 95);
+  }
+  function drawHatDrops(dt) {
+    for (let i = hatDrops.length - 1; i >= 0; i--) {
+      const h = hatDrops[i];
+      h.t += dt;
+      if (h.t >= h.max) {
+        h.node.remove();
+        hatDrops.splice(i, 1);
+        const sm = $('snowmanArt');
+        if (sm) sm.removeAttribute('clip-path');
+        puff('ring', h.x, h.y1, 56, .45);
+        burst(h.x, h.y1, 'star', 5, 75);
+        continue;
+      }
+      const u = h.t / h.max, ease = 1 - Math.pow(1 - u, 2.2);
+      const sway = Math.sin(u * Math.PI * 2.5) * 9 * (1 - u), tilt = Math.sin(u * Math.PI * 2.5) * 11 * (1 - u);
+      const y = h.y0 + (h.y1 - h.y0) * ease;
+      h.node.setAttribute('transform', `translate(${(h.x + sway).toFixed(1)} ${y.toFixed(1)}) rotate(${tilt.toFixed(1)})`);
+    }
   }
 
   /* Blink (PLAN A1): a sister vanishes in starlight here and fades back in there. The logic has already moved her, so a
@@ -211,7 +246,10 @@
           if (e.kind === '+') { burst(e.x, e.y, 'star', 7, 100); puff('ring', e.x, e.y, 56, .45); starCount(e.x, e.y, e.n || 1); }
           else burst(e.x, e.y, e.kind === 'h' ? 'heart' : e.kind === 'o' ? 'star' : 'flake', 8);
           drawItems();
-          if (e.kind === 'o') drawGoal();
+          if (e.kind === 'o') {
+            if (game.goal === 'snowman' && game.items.filter(i => i.kind === 'o' && i.got).length === 3) dropSnowmanHat();
+            drawGoal();
+          }
           break;
         case 'open': drawGoal(); if (game.door) { puff('glow', game.door.x, game.door.bottom - 50, 150, .9); burst(game.door.x, game.door.bottom - 60, 'star', 10, 130); } break;
         case 'gate': drawGates(); break;
@@ -227,7 +265,7 @@
   let shownBlocks = -1;
   function fxFrame(dt, now, play) {
     if (game.blocks.length !== shownBlocks) { shownBlocks = game.blocks.length; drawTiles(); }
-    drawSparks(dt); drawGhosts(dt); drawFloaters(dt);
+    drawSparks(dt); drawGhosts(dt); drawFloaters(dt); drawHatDrops(dt);
     guideTick(dt, now, play);
     if (game.state === 'win' && Math.random() < .25) burst(Math.random() * 960, 200 + Math.random() * 180, ['star', 'heart', 'flake'][Math.floor(Math.random() * 3)], 2, 90);
   }

@@ -29,6 +29,7 @@ def package(out):
     jobs = plan(content, None, True, str(ROOT / 'game'), None)
     files = {p.name: p for p in (ROOT / 'game').glob('*.webp')}
     files.update({p.name: p for p in (ROOT / 'game').glob('*.png')})   # the app icons (art/make_icons.py)
+    files.update({p.name: p for p in (ROOT / 'game').glob('*.woff2')})   # self-hosted subsetted fonts (art/make_fonts.py)
     files.update({f'hd/{p.name}': p for p in (ROOT / 'game/hd').glob('*.webp')})   # the large copies for big screens (art/hd.py)
     files.update({j.name: ROOT / 'game' / j.name for j in jobs})
     files['subs.json'] = ROOT / 'game/subs.json'

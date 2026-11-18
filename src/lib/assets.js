@@ -25,7 +25,7 @@
      magic makes in any room: they are never in a map, so they are always loaded; the HUD counters flake, heart, ball are in the title set too) */
   const ART_TILES = {
     '=': ['shelf0', 'shelf1', 'shelf2'], X: ['pinkice'], I: ['frozen'], B: ['iceblock'], G: ['gate'], P: ['plate_up', 'plate_down'],
-    '*': ['flake'], h: ['heart'], o: ['ball'], D: ['door_closed', 'door_open'], S: ['ball', 'two', 'snowman'],
+    '*': ['flake'], h: ['heart'], o: ['ball'], D: ['door_closed', 'door_open'], S: ['ball', 'two', 'snowman', 'hat_snowman'],
     '/': ['tile_slope_l'], '\\': ['tile_slope_r'], J: ['spring_0', 'spring_1'],
     R: ['bunny_idle', 'bunny_hop1', 'bunny_hop2', 'bunny_hop3', 'bunny_hop4', 'bunny_home'], N: ['bunny_nest', 'bunny_home'],
     M: ['floe_l', 'floe_m', 'floe_r'], F: ['flower_0', 'flower_1', 'flower_2'],

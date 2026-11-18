@@ -7,7 +7,13 @@
 
   const uxState = { inited: false, tok: null, modal: null, hudBuilt: false, lit: {}, sig: '', player: '', tick: 0, seen: {} };
   const uxLocal = { subtitles: false, english: 'words+phrases', mode: 'solo', sound: true };
-  const uxWait = ms => new Promise(r => setTimeout(r, ms));
+  const uxRawWait = ms => new Promise(r => setTimeout(r, ms));
+  async function uxHoldIfPortrait() {
+    try {
+      while (typeof isPortraitView === 'function' && isPortraitView()) await uxRawWait(200);
+    } catch (e) {}
+  }
+  const uxWait = async ms => { await uxRawWait(ms); await uxHoldIfPortrait(); };
   const uxInk = '#4a3a8c';
   const UX_HUE = ['#ff9cc0', '#ffd27a', '#9fd6ff', '#b9e3a5', '#d4b4ff', '#ffb98a'];
 
@@ -21,11 +27,13 @@
     uxLocal[k] = v;
     try { if (typeof setSetting === 'function') setSetting(k, v); } catch (e) {}
   }
-  function uxLine(key, opts) {
+  async function uxLine(key, opts) {
+    await uxHoldIfPortrait();
     let p = null;
     try { if (typeof voice !== 'undefined' && voice && typeof voice.line === 'function') p = voice.line(key, opts); } catch (e) {}
-    if (!p || typeof p.then !== 'function') return uxWait(800);
-    return Promise.race([p.then(() => {}, () => {}), uxWait(20000)]);
+    if (!p || typeof p.then !== 'function') { await uxWait(800); return; }
+    await Promise.race([p.then(() => {}, () => {}), uxRawWait(20000)]);
+    await uxHoldIfPortrait();
   }
   function uxWordVoice(id) {
     let p = null;
@@ -443,7 +451,7 @@
     const root = uxPaint(html);
     uxBind(root, {
       back: () => { uxStopVoice(); showTitle(); },
-      wardrobe: el => { uxStopVoice(); if (typeof showWardrobe === 'function') showWardrobe(); else uxNudge(el); },
+      wardrobe: el => { uxStopVoice(); if (typeof showWardrobe === 'function') showWardrobe(true); else uxNudge(el); },
     });
     root.querySelectorAll('.ux-person').forEach(/** @param {HTMLElement} n */ n => {
       n.addEventListener('click', ev => {
@@ -673,6 +681,7 @@
       hint: el => {
         let tgt = null;
         try { tgt = game.guide && game.guide(); } catch (e) {}
+        try { if (typeof playMelodyDemo === 'function') playMelodyDemo(.25); } catch (e) {}
         if (tgt && tgt.say) uxLine(tgt.say, { interrupt: true }); else uxNudge(el);
       },
       fs: () => {

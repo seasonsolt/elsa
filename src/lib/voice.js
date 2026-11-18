@@ -158,7 +158,15 @@
         // words-only variant with nothing left to say (every {"en"} lacks a zh gloss): no file, just the subtitle
         const voiced = !wMode || def.say.some(s => typeof s === 'string' ? speakable(s) : s.w !== undefined || (s.zh && speakable(s.zh)));
         const file = voiced ? `vo_${key}${def.who === 'companion' ? '__' + who : ''}${wMode ? '__w' : ''}.mp3` : null;
-        const words = def.say.filter(s => s && s.w !== undefined).map(s => s.w);
+        const EN_WORDS = new Set(['hello', 'yay', 'one', 'two', 'three']);
+        const words = [];
+        for (const s of def.say) {
+          if (!s || typeof s !== 'object') continue;
+          if (s.w !== undefined) words.push(s.w);
+          else if (!wMode && typeof s.en === 'string') {
+            for (const m of s.en.toLowerCase().matchAll(/[a-z]+/g)) if (EN_WORDS.has(m[0]) && !words.includes(m[0])) words.push(m[0]);
+          }
+        }
         submit(make({ kind: 'line', key, who, file, segments, words, resolve }, opts));
       });
     }

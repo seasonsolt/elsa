@@ -196,3 +196,18 @@ export async function lastReasonSaysMutedAndMissingFiles({ assert }) {
   assert.equal(await g, false);
   assert.equal(gone.voice.lastReason('mixed'), 'missing');
 }
+
+export async function phraseSegmentsCreditGeneralWordsInWordsPlusPhrasesMode({ assert }) {
+  const s = setup();
+  s.context.LINES.lines.greet = { who: 'nuan', say: ['你好，', { en: 'Hello! One, two, three — yay!', zh: '一二三！' }] };
+  const p = s.voice.line('greet'); await flush();
+  s.sources[0].onended();
+  assert.equal(await p, true);
+  assert.deepEqual(s.heard, ['hello', 'one', 'two', 'three', 'yay'], 'general words inside {en} segments count when heard in words+phrases mode');
+  s.heard.length = 0;
+  s.context.setting = () => 'words';
+  const p2 = s.voice.line('greet'); await flush();
+  s.sources[1].onended();
+  assert.equal(await p2, true);
+  assert.deepEqual(s.heard, [], 'in words-only mode {en} phrases are replaced by their zh gloss and not credited');
+}

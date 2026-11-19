@@ -14,25 +14,25 @@
 <style>
 @font-face {
   font-family: "ZCOOL KuaiLe";
-  src: url("game/font_zh.woff2?v=7e3f0dfa7457") format("woff2");
+  src: url("game/font_zh.woff2?v=f9371cf4e716") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Fredoka";
-  src: url("game/font_en.woff2?v=7e3f0dfa7457") format("woff2");
+  src: url("game/font_en.woff2?v=f9371cf4e716") format("woff2");
   font-weight: 500 600;
   font-style: normal;
   font-display: swap;
 }
 /* Layout: a painted picture-book page fills the screen; a quiet caption band sits under it. */
 :root {
-  --night: #141c46;
+  --night: #111834;
   --ink: #1b2559;
   --line: #4a5aa6;
   --ice: #cfe6ff;
-  --paper: #f6f7ff;
+  --paper: #fff9ec;
   --gold: #ffd27a;
   --ember: #ffbd7e;
   --muted: #a9b6e2;
@@ -59,6 +59,8 @@ body {
   display: block;
   width: min(100vw, calc(100dvh * 960 / 520));
   height: auto;
+  border-radius: 18px;
+  box-shadow: 0 22px 64px rgba(0, 0, 0, .65);
   background: #2a3a86;
   touch-action: none;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
@@ -80,8 +82,9 @@ body.touch #stage { width: min(100vw, calc((100dvh - 96px) * 960 / 520)); }
 @keyframes fall { from { transform: translate(0, -30px); } to { transform: translate(38px, 560px); } }
 
 /* ---- Picture buttons (60-story.js / 70-ui.js build them; position lives on an outer <g>, scale on .ux-btn) ---- */
-.ux-btn, .ux-card, .ux-tile { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: transform .14s ease-out; -webkit-tap-highlight-color: transparent; }
-.ux-btn:hover, .ux-btn:focus-visible, .ux-tile:hover, .ux-tile:focus-visible { transform: scale(1.1); }
+.ux-btn, .ux-card, .ux-tile { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: transform .14s ease-out, filter .16s ease; -webkit-tap-highlight-color: transparent; }
+.ux-btn:hover, .ux-btn:focus-visible, .ux-tile:hover, .ux-tile:focus-visible { transform: scale(1.1); filter: drop-shadow(0 0 10px rgba(255, 224, 150, .82)); }
+.ux-btn:focus, .ux-btn:focus-visible, .ux-tile:focus, .ux-tile:focus-visible, .ux-card:focus, .ux-card:focus-visible { outline: none; }
 .ux-card:hover, .ux-card:focus-visible { animation: uxWig .6s ease-in-out; }
 .ux-btn:active, .ux-tile:active { transform: scale(.95); }
 .ux-btn:focus-visible .ux-plate, .ux-tile:focus-visible .ux-frame { stroke: var(--gold); stroke-width: 4; }
@@ -177,10 +180,11 @@ body.touch .keys { display: none; }
 
 <svg id="stage" viewBox="0 0 960 520" role="img" aria-label="艾莎和安娜在冰堡里的游戏画面">
   <defs>
-    <pattern id="brick" width="160" height="160" patternUnits="userSpaceOnUse"><image href="game/brick.webp?v=7e3f0dfa7457" width="160" height="160"/></pattern>
-    <pattern id="water" width="116" height="30" patternUnits="userSpaceOnUse"><image href="game/water.webp?v=7e3f0dfa7457" width="116" height="30" preserveAspectRatio="none"/></pattern>
+    <pattern id="brick" width="160" height="160" patternUnits="userSpaceOnUse"><image href="game/brick.webp?v=f9371cf4e716" width="160" height="160"/></pattern>
+    <pattern id="water" width="116" height="30" patternUnits="userSpaceOnUse"><image href="game/water.webp?v=f9371cf4e716" width="116" height="30" preserveAspectRatio="none"/></pattern>
     <radialGradient id="warm"><stop offset="0" stop-color="#ffd089" stop-opacity=".75"/><stop offset=".45" stop-color="#ffb35f" stop-opacity=".26"/><stop offset="1" stop-color="#ffb35f" stop-opacity="0"/></radialGradient>
     <radialGradient id="cool"><stop offset="0" stop-color="#bfe6ff" stop-opacity=".62"/><stop offset="1" stop-color="#bfe6ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="aurora"><stop offset="0" stop-color="#9fe8ff" stop-opacity=".68"/><stop offset="1" stop-color="#9fe8ff" stop-opacity="0"/></radialGradient>
     <radialGradient id="rose"><stop offset="0" stop-color="#ff9cc0" stop-opacity=".6"/><stop offset="1" stop-color="#ff9cc0" stop-opacity="0"/></radialGradient>
     <radialGradient id="vignette" cx=".5" cy=".46" r=".74"><stop offset=".62" stop-color="#0d1438" stop-opacity="0"/><stop offset="1" stop-color="#0d1438" stop-opacity=".5"/></radialGradient>
     <linearGradient id="under" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141c52" stop-opacity=".5"/><stop offset="1" stop-color="#141c52" stop-opacity="0"/></linearGradient>
@@ -189,8 +193,8 @@ body.touch .keys { display: none; }
     <linearGradient id="topFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#101a4c" stop-opacity=".78"/><stop offset=".5" stop-color="#101a4c" stop-opacity=".12"/><stop offset=".78" stop-color="#101a4c" stop-opacity="0"/><stop offset="1" stop-color="#101a4c" stop-opacity=".68"/></linearGradient>
     <filter id="silhouette" x="-5%" y="-5%" width="110%" height="110%"><feColorMatrix type="matrix" values="0 0 0 0 .42  0 0 0 0 .46  0 0 0 0 .62  0 0 0 .92 0"/></filter>
     <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0d1438" flood-opacity=".45"/></filter>
-    <linearGradient id="plateGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset="1" stop-color="#cfe0ff" stop-opacity=".9"/></linearGradient>
-    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9ae"/><stop offset="1" stop-color="#ffbf5c"/></linearGradient>
+    <linearGradient id="plateGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".97"/><stop offset="1" stop-color="#e3f1ff" stop-opacity=".93"/></linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffefba"/><stop offset="1" stop-color="#ffbd59"/></linearGradient>
     <linearGradient id="bottomFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1438" stop-opacity="0"/><stop offset="1" stop-color="#0d1438" stop-opacity=".78"/></linearGradient>
     <clipPath id="avatarClip"><circle r="1" cx="0" cy="0"/></clipPath>
   </defs>
@@ -2950,7 +2954,7 @@ function createGame() {
   game.mode = setting('mode');
   /* SIZES and LINES are JSON inlined by art/build_page.py; the placeholders keep this file valid JS on its own. */
   const SIZES = {"frost_idle":[96,170,75.0],"frost_blink":[96,170,75.0],"frost_jump":[123,178,79.0],"frost_fall":[123,167,84.0],"frost_cast":[176,174,84.0],"frost_cheer":[118,179,75.0],"frost_run1":[142,159,110.0],"frost_run2":[148,141,125.0],"frost_run3":[133,157,104.0],"frost_run4":[167,149,118.0],"frost_run5":[142,145,115.0],"frost_run6":[129,152,103.0],"nuan_idle":[76,153,50.0],"nuan_blink":[76,153,50.0],"nuan_jump":[102,155,66.0],"nuan_fall":[88,146,63.0],"nuan_cast":[149,139,85.0],"nuan_cheer":[137,150,76.0],"nuan_run1":[118,126,91.0],"nuan_run2":[105,132,79.0],"nuan_run3":[121,142,90.0],"nuan_run4":[106,128,86.0],"nuan_run5":[118,134,81.0],"nuan_run6":[132,144,80.0],"shelf0":[169,58],"shelf1":[164,59],"shelf2":[164,62],"pinkice":[96,96],"iceblock":[96,96],"frozen":[96,96],"plate_up":[132,55],"plate_down":[132,28],"gate":[204,211],"drift0":[227,48],"drift1":[134,34],"water":[232,58],"door_closed":[234,344],"door_open":[233,356],"flake":[122,142],"heart":[114,106],"ball":[128,128],"two":[177,254],"snowman":[238,326],"pile":[123,107],"bg0":[1672,906],"bg1":[1672,906],"bg2":[1672,906],"bg3":[1672,906],"fx_burst":[200,184],"fx_glow":[200,177],"fx_ring":[200,190],"fx_flake":[51,56],"fx_heart":[56,50],"fx_star":[56,56],"fx_steam":[139,160],"fx_dust":[160,90],"fx_splash":[140,107],"word_heart":[256,256],"word_star":[256,256],"word_door":[256,256],"word_water":[256,256],"word_ice":[256,256],"word_fish":[256,256],"word_slide":[256,256],"word_fast":[256,256],"word_down":[256,256],"word_push":[256,256],"word_open":[256,256],"word_gate":[256,256],"word_jump":[256,256],"alt_word_fast":[256,256],"alt_word_push":[256,256],"alt_word_open":[256,256],"word_up":[256,256],"word_high":[256,256],"word_bunny":[256,256],"word_home":[256,256],"word_carrot":[256,256],"word_left":[256,256],"word_right":[256,256],"word_wait":[256,256],"word_red":[256,256],"word_yellow":[256,256],"word_blue":[256,256],"word_snowman":[256,256],"word_ball":[256,256],"alt_word_wait":[256,256],"alt_word_up":[256,256],"alt_word_high":[256,256],"word_hat":[256,256],"word_flower":[256,256],"word_warm":[256,256],"word_spring":[256,256],"word_one":[256,256],"word_two":[256,256],"word_three":[256,256],"word_snowflake":[256,256],"word_hello":[256,256],"word_yay":[256,256],"word_music":[256,256],"word_sun":[256,256],"alt_word_warm":[256,256],"alt_word_spring":[256,256],"alt_word_hello":[256,256],"alt_word_yay":[256,256],"ui_book":[187,192],"ui_bulb":[174,192],"ui_gear":[192,187],"ui_fullscreen":[192,190],"ui_play":[256,256],"ui_next":[191,192],"ui_replay":[191,192],"ui_back":[192,192],"ui_ear":[192,174],"ui_mouth":[192,113],"ui_sticker":[192,177],"ui_wardrobe":[183,192],"ui_solo":[188,192],"ui_duo":[189,192],"ui_meet":[256,256],"hat_snowman":[120,102],"ui_keys":[320,281],"ui_key_left":[115,107],"ui_key_right":[115,108],"ui_key_up":[113,105],"ui_key_space":[325,114],"ui_keys_rects":{"up":[105,-1,110,96],"left":[42,98,111,96],"right":[165,99,111,95],"space":[-1,200,320,80]},"ui_keys_centers":{"left":[97,146],"right":[220,146],"up":[160,47],"space":[159,240]},"fish_1":[97,66],"fish_2":[97,66],"tile_slope_r":[96,96],"tile_slope_l":[96,96],"spring_0":[96,96],"spring_1":[96,96],"flower_0":[96,96],"flower_1":[96,96],"flower_2":[96,96],"bunny_nest":[96,67],"note_1":[96,96],"note_1_lit":[96,96],"note_2":[96,96],"note_2_lit":[96,96],"note_3":[96,96],"note_3_lit":[96,96],"note_4":[96,96],"note_4_lit":[96,96],"note_5":[96,96],"note_5_lit":[96,96],"bunny_idle":[66,78],"bunny_hop1":[66,78],"bunny_hop2":[66,78],"bunny_hop3":[66,78],"bunny_hop4":[66,78],"bunny_home":[66,78],"floe_m":[96,96],"floe_l":[96,96],"floe_r":[96,96],"floe":[96,96],"sticker_hall":[189,192],"sticker_lake":[188,192],"sticker_slope":[188,192],"sticker_tower":[189,192],"sticker_spring":[187,192],"sticker_bunny":[187,192],"sticker_floe":[188,192],"sticker_music":[188,192],"sticker_ballroom":[188,192],"sticker_garden":[187,192],"sticker_words5":[187,192],"sticker_hall_gold":[189,192],"sticker_lake_gold":[189,192],"sticker_slope_gold":[189,192],"sticker_tower_gold":[189,192],"sticker_spring_gold":[188,192],"sticker_bunny_gold":[188,192],"sticker_floe_gold":[188,192],"sticker_music_gold":[188,192],"sticker_ballroom_gold":[189,192],"sticker_garden_gold":[189,192],"sticker_board":[1280,720],"bg_slope":[1672,906],"bg_spring":[1672,906],"bg_bunny":[1672,906],"bg_floe":[1672,906],"bg_music":[1672,906],"bg_garden":[1672,906],"portrait_frost":[312,416],"portrait_nuan":[312,416],"frost_idle_d1":[96,170,75.0],"frost_idle_d2":[96,170,75.0],"frost_blink_d1":[96,170,75.0],"frost_blink_d2":[96,170,75.0],"frost_jump_d1":[123,178,79.0],"frost_jump_d2":[123,178,79.0],"frost_fall_d1":[123,167,84.0],"frost_fall_d2":[123,167,84.0],"frost_cast_d1":[176,174,84.0],"frost_cast_d2":[176,174,84.0],"frost_cheer_d1":[118,179,75.0],"frost_cheer_d2":[118,179,75.0],"frost_run1_d1":[142,159,110.0],"frost_run1_d2":[142,159,110.0],"frost_run2_d1":[148,141,125.0],"frost_run2_d2":[148,141,125.0],"frost_run3_d1":[133,157,104.0],"frost_run3_d2":[133,157,104.0],"frost_run4_d1":[167,149,118.0],"frost_run4_d2":[167,149,118.0],"frost_run5_d1":[142,145,115.0],"frost_run5_d2":[142,145,115.0],"frost_run6_d1":[129,152,103.0],"frost_run6_d2":[129,152,103.0],"nuan_idle_d1":[76,153,50.0],"nuan_idle_d2":[76,153,50.0],"nuan_blink_d1":[76,153,50.0],"nuan_blink_d2":[76,153,50.0],"nuan_jump_d1":[102,155,66.0],"nuan_jump_d2":[102,155,66.0],"nuan_fall_d1":[88,146,63.0],"nuan_fall_d2":[88,146,63.0],"nuan_cast_d1":[149,139,85.0],"nuan_cast_d2":[149,139,85.0],"nuan_cheer_d1":[137,150,76.0],"nuan_cheer_d2":[137,150,76.0],"nuan_run1_d1":[118,126,91.0],"nuan_run1_d2":[118,126,91.0],"nuan_run2_d1":[105,132,79.0],"nuan_run2_d2":[105,132,79.0],"nuan_run3_d1":[121,142,90.0],"nuan_run3_d2":[121,142,90.0],"nuan_run4_d1":[106,128,86.0],"nuan_run4_d2":[106,128,86.0],"nuan_run5_d1":[118,134,81.0],"nuan_run5_d2":[118,134,81.0],"nuan_run6_d1":[132,144,80.0],"nuan_run6_d2":[132,144,80.0],"hat_crown":[128,104],"hat_bow":[128,91],"hat_wreath":[128,86],"hat_clip":[128,106],"hat_offsets":{"frost":{"idle":[1.48,-3.51,0.46,0],"blink":[1.48,-3.51,0.46,0],"jump":[0.99,0.94,0.46,0],"fall":[0.99,0.94,0.46,0],"cast":[-0.49,-3.51,0.46,0],"cheer":[0.49,1.44,0.46,0],"run1":[1.48,-3.51,0.46,0],"run2":[2.96,-3.51,0.46,0],"run3":[1.48,-3.51,0.46,0],"run4":[1.98,-3.51,0.46,0],"run5":[2.47,-3.51,0.46,0],"run6":[1.98,-3.51,0.46,0]},"nuan":{"idle":[0.99,-3.51,0.46,0],"blink":[0.99,-3.51,0.46,0],"jump":[0.0,2.92,0.46,0],"fall":[-11.86,-2.02,0.46,0],"cast":[0.99,-3.51,0.46,0],"cheer":[0.49,1.44,0.46,0],"run1":[1.98,-3.51,0.46,0],"run2":[1.48,-3.51,0.46,0],"run3":[1.98,-3.51,0.46,0],"run4":[1.98,-3.51,0.46,0],"run5":[0.99,-3.51,0.46,0],"run6":[1.48,-3.51,0.46,0]}}};
-  const ASSET_VERSION = "7e3f0dfa7457";
+  const ASSET_VERSION = "f9371cf4e716";
   const assetURL = file => `game/${file}?v=${ASSET_VERSION}`;
 
   /* Sharp pictures on a big screen (fullscreen, a Retina display): art/hd.py keeps a copy of every stage picture at twice the size in
@@ -3139,19 +3143,21 @@ function createGame() {
   function drawTiles() {
     const box = $('tiles');
     box.textContent = '';
-    let wall = '', rim = '';
+    let wall = '', rim = '', hi = '';
     const under = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (game.grid[r][c] !== '#') continue;
       const x = c * T, y = r * T;
       wall += `M${x} ${y}h${T}v${T}h-${T}z`;
+      if (r > 0 && cellAt(c, r - 1) !== '#') hi += `M${x} ${y + 1.5}h${T}`;
       if (r < ROWS - 1 && cellAt(c, r + 1) !== '#') { rim += `M${x} ${y + T}h${T}`; under.push([x, y + T]); }
-      if (cellAt(c + 1, r) !== '#') rim += `M${x + T} ${y}v${T}`;
-      if (cellAt(c - 1, r) !== '#') rim += `M${x} ${y}v${T}`;
+      if (cellAt(c + 1, r) !== '#') { rim += `M${x + T} ${y}v${T}`; hi += `M${x + T - 1.5} ${y}v${T}`; }
+      if (cellAt(c - 1, r) !== '#') { rim += `M${x} ${y}v${T}`; hi += `M${x + 1.5} ${y}v${T}`; }
     }
     el('path', { d: wall, fill: 'url(#brick)' }, box);
-    el('path', { d: wall, fill: '#26337f', opacity: .44 }, box);
-    el('path', { d: rim, stroke: '#1a2565', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: .62, fill: 'none' }, box);
+    el('path', { d: wall, fill: '#2c4296', opacity: .16 }, box);
+    el('path', { d: rim, stroke: '#1d2d70', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: .52, fill: 'none' }, box);
+    el('path', { d: hi, stroke: '#b8e6ff', 'stroke-width': 2.2, 'stroke-linecap': 'round', opacity: .55, fill: 'none' }, box);
     for (const [x, y] of under) el('rect', { x, y, width: T, height: 16, fill: 'url(#under)' }, box);
 
     for (const run of runs((c, r) => cellAt(c, r) === '~')) {
@@ -5398,13 +5404,17 @@ function createGame() {
     if (typeof loadArt === 'function') loadArt(['bg_garden']);
     const root = uxPaint(`<g class="page">
       <image href="${SRC('bg_garden')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
-      <rect width="960" height="520" fill="#0d1438" opacity=".38"/>
+      <rect width="960" height="520" fill="#101836" opacity=".42"/>
       <g pointer-events="none">${petals}</g>
-      <rect x="210" y="38" width="540" height="316" rx="34" fill="#fffaf0" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
-      <rect x="224" y="52" width="512" height="288" rx="24" fill="#27357f" opacity=".12" stroke="#d9c69e" stroke-width="2"/>
-      <circle cx="385" cy="195" r="95" fill="url(#cool)"/><circle cx="575" cy="200" r="90" fill="url(#warm)"/>
-      <g id="finFrost" transform="translate(385 322) scale(2.45)"></g>
-      <g id="finNuan" transform="translate(575 322) scale(-2.45 2.45)"></g>
+      <rect x="200" y="38" width="560" height="316" rx="34" fill="#fff9ec" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
+      <g transform="translate(480 42)">
+        <path d="${UX_STAR_D}" transform="translate(-38 14) scale(13)" fill="#ffd27a"/>
+        ${uxPic('fx_star', -22, -8, 44, 44, `<path d="${UX_STAR_D}" transform="scale(18)" fill="#ffd27a"/>`)}
+        <path d="${UX_STAR_D}" transform="translate(38 14) scale(13)" fill="#ffd27a"/>
+      </g>
+      <circle cx="385" cy="200" r="102" fill="url(#aurora)"/><circle cx="575" cy="204" r="98" fill="url(#warm)"/>
+      <g id="finFrost" transform="translate(385 324) scale(2.45)"></g>
+      <g id="finNuan" transform="translate(575 324) scale(-2.45 2.45)"></g>
       ${badge(284, 396, uxPic('fx_star', -18, -18, 36, 36, `<path d="${UX_STAR_D}" transform="scale(18)" fill="#ffd27a"/>`), `${totalStars}/${LEVELS.length * 3}`)}
       ${badge(480, 396, uxIcon('sticker', 20, '#ffd27a'), String(stickerCount))}
       ${badge(676, 396, uxIcon('book', 20, '#cfe6ff'), String(wordCount))}
@@ -5570,22 +5580,22 @@ function createGame() {
   }
 
   /* ---------- pictures with placeholders ---------- */
-  /* Unit glyphs (radius 1) drawn when a ui_* picture is not delivered yet. Shapes only, never text, never a broken image. */
+  /* Unit glyphs (radius 1) drawn when a ui_* picture is not delivered yet or unified crisp controls are preferred. */
   function uxGlyph(name, ink) {
     const c = ink || uxInk;
     const st = `fill="none" stroke="${c}" stroke-width=".2" stroke-linecap="round" stroke-linejoin="round"`;
     const fl = `fill="${c}" stroke="${c}" stroke-width=".1" stroke-linejoin="round"`;
     switch (name) {
-      case 'play': case 'start': case 'continue': return `<path d="M-.4 -.6L.68 0L-.4 .6Z" ${fl}/>`;
-      case 'next': case 'key_right': return `<path d="M-.65 0H.5M.05 -.5L.6 0L.05 .5" ${st}/>`;
-      case 'back': case 'key_left': return `<path d="M.65 0H-.5M-.05 -.5L-.6 0L-.05 .5" ${st}/>`;
-      case 'key_up': return `<path d="M0 .65V-.5M-.5 -.05L0 -.6L.5 -.05" ${st}/>`;
+      case 'play': case 'start': case 'continue': return `<path d="M-.32 -.56L.62 0L-.32 .56Z" ${fl}/>`;
+      case 'next': case 'key_right': return `<path d="M-.6 0H.42M.02 -.48L.54 0L.02 .48" ${st} stroke-width=".22"/>`;
+      case 'back': case 'key_left': return `<path d="M.6 0H-.42M-.02 -.48L-.54 0L-.02 .48" ${st} stroke-width=".22"/>`;
+      case 'key_up': return `<path d="M0 .6V-.42M-.48 -.02L0 -.54L.48 -.02" ${st} stroke-width=".22"/>`;
       case 'key_space': return `<path d="M-.75 -.15V.25H.75V-.15" ${st}/>`;
-      case 'replay': return `<path d="M.6 .05A.6 .6 0 1 1 .35 -.5" ${st}/><path d="M.05 -.85L.5 -.55L.0 -.25Z" ${fl}/>`;
+      case 'replay': return `<path d="M.54 -.16A.56 .56 0 1 0 .42 .38" ${st} stroke-width=".2"/><path d="M.24 -.5L.66 -.14L.18 .02Z" ${fl}/>`;
       case 'words': case 'book': return `<path d="M-.75 -.5Q-.38 -.7 0 -.45Q.38 -.7 .75 -.5V.55Q.38 .35 0 .6Q-.38 .35 -.75 .55Z" fill="#fff" stroke="${c}" stroke-width=".14" stroke-linejoin="round"/><path d="M0 -.45V.6" ${st} stroke-width=".1"/>`;
-      case 'bulb': return `<circle cx="0" cy="-.2" r=".5" fill="#ffe27a" stroke="${c}" stroke-width=".14"/><rect x="-.24" y=".34" width=".48" height=".3" rx=".08" fill="${c}"/>`;
-      case 'gear': return `<circle r=".66" fill="none" stroke="${c}" stroke-width=".26" stroke-dasharray=".2 .0786"/><circle r=".5" fill="${c}"/><circle r=".2" fill="#fff"/>`;
-      case 'fullscreen': return `<path d="M-.7 -.25V-.7H-.25M.25 -.7H.7V-.25M.7 .25V.7H.25M-.25 .7H-.7V.25" ${st} stroke-width=".17"/>`;
+      case 'bulb': return `<path d="M0 -.74V-.56M-.52 -.52L-.38 -.38M.52 -.52L.38 -.38M-.72 -.06H-.54M.54 -.06H.72" stroke="#ffd27a" stroke-width=".13" stroke-linecap="round"/><circle cx="0" cy="-.08" r=".42" fill="#ffe074" stroke="${c}" stroke-width=".13"/><path d="M-.2 .32H.2V.52A.2 .2 0 0 1 -.2 .52Z" fill="${c}"/>`;
+      case 'gear': return `<circle r=".52" fill="none" stroke="${c}" stroke-width=".22" stroke-dasharray=".22 .12"/><circle r=".2" fill="${c}"/>`;
+      case 'fullscreen': return `<path d="M-.6 -.22V-.6H-.22M.22 -.6H.6V-.22M.6 .22V.6H.22M-.22 .6H-.6V.22" ${st} stroke-width=".19"/>`;
       case 'ear': return `<path d="M-.1 .7C-.55 .55 -.6 .1 -.5 -.2C-.4 -.7 .25 -.85 .5 -.4C.7 -.05 .35 .2 .15 .35C.05 .45 .12 .62 -.1 .7Z" fill="#ffd9b0" stroke="${c}" stroke-width=".12"/><path d="M-.05 -.3C.15 -.4 .3 -.2 .1 0" ${st} stroke-width=".1"/>`;
       case 'mouth': return `<path d="M-.7 -.05Q0 -.5 .7 -.05Q0 .65 -.7 -.05Z" fill="#e8527a" stroke="${c}" stroke-width=".12" stroke-linejoin="round"/><path d="M-.35 .05Q0 .0 .35 .05" ${st} stroke="#fff" stroke-width=".1"/>`;
       case 'sticker': case 'stickers': case 'star': return `<path d="M0 -.8L.22 -.25L.8 -.22L.35 .15L.5 .72L0 .4L-.5 .72L-.35 .15L-.8 -.22L-.22 -.25Z" fill="#ffd27a" stroke="${c}" stroke-width=".12" stroke-linejoin="round"/>`;
@@ -5593,8 +5603,8 @@ function createGame() {
       case 'solo': return `<circle cy="-.38" r=".28" ${fl}/><path d="M-.5 .7Q-.5 .1 0 .1Q.5 .1 .5 .7Z" ${fl}/>`;
       case 'duo': return `<circle cx="-.4" cy="-.38" r=".24" ${fl}/><path d="M-.8 .65Q-.8 .1 -.4 .1Q0 .1 0 .65Z" ${fl}/><circle cx=".42" cy="-.3" r=".28" ${fl}/><path d="M-.02 .7Q-.02 .15 .42 .15Q.86 .15 .86 .7Z" ${fl}/>`;
       case 'meet': return `<circle cx="-.38" cy="-.1" r=".36" fill="#cfe6ff" stroke="${c}" stroke-width=".12"/><circle cx=".38" cy="-.1" r=".36" fill="#ffd9a8" stroke="${c}" stroke-width=".12"/><path d="M-.6 .7Q-.38 .35 -.16 .7M.16 .7Q.38 .35 .6 .7" ${st} stroke-width=".12"/>`;
-      case 'rooms': return `<rect x="-.7" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x="-.7" y=".1" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y=".1" width=".6" height=".6" rx=".1" ${fl}/>`;
-      case 'home': return `<path d="M-.7 0L0 -.7L.7 0M-.5 -.1V.65H.5V-.1" ${st}/>`;
+      case 'rooms': return `<rect x="-.66" y="-.66" width=".54" height=".54" rx=".14" ${fl}/><rect x=".12" y="-.66" width=".54" height=".54" rx=".14" ${fl}/><rect x="-.66" y=".12" width=".54" height=".54" rx=".14" ${fl}/><rect x=".12" y=".12" width=".54" height=".54" rx=".14" ${fl}/>`;
+      case 'home': return `<path d="M0 -.66L.68 -.06V.64H.22V.16H-.22V.64H-.68V-.06Z" ${st} stroke-width=".18"/>`;
       case 'close': return `<path d="M-.5 -.5L.5 .5M.5 -.5L-.5 .5" ${st} stroke-width=".26"/>`;
       case 'lock': return `<path d="M-.3 -.1V-.35A.3 .3 0 0 1 .3 -.35V-.1" ${st} stroke-width=".16"/><rect x="-.5" y="-.1" width="1" height=".8" rx=".14" ${fl}/>`;
       case 'check': return `<path d="M-.6 .05L-.2 .5L.65 -.5" ${st} stroke-width=".26"/>`;
@@ -5633,13 +5643,14 @@ function createGame() {
     uxProbe(name);
     return `<g class="ph" data-pic="${name}" data-box="${x},${y},${w},${h}" data-extra="${(extra || '').replace(/"/g, '&quot;')}">${ph}</g>`;
   }
-  /* A ui_<name> icon centred on 0,0 inside a plate of radius r. Names without a delivered picture stay a drawn glyph. */
+  /* A ui_<name> icon centred on 0,0 inside a plate of radius r. Controls use crisp SVG glyphs matching our unified UI style. */
   const UX_IMG_ALIAS = { words: 'book', stickers: 'sticker' };
-  const UX_GLYPH_ONLY = ['rooms', 'home', 'close', 'lock', 'check'];
+  const UX_GLYPH_ONLY = ['play', 'next', 'back', 'replay', 'rooms', 'home', 'bulb', 'fullscreen', 'gear', 'close', 'lock', 'check', 'solo', 'duo'];
   function uxIcon(name, r, ink) {
-    const s = r * 0.62, glyph = `<g transform="scale(${s.toFixed(2)})">${uxGlyph(name, ink)}</g>`;
+    const s = r * 0.66, glyph = `<g transform="scale(${s.toFixed(2)})">${uxGlyph(name, ink)}</g>`;
     if (UX_GLYPH_ONLY.includes(name)) return glyph;
-    return uxPic('ui_' + (UX_IMG_ALIAS[name] || name), -r * 0.88, -r * 0.88, r * 1.76, r * 1.76, glyph);
+    const f = name === 'meet' ? 0.86 : 0.68;
+    return uxPic('ui_' + (UX_IMG_ALIAS[name] || name), -r * f, -r * f, r * f * 2, r * f * 2, glyph);
   }
   /* Soft blob standing in for a word icon until word_<id>.webp is delivered. */
   function uxBlob(id, cx, cy, r, grey) {
@@ -5662,13 +5673,13 @@ function createGame() {
      a button that is not one of the screen's few main buttons. */
   function uxButton(o) {
     const r = o.r || 36, plate = o.plate || 'light';
-    const fill = plate === 'gold' ? 'url(#goldGrad)' : plate === 'dark' ? '#141c52' : 'url(#plateGrad)';
-    const stroke = plate === 'gold' ? '#fff3c9' : plate === 'dark' ? '#cfe6ff' : '#ffffff';
-    const ink = plate === 'dark' ? '#f6f7ff' : uxInk;
+    const fill = plate === 'gold' ? 'url(#goldGrad)' : plate === 'dark' ? '#141c42' : 'url(#plateGrad)';
+    const stroke = plate === 'gold' ? '#fff7dc' : plate === 'dark' ? '#7dd4ff' : '#7ea9e8';
+    const ink = plate === 'gold' ? '#4a2605' : plate === 'dark' ? '#fff9ec' : '#1b2c5c';
     const ring = o.ring ? `<circle class="ux-ring" r="${r + 5}" fill="none" stroke="#ffd27a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * (r + 5)).toFixed(1)}" style="--len:${(2 * Math.PI * (r + 5)).toFixed(1)}"/>` : '';
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${uxLabel(o.ui, o.act)}">
       <circle r="${uxHitRadius(r, o.ring)}" fill="#000" fill-opacity="0" pointer-events="all"/>
-      <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .78 : 1}" stroke="${stroke}" stroke-width="3" filter="url(#softShadow)"/>${ring}
+      <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .88 : 1}" stroke="${stroke}" stroke-width="${plate === 'gold' ? 3.5 : 3}" filter="url(#softShadow)"/>${ring}
       ${uxIcon(o.icon || o.act, r, ink)}</g></g>`;
   }
   /* Make an element a hoverable button: scale (CSS .ux-btn / .ux-tile), spoken name, hover tick, optional click. Safe to call twice. */
@@ -5732,7 +5743,8 @@ function createGame() {
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-pop ${o.show ? 'show' : ''}" data-pop="${o.slot == null ? '' : o.slot}">
       <g class="ux-card" data-act="${o.act || 'word'}" data-word="${wd.id}" data-ui="" tabindex="0" role="button" lang="en" aria-label="${wd.en}">
         <rect class="ux-glowrect" x="-8" y="-8" width="${w + 16}" height="${h + 16}" rx="28" fill="none" stroke="#ffe27a" stroke-width="7" opacity="0"/>
-        <rect class="ux-frame" width="${w}" height="${h}" rx="22" fill="#fffaf0" stroke="#ffd27a" stroke-width="4" filter="url(#softShadow)"/>
+        <rect class="ux-frame" width="${w}" height="${h}" rx="22" fill="#fff9ec" stroke="#ffd27a" stroke-width="4" filter="url(#softShadow)"/>
+        <rect x="6" y="6" width="${w - 12}" height="${h - 12}" rx="17" fill="none" stroke="#ffffff" stroke-width="2" opacity=".75"/>
         ${pic}${txt}${badge}</g></g></g>`;
   }
   function uxConfetti(parent, x, y, n) {
@@ -5815,7 +5827,10 @@ function createGame() {
     const html = `<g class="page">
       <image href="${SRC('key')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
       <rect width="960" height="520" fill="url(#topFade)"/>
-      <text x="480" y="92" text-anchor="middle" font-size="62" fill="#fffdf4" stroke="#1b2559" stroke-width="8" paint-order="stroke" stroke-linejoin="round">艾莎和安娜的冰堡</text>
+      <g filter="url(#softShadow)">
+        <rect x="235" y="18" width="490" height="64" rx="32" fill="#141c42" opacity=".88" stroke="#ffd27a" stroke-width="3"/>
+        <text x="480" y="61" text-anchor="middle" font-size="36" fill="#fff9ec" letter-spacing="2">艾莎和安娜的冰堡</text>
+      </g>
       ${uxButton({ act: 'play', ui: cont ? 'continue' : 'start', icon: 'play', x: 480, y: 318, r: 66, plate: 'gold', cls: 'ux-pulse' })}
       ${uxButton({ act: 'rooms', ui: 'rooms', x: 372, y: 448, r: 36 })}
       ${uxButton({ act: 'words', ui: 'words', x: 480, y: 448, r: 36 })}
@@ -5854,7 +5869,7 @@ function createGame() {
       const dots = Array.from({ length: col + 1 }, (_, k) => `<circle cx="${12 + k * 18}" cy="${th + 16}" r="6.5" fill="${hues[row % 3]}" stroke="#fff" stroke-width="1.5"/>`).join('');
       const stars = [0, 1, 2].map(k => `<path transform="translate(${tw - 66 + k * 24} ${th + 16}) scale(10)" d="M0 -.8L.22 -.25L.8 -.22L.35 .15L.5 .72L0 .4L-.5 .72L-.35 .15L-.8 -.22L-.22 -.25Z" fill="${st[k] ? '#ffd27a' : '#3b4a96'}" opacity="${st[k] ? 1 : .6}"/>`).join('');
       return `<g transform="translate(${x} ${y})"><g class="ux-tile ${open ? '' : 'locked'}" data-act="room" data-room="${i}" data-ui="room_${lv.id}" tabindex="0" role="button" aria-label="${uxLabel('room_' + lv.id, 'room ' + (i + 1))}">
-        <rect class="ux-frame" x="-4" y="-4" width="${tw + 8}" height="${th + 8}" rx="14" fill="#fffaf0" stroke="${open ? '#ffd27a' : '#6a76b8'}" stroke-width="3" filter="url(#softShadow)"/>
+        <rect class="ux-frame" x="-4" y="-4" width="${tw + 8}" height="${th + 8}" rx="14" fill="#fff9ec" stroke="${open ? '#ffd27a' : '#586aa8'}" stroke-width="3.5" filter="url(#softShadow)"/>
         <image href="${SRC(lv.bg)}" width="${tw}" height="${th}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round 10px)"/>
         ${open ? '' : `<rect width="${tw}" height="${th}" rx="10" fill="#0d1438" opacity=".6"/><g transform="translate(${tw / 2} ${th / 2}) scale(22)">${uxGlyph('lock', '#e8ecff')}</g>`}
         ${dots}${open ? stars : ''}</g></g>`;
@@ -5874,11 +5889,13 @@ function createGame() {
     const ppl = [{ id: 'frost', name: 'Elsa · 艾莎', x: 270, hue: '#cfe6ff' }, { id: 'nuan', name: 'Anna · 安娜', x: 690, hue: '#ffd9a8' }];
     const cards = ppl.map(p => `<g transform="translate(${p.x} 0)"><g class="ux-card-wrap" data-person="${p.id}">
       <clipPath id="uxClip_${p.id}"><rect x="-135" y="76" width="270" height="360" rx="22"/></clipPath>
+      <circle cx="0" cy="256" r="175" fill="url(#${p.id === 'frost' ? 'aurora' : 'warm'})" opacity=".42" pointer-events="none"/>
       <ellipse cx="0" cy="456" rx="130" ry="14" fill="#0d1438" opacity=".4"/>
       <g class="ux-person" data-act="person" data-who="${p.id}" tabindex="0" role="button" aria-label="${p.name}" style="cursor:pointer" data-ui="">
-        <rect x="-135" y="76" width="270" height="360" rx="22" fill="${p.hue}" filter="url(#softShadow)"/>
-        <text x="0" y="64" text-anchor="middle" fill="#fffdf4" font-size="26">${p.name}</text><g clip-path="url(#uxClip_${p.id})">${uxPic('portrait_' + p.id, -135, 76, 270, 360, `<rect x="-135" y="76" width="270" height="360" fill="${p.hue}" opacity=".8"/>`)}</g>
-        <rect x="-135" y="76" width="270" height="360" rx="22" fill="none" stroke="${p.hue}" stroke-width="6"/>
+        <rect x="-135" y="76" width="270" height="360" rx="22" fill="#fff9ec" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
+        <g filter="url(#softShadow)"><rect x="-105" y="24" width="210" height="40" rx="20" fill="#141c42" opacity=".92" stroke="#ffd27a" stroke-width="2.5"/><text x="0" y="51" text-anchor="middle" fill="#fff9ec" font-size="22">${p.name}</text></g>
+        <g clip-path="url(#uxClip_${p.id})">${uxPic('portrait_' + p.id, -135, 76, 270, 360, `<rect x="-135" y="76" width="270" height="360" fill="${p.hue}" opacity=".8"/>`)}</g>
+        <rect x="-135" y="76" width="270" height="360" rx="22" fill="none" stroke="#ffd27a" stroke-width="5"/>
       </g></g></g>`).join('');
     const html = `<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".55"/>
       ${cards}${uxButton({ act: 'wardrobe', ui: 'wardrobe', x: 480, y: 290, r: 42 })}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
@@ -6093,7 +6110,7 @@ function createGame() {
         <rect class="kb" width="${k.w}" height="36" rx="${r}" fill="#27357f" stroke="#cfe6ff" stroke-width="2" opacity=".82"/>
         <g transform="translate(${k.w / 2} 18)">${uxPic('ui_key_' + k.id, -k.w / 2 + 3, -15, k.w - 6, 30, `<g transform="scale(${k.id === 'space' ? 13 : 12})">${uxGlyph('key_' + k.id, '#f6f7ff')}</g>`)}</g></g></g></g>`;
     }).join('');
-    const pills = UX_PILLS.map(p => `<g id="uxP_${p.id}" visibility="hidden"><rect width="84" height="38" rx="19" fill="#141c52" opacity=".76"/>
+    const pills = UX_PILLS.map(p => `<g id="uxP_${p.id}" visibility="hidden"><rect width="84" height="38" rx="19" fill="#141c42" opacity=".88" stroke="#7dd4ff" stroke-width="1.8"/>
       <image href="${SRC(p.img)}" x="8" y="5" width="28" height="28" preserveAspectRatio="xMidYMid meet"/><text class="latin" x="44" y="27" font-size="20" fill="${p.col}"></text></g>`).join('');
     $('hud').innerHTML = `<g id="uxHud" visibility="hidden">
       <g id="uxAvatars" transform="translate(38 38)">
@@ -6576,8 +6593,10 @@ function createGame() {
       let html = `<g class="${first ? 'page' : ''}"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".62"/>`;
       ['frost', 'nuan'].forEach((who, i) => {
         const cx = i ? 710 : 250;
-        html += `<rect x="${cx - 170}" y="46" width="340" height="276" rx="26" fill="${who === 'frost' ? '#cfe6ff' : '#ffd9a8'}" opacity=".9" filter="url(#softShadow)"/>
-          <g class="rw-prev" data-who="${who}" transform="translate(${cx} 306) scale(2.5)"></g>`;
+        html += `<rect x="${cx - 170}" y="46" width="340" height="276" rx="28" fill="#fff9ec" stroke="#ffd27a" stroke-width="4.5" filter="url(#softShadow)"/>
+          <circle cx="${cx}" cy="184" r="126" fill="url(#${who === 'frost' ? 'aurora' : 'warm'})" opacity=".68"/>
+          <ellipse cx="${cx}" cy="306" rx="108" ry="12" fill="${who === 'frost' ? '#7dd4ff' : '#ffbd59'}" opacity=".32"/>
+          <g class="rw-prev" data-who="${who}" transform="translate(${cx} 302) scale(2.5)"></g>`;
         const dress = [0, 1, 2].map(k => {
           const ready = rwDressReady(who, k), need = k ? RW_UNLOCK['dress' + k] : 0;
           const art = `<circle r="19" fill="${RW_DRESS_COL[who][k]}"/><path d="M-13 -6Q0 -17 13 -6" stroke="#fff" stroke-width="3" fill="none" opacity=".6" stroke-linecap="round"/>`;

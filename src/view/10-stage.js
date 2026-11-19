@@ -38,19 +38,21 @@
   function drawTiles() {
     const box = $('tiles');
     box.textContent = '';
-    let wall = '', rim = '';
+    let wall = '', rim = '', hi = '';
     const under = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (game.grid[r][c] !== '#') continue;
       const x = c * T, y = r * T;
       wall += `M${x} ${y}h${T}v${T}h-${T}z`;
+      if (r > 0 && cellAt(c, r - 1) !== '#') hi += `M${x} ${y + 1.5}h${T}`;
       if (r < ROWS - 1 && cellAt(c, r + 1) !== '#') { rim += `M${x} ${y + T}h${T}`; under.push([x, y + T]); }
-      if (cellAt(c + 1, r) !== '#') rim += `M${x + T} ${y}v${T}`;
-      if (cellAt(c - 1, r) !== '#') rim += `M${x} ${y}v${T}`;
+      if (cellAt(c + 1, r) !== '#') { rim += `M${x + T} ${y}v${T}`; hi += `M${x + T - 1.5} ${y}v${T}`; }
+      if (cellAt(c - 1, r) !== '#') { rim += `M${x} ${y}v${T}`; hi += `M${x + 1.5} ${y}v${T}`; }
     }
     el('path', { d: wall, fill: 'url(#brick)' }, box);
-    el('path', { d: wall, fill: '#26337f', opacity: .44 }, box);
-    el('path', { d: rim, stroke: '#1a2565', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: .62, fill: 'none' }, box);
+    el('path', { d: wall, fill: '#2c4296', opacity: .16 }, box);
+    el('path', { d: rim, stroke: '#1d2d70', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: .52, fill: 'none' }, box);
+    el('path', { d: hi, stroke: '#b8e6ff', 'stroke-width': 2.2, 'stroke-linecap': 'round', opacity: .55, fill: 'none' }, box);
     for (const [x, y] of under) el('rect', { x, y, width: T, height: 16, fill: 'url(#under)' }, box);
 
     for (const run of runs((c, r) => cellAt(c, r) === '~')) {

@@ -136,22 +136,22 @@
   }
 
   /* ---------- pictures with placeholders ---------- */
-  /* Unit glyphs (radius 1) drawn when a ui_* picture is not delivered yet. Shapes only, never text, never a broken image. */
+  /* Unit glyphs (radius 1) drawn when a ui_* picture is not delivered yet or unified crisp controls are preferred. */
   function uxGlyph(name, ink) {
     const c = ink || uxInk;
     const st = `fill="none" stroke="${c}" stroke-width=".2" stroke-linecap="round" stroke-linejoin="round"`;
     const fl = `fill="${c}" stroke="${c}" stroke-width=".1" stroke-linejoin="round"`;
     switch (name) {
-      case 'play': case 'start': case 'continue': return `<path d="M-.4 -.6L.68 0L-.4 .6Z" ${fl}/>`;
-      case 'next': case 'key_right': return `<path d="M-.65 0H.5M.05 -.5L.6 0L.05 .5" ${st}/>`;
-      case 'back': case 'key_left': return `<path d="M.65 0H-.5M-.05 -.5L-.6 0L-.05 .5" ${st}/>`;
-      case 'key_up': return `<path d="M0 .65V-.5M-.5 -.05L0 -.6L.5 -.05" ${st}/>`;
+      case 'play': case 'start': case 'continue': return `<path d="M-.32 -.56L.62 0L-.32 .56Z" ${fl}/>`;
+      case 'next': case 'key_right': return `<path d="M-.6 0H.42M.02 -.48L.54 0L.02 .48" ${st} stroke-width=".22"/>`;
+      case 'back': case 'key_left': return `<path d="M.6 0H-.42M-.02 -.48L-.54 0L-.02 .48" ${st} stroke-width=".22"/>`;
+      case 'key_up': return `<path d="M0 .6V-.42M-.48 -.02L0 -.54L.48 -.02" ${st} stroke-width=".22"/>`;
       case 'key_space': return `<path d="M-.75 -.15V.25H.75V-.15" ${st}/>`;
-      case 'replay': return `<path d="M.6 .05A.6 .6 0 1 1 .35 -.5" ${st}/><path d="M.05 -.85L.5 -.55L.0 -.25Z" ${fl}/>`;
+      case 'replay': return `<path d="M.54 -.16A.56 .56 0 1 0 .42 .38" ${st} stroke-width=".2"/><path d="M.24 -.5L.66 -.14L.18 .02Z" ${fl}/>`;
       case 'words': case 'book': return `<path d="M-.75 -.5Q-.38 -.7 0 -.45Q.38 -.7 .75 -.5V.55Q.38 .35 0 .6Q-.38 .35 -.75 .55Z" fill="#fff" stroke="${c}" stroke-width=".14" stroke-linejoin="round"/><path d="M0 -.45V.6" ${st} stroke-width=".1"/>`;
-      case 'bulb': return `<circle cx="0" cy="-.2" r=".5" fill="#ffe27a" stroke="${c}" stroke-width=".14"/><rect x="-.24" y=".34" width=".48" height=".3" rx=".08" fill="${c}"/>`;
-      case 'gear': return `<circle r=".66" fill="none" stroke="${c}" stroke-width=".26" stroke-dasharray=".2 .0786"/><circle r=".5" fill="${c}"/><circle r=".2" fill="#fff"/>`;
-      case 'fullscreen': return `<path d="M-.7 -.25V-.7H-.25M.25 -.7H.7V-.25M.7 .25V.7H.25M-.25 .7H-.7V.25" ${st} stroke-width=".17"/>`;
+      case 'bulb': return `<path d="M0 -.74V-.56M-.52 -.52L-.38 -.38M.52 -.52L.38 -.38M-.72 -.06H-.54M.54 -.06H.72" stroke="#ffd27a" stroke-width=".13" stroke-linecap="round"/><circle cx="0" cy="-.08" r=".42" fill="#ffe074" stroke="${c}" stroke-width=".13"/><path d="M-.2 .32H.2V.52A.2 .2 0 0 1 -.2 .52Z" fill="${c}"/>`;
+      case 'gear': return `<circle r=".52" fill="none" stroke="${c}" stroke-width=".22" stroke-dasharray=".22 .12"/><circle r=".2" fill="${c}"/>`;
+      case 'fullscreen': return `<path d="M-.6 -.22V-.6H-.22M.22 -.6H.6V-.22M.6 .22V.6H.22M-.22 .6H-.6V.22" ${st} stroke-width=".19"/>`;
       case 'ear': return `<path d="M-.1 .7C-.55 .55 -.6 .1 -.5 -.2C-.4 -.7 .25 -.85 .5 -.4C.7 -.05 .35 .2 .15 .35C.05 .45 .12 .62 -.1 .7Z" fill="#ffd9b0" stroke="${c}" stroke-width=".12"/><path d="M-.05 -.3C.15 -.4 .3 -.2 .1 0" ${st} stroke-width=".1"/>`;
       case 'mouth': return `<path d="M-.7 -.05Q0 -.5 .7 -.05Q0 .65 -.7 -.05Z" fill="#e8527a" stroke="${c}" stroke-width=".12" stroke-linejoin="round"/><path d="M-.35 .05Q0 .0 .35 .05" ${st} stroke="#fff" stroke-width=".1"/>`;
       case 'sticker': case 'stickers': case 'star': return `<path d="M0 -.8L.22 -.25L.8 -.22L.35 .15L.5 .72L0 .4L-.5 .72L-.35 .15L-.8 -.22L-.22 -.25Z" fill="#ffd27a" stroke="${c}" stroke-width=".12" stroke-linejoin="round"/>`;
@@ -159,8 +159,8 @@
       case 'solo': return `<circle cy="-.38" r=".28" ${fl}/><path d="M-.5 .7Q-.5 .1 0 .1Q.5 .1 .5 .7Z" ${fl}/>`;
       case 'duo': return `<circle cx="-.4" cy="-.38" r=".24" ${fl}/><path d="M-.8 .65Q-.8 .1 -.4 .1Q0 .1 0 .65Z" ${fl}/><circle cx=".42" cy="-.3" r=".28" ${fl}/><path d="M-.02 .7Q-.02 .15 .42 .15Q.86 .15 .86 .7Z" ${fl}/>`;
       case 'meet': return `<circle cx="-.38" cy="-.1" r=".36" fill="#cfe6ff" stroke="${c}" stroke-width=".12"/><circle cx=".38" cy="-.1" r=".36" fill="#ffd9a8" stroke="${c}" stroke-width=".12"/><path d="M-.6 .7Q-.38 .35 -.16 .7M.16 .7Q.38 .35 .6 .7" ${st} stroke-width=".12"/>`;
-      case 'rooms': return `<rect x="-.7" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y="-.7" width=".6" height=".6" rx=".1" ${fl}/><rect x="-.7" y=".1" width=".6" height=".6" rx=".1" ${fl}/><rect x=".1" y=".1" width=".6" height=".6" rx=".1" ${fl}/>`;
-      case 'home': return `<path d="M-.7 0L0 -.7L.7 0M-.5 -.1V.65H.5V-.1" ${st}/>`;
+      case 'rooms': return `<rect x="-.66" y="-.66" width=".54" height=".54" rx=".14" ${fl}/><rect x=".12" y="-.66" width=".54" height=".54" rx=".14" ${fl}/><rect x="-.66" y=".12" width=".54" height=".54" rx=".14" ${fl}/><rect x=".12" y=".12" width=".54" height=".54" rx=".14" ${fl}/>`;
+      case 'home': return `<path d="M0 -.66L.68 -.06V.64H.22V.16H-.22V.64H-.68V-.06Z" ${st} stroke-width=".18"/>`;
       case 'close': return `<path d="M-.5 -.5L.5 .5M.5 -.5L-.5 .5" ${st} stroke-width=".26"/>`;
       case 'lock': return `<path d="M-.3 -.1V-.35A.3 .3 0 0 1 .3 -.35V-.1" ${st} stroke-width=".16"/><rect x="-.5" y="-.1" width="1" height=".8" rx=".14" ${fl}/>`;
       case 'check': return `<path d="M-.6 .05L-.2 .5L.65 -.5" ${st} stroke-width=".26"/>`;
@@ -199,13 +199,14 @@
     uxProbe(name);
     return `<g class="ph" data-pic="${name}" data-box="${x},${y},${w},${h}" data-extra="${(extra || '').replace(/"/g, '&quot;')}">${ph}</g>`;
   }
-  /* A ui_<name> icon centred on 0,0 inside a plate of radius r. Names without a delivered picture stay a drawn glyph. */
+  /* A ui_<name> icon centred on 0,0 inside a plate of radius r. Controls use crisp SVG glyphs matching our unified UI style. */
   const UX_IMG_ALIAS = { words: 'book', stickers: 'sticker' };
-  const UX_GLYPH_ONLY = ['rooms', 'home', 'close', 'lock', 'check'];
+  const UX_GLYPH_ONLY = ['play', 'next', 'back', 'replay', 'rooms', 'home', 'bulb', 'fullscreen', 'gear', 'close', 'lock', 'check', 'solo', 'duo'];
   function uxIcon(name, r, ink) {
-    const s = r * 0.62, glyph = `<g transform="scale(${s.toFixed(2)})">${uxGlyph(name, ink)}</g>`;
+    const s = r * 0.66, glyph = `<g transform="scale(${s.toFixed(2)})">${uxGlyph(name, ink)}</g>`;
     if (UX_GLYPH_ONLY.includes(name)) return glyph;
-    return uxPic('ui_' + (UX_IMG_ALIAS[name] || name), -r * 0.88, -r * 0.88, r * 1.76, r * 1.76, glyph);
+    const f = name === 'meet' ? 0.86 : 0.68;
+    return uxPic('ui_' + (UX_IMG_ALIAS[name] || name), -r * f, -r * f, r * f * 2, r * f * 2, glyph);
   }
   /* Soft blob standing in for a word icon until word_<id>.webp is delivered. */
   function uxBlob(id, cx, cy, r, grey) {
@@ -228,13 +229,13 @@
      a button that is not one of the screen's few main buttons. */
   function uxButton(o) {
     const r = o.r || 36, plate = o.plate || 'light';
-    const fill = plate === 'gold' ? 'url(#goldGrad)' : plate === 'dark' ? '#141c52' : 'url(#plateGrad)';
-    const stroke = plate === 'gold' ? '#fff3c9' : plate === 'dark' ? '#cfe6ff' : '#ffffff';
-    const ink = plate === 'dark' ? '#f6f7ff' : uxInk;
+    const fill = plate === 'gold' ? 'url(#goldGrad)' : plate === 'dark' ? '#141c42' : 'url(#plateGrad)';
+    const stroke = plate === 'gold' ? '#fff7dc' : plate === 'dark' ? '#7dd4ff' : '#7ea9e8';
+    const ink = plate === 'gold' ? '#4a2605' : plate === 'dark' ? '#fff9ec' : '#1b2c5c';
     const ring = o.ring ? `<circle class="ux-ring" r="${r + 5}" fill="none" stroke="#ffd27a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * (r + 5)).toFixed(1)}" style="--len:${(2 * Math.PI * (r + 5)).toFixed(1)}"/>` : '';
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-btn ${o.cls || ''}" data-act="${o.act}" data-ui="${o.ui || ''}" tabindex="${o.keep === false ? -1 : 0}" role="button" aria-label="${uxLabel(o.ui, o.act)}">
       <circle r="${uxHitRadius(r, o.ring)}" fill="#000" fill-opacity="0" pointer-events="all"/>
-      <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .78 : 1}" stroke="${stroke}" stroke-width="3" filter="url(#softShadow)"/>${ring}
+      <circle class="ux-plate" r="${r}" fill="${fill}" fill-opacity="${plate === 'dark' ? .88 : 1}" stroke="${stroke}" stroke-width="${plate === 'gold' ? 3.5 : 3}" filter="url(#softShadow)"/>${ring}
       ${uxIcon(o.icon || o.act, r, ink)}</g></g>`;
   }
   /* Make an element a hoverable button: scale (CSS .ux-btn / .ux-tile), spoken name, hover tick, optional click. Safe to call twice. */
@@ -298,7 +299,8 @@
     return `<g transform="translate(${o.x} ${o.y})"><g class="ux-pop ${o.show ? 'show' : ''}" data-pop="${o.slot == null ? '' : o.slot}">
       <g class="ux-card" data-act="${o.act || 'word'}" data-word="${wd.id}" data-ui="" tabindex="0" role="button" lang="en" aria-label="${wd.en}">
         <rect class="ux-glowrect" x="-8" y="-8" width="${w + 16}" height="${h + 16}" rx="28" fill="none" stroke="#ffe27a" stroke-width="7" opacity="0"/>
-        <rect class="ux-frame" width="${w}" height="${h}" rx="22" fill="#fffaf0" stroke="#ffd27a" stroke-width="4" filter="url(#softShadow)"/>
+        <rect class="ux-frame" width="${w}" height="${h}" rx="22" fill="#fff9ec" stroke="#ffd27a" stroke-width="4" filter="url(#softShadow)"/>
+        <rect x="6" y="6" width="${w - 12}" height="${h - 12}" rx="17" fill="none" stroke="#ffffff" stroke-width="2" opacity=".75"/>
         ${pic}${txt}${badge}</g></g></g>`;
   }
   function uxConfetti(parent, x, y, n) {
@@ -381,7 +383,10 @@
     const html = `<g class="page">
       <image href="${SRC('key')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
       <rect width="960" height="520" fill="url(#topFade)"/>
-      <text x="480" y="92" text-anchor="middle" font-size="62" fill="#fffdf4" stroke="#1b2559" stroke-width="8" paint-order="stroke" stroke-linejoin="round">艾莎和安娜的冰堡</text>
+      <g filter="url(#softShadow)">
+        <rect x="235" y="18" width="490" height="64" rx="32" fill="#141c42" opacity=".88" stroke="#ffd27a" stroke-width="3"/>
+        <text x="480" y="61" text-anchor="middle" font-size="36" fill="#fff9ec" letter-spacing="2">艾莎和安娜的冰堡</text>
+      </g>
       ${uxButton({ act: 'play', ui: cont ? 'continue' : 'start', icon: 'play', x: 480, y: 318, r: 66, plate: 'gold', cls: 'ux-pulse' })}
       ${uxButton({ act: 'rooms', ui: 'rooms', x: 372, y: 448, r: 36 })}
       ${uxButton({ act: 'words', ui: 'words', x: 480, y: 448, r: 36 })}
@@ -420,7 +425,7 @@
       const dots = Array.from({ length: col + 1 }, (_, k) => `<circle cx="${12 + k * 18}" cy="${th + 16}" r="6.5" fill="${hues[row % 3]}" stroke="#fff" stroke-width="1.5"/>`).join('');
       const stars = [0, 1, 2].map(k => `<path transform="translate(${tw - 66 + k * 24} ${th + 16}) scale(10)" d="M0 -.8L.22 -.25L.8 -.22L.35 .15L.5 .72L0 .4L-.5 .72L-.35 .15L-.8 -.22L-.22 -.25Z" fill="${st[k] ? '#ffd27a' : '#3b4a96'}" opacity="${st[k] ? 1 : .6}"/>`).join('');
       return `<g transform="translate(${x} ${y})"><g class="ux-tile ${open ? '' : 'locked'}" data-act="room" data-room="${i}" data-ui="room_${lv.id}" tabindex="0" role="button" aria-label="${uxLabel('room_' + lv.id, 'room ' + (i + 1))}">
-        <rect class="ux-frame" x="-4" y="-4" width="${tw + 8}" height="${th + 8}" rx="14" fill="#fffaf0" stroke="${open ? '#ffd27a' : '#6a76b8'}" stroke-width="3" filter="url(#softShadow)"/>
+        <rect class="ux-frame" x="-4" y="-4" width="${tw + 8}" height="${th + 8}" rx="14" fill="#fff9ec" stroke="${open ? '#ffd27a' : '#586aa8'}" stroke-width="3.5" filter="url(#softShadow)"/>
         <image href="${SRC(lv.bg)}" width="${tw}" height="${th}" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 round 10px)"/>
         ${open ? '' : `<rect width="${tw}" height="${th}" rx="10" fill="#0d1438" opacity=".6"/><g transform="translate(${tw / 2} ${th / 2}) scale(22)">${uxGlyph('lock', '#e8ecff')}</g>`}
         ${dots}${open ? stars : ''}</g></g>`;
@@ -440,11 +445,13 @@
     const ppl = [{ id: 'frost', name: 'Elsa · 艾莎', x: 270, hue: '#cfe6ff' }, { id: 'nuan', name: 'Anna · 安娜', x: 690, hue: '#ffd9a8' }];
     const cards = ppl.map(p => `<g transform="translate(${p.x} 0)"><g class="ux-card-wrap" data-person="${p.id}">
       <clipPath id="uxClip_${p.id}"><rect x="-135" y="76" width="270" height="360" rx="22"/></clipPath>
+      <circle cx="0" cy="256" r="175" fill="url(#${p.id === 'frost' ? 'aurora' : 'warm'})" opacity=".42" pointer-events="none"/>
       <ellipse cx="0" cy="456" rx="130" ry="14" fill="#0d1438" opacity=".4"/>
       <g class="ux-person" data-act="person" data-who="${p.id}" tabindex="0" role="button" aria-label="${p.name}" style="cursor:pointer" data-ui="">
-        <rect x="-135" y="76" width="270" height="360" rx="22" fill="${p.hue}" filter="url(#softShadow)"/>
-        <text x="0" y="64" text-anchor="middle" fill="#fffdf4" font-size="26">${p.name}</text><g clip-path="url(#uxClip_${p.id})">${uxPic('portrait_' + p.id, -135, 76, 270, 360, `<rect x="-135" y="76" width="270" height="360" fill="${p.hue}" opacity=".8"/>`)}</g>
-        <rect x="-135" y="76" width="270" height="360" rx="22" fill="none" stroke="${p.hue}" stroke-width="6"/>
+        <rect x="-135" y="76" width="270" height="360" rx="22" fill="#fff9ec" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
+        <g filter="url(#softShadow)"><rect x="-105" y="24" width="210" height="40" rx="20" fill="#141c42" opacity=".92" stroke="#ffd27a" stroke-width="2.5"/><text x="0" y="51" text-anchor="middle" fill="#fff9ec" font-size="22">${p.name}</text></g>
+        <g clip-path="url(#uxClip_${p.id})">${uxPic('portrait_' + p.id, -135, 76, 270, 360, `<rect x="-135" y="76" width="270" height="360" fill="${p.hue}" opacity=".8"/>`)}</g>
+        <rect x="-135" y="76" width="270" height="360" rx="22" fill="none" stroke="#ffd27a" stroke-width="5"/>
       </g></g></g>`).join('');
     const html = `<g class="page"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".55"/>
       ${cards}${uxButton({ act: 'wardrobe', ui: 'wardrobe', x: 480, y: 290, r: 42 })}${uxButton({ act: 'back', ui: 'back', x: 52, y: 44, r: 28 })}</g>`;
@@ -659,7 +666,7 @@
         <rect class="kb" width="${k.w}" height="36" rx="${r}" fill="#27357f" stroke="#cfe6ff" stroke-width="2" opacity=".82"/>
         <g transform="translate(${k.w / 2} 18)">${uxPic('ui_key_' + k.id, -k.w / 2 + 3, -15, k.w - 6, 30, `<g transform="scale(${k.id === 'space' ? 13 : 12})">${uxGlyph('key_' + k.id, '#f6f7ff')}</g>`)}</g></g></g></g>`;
     }).join('');
-    const pills = UX_PILLS.map(p => `<g id="uxP_${p.id}" visibility="hidden"><rect width="84" height="38" rx="19" fill="#141c52" opacity=".76"/>
+    const pills = UX_PILLS.map(p => `<g id="uxP_${p.id}" visibility="hidden"><rect width="84" height="38" rx="19" fill="#141c42" opacity=".88" stroke="#7dd4ff" stroke-width="1.8"/>
       <image href="${SRC(p.img)}" x="8" y="5" width="28" height="28" preserveAspectRatio="xMidYMid meet"/><text class="latin" x="44" y="27" font-size="20" fill="${p.col}"></text></g>`).join('');
     $('hud').innerHTML = `<g id="uxHud" visibility="hidden">
       <g id="uxAvatars" transform="translate(38 38)">

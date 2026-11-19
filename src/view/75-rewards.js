@@ -374,8 +374,10 @@
       let html = `<g class="${first ? 'page' : ''}"><image href="${SRC('bg0')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/><rect width="960" height="520" fill="#0d1438" opacity=".62"/>`;
       ['frost', 'nuan'].forEach((who, i) => {
         const cx = i ? 710 : 250;
-        html += `<rect x="${cx - 170}" y="46" width="340" height="276" rx="26" fill="${who === 'frost' ? '#cfe6ff' : '#ffd9a8'}" opacity=".9" filter="url(#softShadow)"/>
-          <g class="rw-prev" data-who="${who}" transform="translate(${cx} 306) scale(2.5)"></g>`;
+        html += `<rect x="${cx - 170}" y="46" width="340" height="276" rx="28" fill="#fff9ec" stroke="#ffd27a" stroke-width="4.5" filter="url(#softShadow)"/>
+          <circle cx="${cx}" cy="184" r="126" fill="url(#${who === 'frost' ? 'aurora' : 'warm'})" opacity=".68"/>
+          <ellipse cx="${cx}" cy="306" rx="108" ry="12" fill="${who === 'frost' ? '#7dd4ff' : '#ffbd59'}" opacity=".32"/>
+          <g class="rw-prev" data-who="${who}" transform="translate(${cx} 302) scale(2.5)"></g>`;
         const dress = [0, 1, 2].map(k => {
           const ready = rwDressReady(who, k), need = k ? RW_UNLOCK['dress' + k] : 0;
           const art = `<circle r="19" fill="${RW_DRESS_COL[who][k]}"/><path d="M-13 -6Q0 -17 13 -6" stroke="#fff" stroke-width="3" fill="none" opacity=".6" stroke-linecap="round"/>`;

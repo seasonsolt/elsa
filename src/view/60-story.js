@@ -402,13 +402,17 @@
     if (typeof loadArt === 'function') loadArt(['bg_garden']);
     const root = uxPaint(`<g class="page">
       <image href="${SRC('bg_garden')}" width="960" height="520" preserveAspectRatio="xMidYMid slice"/>
-      <rect width="960" height="520" fill="#0d1438" opacity=".38"/>
+      <rect width="960" height="520" fill="#101836" opacity=".42"/>
       <g pointer-events="none">${petals}</g>
-      <rect x="210" y="38" width="540" height="316" rx="34" fill="#fffaf0" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
-      <rect x="224" y="52" width="512" height="288" rx="24" fill="#27357f" opacity=".12" stroke="#d9c69e" stroke-width="2"/>
-      <circle cx="385" cy="195" r="95" fill="url(#cool)"/><circle cx="575" cy="200" r="90" fill="url(#warm)"/>
-      <g id="finFrost" transform="translate(385 322) scale(2.45)"></g>
-      <g id="finNuan" transform="translate(575 322) scale(-2.45 2.45)"></g>
+      <rect x="200" y="38" width="560" height="316" rx="34" fill="#fff9ec" stroke="#ffd27a" stroke-width="5" filter="url(#softShadow)"/>
+      <g transform="translate(480 42)">
+        <path d="${UX_STAR_D}" transform="translate(-38 14) scale(13)" fill="#ffd27a"/>
+        ${uxPic('fx_star', -22, -8, 44, 44, `<path d="${UX_STAR_D}" transform="scale(18)" fill="#ffd27a"/>`)}
+        <path d="${UX_STAR_D}" transform="translate(38 14) scale(13)" fill="#ffd27a"/>
+      </g>
+      <circle cx="385" cy="200" r="102" fill="url(#aurora)"/><circle cx="575" cy="204" r="98" fill="url(#warm)"/>
+      <g id="finFrost" transform="translate(385 324) scale(2.45)"></g>
+      <g id="finNuan" transform="translate(575 324) scale(-2.45 2.45)"></g>
       ${badge(284, 396, uxPic('fx_star', -18, -18, 36, 36, `<path d="${UX_STAR_D}" transform="scale(18)" fill="#ffd27a"/>`), `${totalStars}/${LEVELS.length * 3}`)}
       ${badge(480, 396, uxIcon('sticker', 20, '#ffd27a'), String(stickerCount))}
       ${badge(676, 396, uxIcon('book', 20, '#cfe6ff'), String(wordCount))}

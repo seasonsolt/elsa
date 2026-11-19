@@ -1,30 +1,27 @@
 """Large copies of the stage pictures for big screens (fullscreen, a Retina display): game/hd/<name>.webp at twice the stored size.
 
-The technique of news-e-accs tools/make-wallpaper.sh: Real-ESRGAN upscales 4x, Lanczos brings the result to the target size, and the
-opaque paintings (backgrounds, story and memory pictures) get a light grain back, because x4plus smooths the watercolour texture.
-Pictures with transparency (the sisters, toys, doors) use the x4plus-anime model, whose clean edges suit the cut-out line art, and get
-no grain. Both models are BSD-3 (Real-ESRGAN), so the copies ship with the game.
+Pictures with transparency (the sisters, toys, doors) use Real-ESRGAN x4plus-anime and BICUBIC downsampling for clean line art.
+Opaque paintings (backgrounds, story, memory, textures) use silky BICUBIC 2x upscaling + whisper optical GaussianBlur(0.35)
+with zero sharpening halos and zero grain noise so large screens stay warm and comfortable for children's eyes.
 
     python art/hd.py              makes the copies that are missing or whose picture changed (art/hd.json keeps a hash of each source)
     python art/hd.py --force      all of them
     python art/hd.py --only bg1,frost_idle
 
-Needs Pillow and numpy (e.g. the venv of art/character_atlas.py) and realesrgan-ncnn-vulkan: REALESRGAN=path, on PATH, or
+Needs Pillow and (when rebuilding RGBA sprites) realesrgan-ncnn-vulkan: REALESRGAN=path, on PATH, or
 ~/Applications/realesrgan, with its models/ directory next to it. Writes art/hd.json { name: sha256 of game/<name>.webp, first 12 },
 which art/build_page.py puts into the page (the view swaps a picture for its large copy, see src/view/00-core.js). Run
 python3 art/build_page.py afterwards. """
 import argparse, hashlib, json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 ART = Path(__file__).resolve().parent
 GAME = ART.parent / 'game'
 HD = GAME / 'hd'
 INDEX = ART / 'hd.json'
 SCALE = 2
-GRAIN = 3.0          # std of the grain on opaque paintings, in 8-bit levels
 # the pictures drawn on the stage or across the whole stage; word icons, stickers, UI icons and glow effects stay as they are
 STAGE = re.compile(r'^(bg\d*|bg_\w+|story_\w+|mem_\w+|key|portrait_\w+|(frost|nuan)_\w+|hat_\w+|door_\w+|flake|heart|ball|two|snowman|gate'
                    r'|iceblock|frozen|pinkice|shelf\d|drift\d|water|plate_\w+|brick|tile_slope_\w|spring_\d|floe\w*|note_\w+|flower_\d'
@@ -57,16 +54,17 @@ def upscale(names, model, tmp, binary):
     return run_out
 
 
-def finish(name, x4, opaque, rng):
+def finish_opaque(name):
+    sd = Image.open(GAME / f'{name}.webp').convert('RGB')
+    im = sd.resize((sd.width * SCALE, sd.height * SCALE), Image.BICUBIC)
+    im = im.filter(ImageFilter.GaussianBlur(radius=0.35))
+    im.save(HD / f'{name}.webp', quality=82, method=6)
+
+
+def finish_rgba(name, x4):
     sd = Image.open(GAME / f'{name}.webp')
-    im = Image.open(x4).convert('RGBA' if not opaque else 'RGB').resize((sd.width * SCALE, sd.height * SCALE), Image.LANCZOS)
-    if opaque:
-        a = np.asarray(im, np.float32)
-        a += rng.normal(0, GRAIN, a.shape[:2])[..., None]          # one grain for all three channels: no colour speckle
-        im = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
-        im.save(HD / f'{name}.webp', quality=80, method=6)
-    else:
-        im.save(HD / f'{name}.webp', quality=88, alpha_quality=90, method=6)
+    im = Image.open(x4).convert('RGBA').resize((sd.width * SCALE, sd.height * SCALE), Image.BICUBIC)
+    im.save(HD / f'{name}.webp', quality=88, alpha_quality=90, method=6)
 
 
 def main():
@@ -86,18 +84,20 @@ def main():
     todo = [n for n in names if a.force or index.get(n) != digest(GAME / f'{n}.webp') or not (HD / f'{n}.webp').is_file()]
     print(f'{len(names)} stage pictures, {len(todo)} to make')
     if todo:
-        binary = find_esrgan() or sys.exit('realesrgan-ncnn-vulkan not found: set REALESRGAN or put it on PATH')
         opaque = {n for n in todo if Image.open(GAME / f'{n}.webp').mode != 'RGBA'}
-        rng = np.random.default_rng(7)
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp = Path(tmp)
-            for model, group in (('realesrgan-x4plus', sorted(opaque)), ('realesrgan-x4plus-anime', sorted(set(todo) - opaque))):
-                if not group:
-                    continue
-                print(f'{model}: {len(group)}')
-                out = upscale(group, model, tmp, binary)
-                for n in group:
-                    finish(n, out / f'{n}.png', n in opaque, rng)
+        rgba = sorted(set(todo) - opaque)
+        if opaque:
+            print(f'soft-bicubic-2x: {len(opaque)}')
+            for n in sorted(opaque):
+                finish_opaque(n)
+                index[n] = digest(GAME / f'{n}.webp')
+        if rgba:
+            binary = find_esrgan() or sys.exit('realesrgan-ncnn-vulkan not found: set REALESRGAN or put it on PATH')
+            with tempfile.TemporaryDirectory() as tmp:
+                print(f'realesrgan-x4plus-anime: {len(rgba)}')
+                out = upscale(rgba, 'realesrgan-x4plus-anime', Path(tmp), binary)
+                for n in rgba:
+                    finish_rgba(n, out / f'{n}.png')
                     index[n] = digest(GAME / f'{n}.webp')
     # forget copies whose picture is gone
     for n in list(index):

@@ -54,7 +54,7 @@ def compose_square_key(src_path, size):
     canvas = Image.new('RGBA', (crop_h, crop_h))
     canvas.paste(left, (0, 0))
     canvas.alpha_composite(right, (half_w - pad, 0))
-    return canvas.convert('RGB').resize((size, size), Image.LANCZOS)
+    return canvas.convert('RGB').resize((size, size), Image.BICUBIC)
 
 
 def maskable_icon(size, art_fraction):
@@ -64,7 +64,7 @@ def maskable_icon(size, art_fraction):
     if bbox:
         art = art.crop(bbox)
     scale = size * art_fraction / max(art.size)
-    art = art.resize((round(art.width * scale), round(art.height * scale)), Image.LANCZOS)
+    art = art.resize((round(art.width * scale), round(art.height * scale)), Image.BICUBIC)
     img.paste(art, ((size - art.width) // 2, (size - art.height) // 2), art)
     return img
 
@@ -74,12 +74,12 @@ def main():
     if v3_key.is_file():
         big = compose_square_key(v3_key, 512)
         big.save(GAME / 'icon-512.png', optimize=True)
-        big.resize((192, 192), Image.LANCZOS).save(GAME / 'icon-192.png', optimize=True)
-        big.resize((180, 180), Image.LANCZOS).save(GAME / 'apple-touch-icon.png', optimize=True)
+        big.resize((192, 192), Image.BICUBIC).save(GAME / 'icon-192.png', optimize=True)
+        big.resize((180, 180), Image.BICUBIC).save(GAME / 'apple-touch-icon.png', optimize=True)
     else:
         big = maskable_icon(512, .84)
         big.save(GAME / 'icon-512.png', optimize=True)
-        big.resize((192, 192), Image.LANCZOS).save(GAME / 'icon-192.png', optimize=True)
+        big.resize((192, 192), Image.BICUBIC).save(GAME / 'icon-192.png', optimize=True)
         maskable_icon(180, .84).save(GAME / 'apple-touch-icon.png', optimize=True)
     maskable_icon(512, .68).save(GAME / 'icon-maskable-512.png', optimize=True)
     for name in ('icon-192', 'icon-512', 'icon-maskable-512', 'apple-touch-icon'):
